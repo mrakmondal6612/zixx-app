@@ -24,15 +24,14 @@ UserRouter.get("/users", async (req, res) => {
 
 UserRouter.post("/register", async (req, res) => {
   try {
-    const { first_name, last_name, email, password, phone, gender } = req.body;
+    const { name, email, password, phone, gender } = req.body;
     const user = await UserModel.findOne({ email: email });
     if (user) {
       return res.send({ msg: "User already exists", ok: false });
     }
 
     const newUser = await new UserModel({
-      first_name,
-      last_name,
+      name,
       email,
       password,
       phone,

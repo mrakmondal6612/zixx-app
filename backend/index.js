@@ -31,7 +31,7 @@ app.use(CartRouter);
 app.listen(process.env.PORT, async () => {
   try {
     await connection;
-    console.log("Running and Connected to DB");
+    console.log("Running on PORT", process.env.PORT, " and Connected to DB");
   } catch (error) {
     console.log(error);
   }
