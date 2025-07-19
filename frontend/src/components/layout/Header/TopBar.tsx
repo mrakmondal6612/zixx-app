@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, MapPin, ChevronDown, User, LogOut } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from '@/hooks/AuthProvider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,15 +15,16 @@ import {
 export const TopBar = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => {
+    if (location.pathname.includes('/women')) return 'women';
     if (location.pathname.includes('/men')) return 'men';
     if (location.pathname.includes('/kids')) return 'kids';
-    return 'women';
+    return 'home';
   });
   
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState('India');
-  const { user, signOut, loading } = useAuth();
+  const { user, logout, loading } = useAuthContext();
   
   const countries = [
     'India', 'United States', 'United Kingdom', 'Canada', 'Australia', 
@@ -48,7 +49,7 @@ export const TopBar = () => {
         {/* Main navigation - shifted to left */}
         <nav className={`${isMobile && !mobileMenuOpen ? 'hidden' : 'flex'} ${isMobile ? 'absolute top-[41px] left-0 right-0 bg-[rgba(34,40,40,1)] z-50 flex-col' : 'static flex-row'} items-stretch text-sm font-bold text-center uppercase ml-0`}>
           <Link 
-            to="/"
+            to="/women"
             className={`leading-loose w-[70px] md:w-[114px] px-px border-x-[1px] border-x-[#52505] border-solid transition-all duration-300 hover:scale-105 ${
               activeTab === 'women' 
                 ? 'bg-white text-black transform scale-105' 
@@ -134,7 +135,7 @@ export const TopBar = () => {
                 <DropdownMenuTrigger className="flex items-center gap-1 text-white text-[10px] md:text-[13px] font-normal leading-[19.5px] hover:opacity-80 transition-opacity ml-1 md:ml-2">
                   <User className="w-3 h-3" />
                   <span className="hidden md:inline">
-                    {user.user_metadata?.display_name || user.email?.split('@')[0] || 'Account'}
+                    {user.first_name ? `${user.first_name} ${user.last_name}` : user.email?.split('@')[0] || 'Account'}
                   </span>
                   <ChevronDown className="w-3 h-3" />
                 </DropdownMenuTrigger>
@@ -153,7 +154,7 @@ export const TopBar = () => {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={signOut}
+                    onClick={() => logout()}
                     className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer text-red-600"
                   >
                     <LogOut className="w-4 h-4" />

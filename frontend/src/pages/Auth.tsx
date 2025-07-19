@@ -1,216 +1,170 @@
 import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from '@/hooks/AuthProvider';
+import { FaFacebook, FaGoogle } from 'react-icons/fa';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [gender, setGender] = useState('');
+  const [dob, setDob] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { user, signIn, signUp } = useAuth();
+  const { user, login } = useAuthContext();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Redirect if already authenticated
-  if (user) {
-    return <Navigate to="/" replace />;
-  }
+  const toggleMode = () => {
+    setIsLogin((prev) => !prev);
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setFirstName('');
+    setLastName('');
+    setPhone('');
+    setGender('');
+    setDob('');
+  };
+
+  if (user) return <Navigate to="/" replace />;
+
+  const setToken = (token: string) => {
+    localStorage.setItem('token', token);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      if (isLogin) {
-        const { error } = await signIn(email, password);
+      const payload = isLogin
+        ? { email, password }
+        : { first_name: firstName, last_name: lastName, email, password, phone: Number(phone), gender, dob };
 
-        if (error) throw error;
+      const res = await fetch(isLogin ? '/api/login' : '/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-        toast({
-          title: "Success!",
-          description: "You have been logged in successfully.",
-        });
-      } else {
-        if (password !== confirmPassword) {
-          throw new Error('Passwords do not match');
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const html = await res.text();
+        if (html.startsWith('<!DOCTYPE')) {
+          throw new Error('Received HTML instead of JSON. Check API endpoint.');
         }
+        throw new Error('Invalid content-type in response.');
+      }
 
-        if (password.length < 6) {
-          throw new Error('Password must be at least 6 characters');
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data?.msg || 'Request failed');
+      }
+
+      toast({ title: 'Success!', description: isLogin ? 'Logged in successfully.' : 'Account created.' });
+
+      if (data.token && isLogin) {
+        setToken(data.token);
+        if (typeof login === 'function') {
+          const from = (location.state as any)?.from?.pathname || "/";
+          await login(email, password, from);
+          navigate(from, { replace: true });
         }
-
-        const { error } = await signUp(email, password, displayName);
-
-        if (error) throw error;
-
-        toast({
-          title: "Success!",
-          description: "Account created successfully! Please check your email for verification.",
-        });
+      } else if (!isLogin) {
+        setIsLogin(true);
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || 'An unexpected error occurred',
-        variant: "destructive",
-      });
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
-  const resetForm = () => {
-    setEmail('');
-    setPassword('');
-    setConfirmPassword('');
-    setDisplayName('');
-  };
-
-  const toggleMode = () => {
-    setIsLogin(!isLogin);
-    resetForm();
-  };
-
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <>
       <Header />
-      
-      <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-8 py-10">
-        <div className="flex flex-col lg:flex-row gap-8 items-center justify-center">
-          {/* Left side - Image */}
-          <div className="w-full lg:w-1/2 max-w-md order-2 lg:order-1">
-            <div className="aspect-square bg-muted rounded-lg overflow-hidden">
-              <img 
-                src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=500&h=500" 
-                alt="Fashion model" 
-                className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
-              />
-            </div>
+      <ScrollToTop />
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f6fa] py-8 px-2">
+        <div className="w-full max-w-5xl bg-white rounded-2xl shadow-lg flex flex-col md:flex-row overflow-hidden">
+          <div className="flex-1 flex flex-col justify-center px-8 py-10 md:py-16">
+            <h1 className="text-3xl md:text-4xl font-bold mb-2 flex items-center gap-2">
+              {isLogin ? 'Welcome Back' : 'Welcome'} <span className="text-2xl">👋</span>
+            </h1>
+            <p className="mb-8 text-gray-700 text-lg">Join us now to be a part of Zixx's family.</p>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {!isLogin && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Input placeholder="First Name *" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+                  <Input placeholder="Last Name *" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+                </div>
+              )}
+              <Input type="email" placeholder="Email ID *" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <div className="relative">
+                <Input type={showPassword ? 'text' : 'password'} placeholder={isLogin ? 'Password' : 'Choose New Password *'} value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-700" tabIndex={-1}>
+                  <span>{showPassword ? '🙈' : '👁️'}</span>
+                </button>
+              </div>
+              {!isLogin && (
+                <>
+                  <Input type={showPassword ? 'text' : 'password'} placeholder="Confirm Password *" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                  <Input type="date" placeholder="Please enter your birthdate *" value={dob} onChange={(e) => setDob(e.target.value)} required />
+                  <Input type="tel" placeholder="+91 Mobile Number *" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                  <div className="flex items-center gap-4 mt-2">
+                    <span className="font-medium">Gender</span>
+                    {['male', 'female', 'other'].map((g) => (
+                      <label key={g} className="flex items-center gap-1">
+                        <input type="radio" name="gender" value={g} checked={gender === g} onChange={() => setGender(g)} required className="accent-red-600" /> {g.charAt(0).toUpperCase() + g.slice(1)}
+                      </label>
+                    ))}
+                  </div>
+                </>
+              )}
+              <Button type="submit" className="w-full bg-[#D92030] hover:bg-[#b81a27] text-white text-lg font-semibold rounded-md py-2 mt-2" disabled={loading}>
+                {loading ? 'Loading...' : isLogin ? 'Sign in' : 'REGISTER'}
+              </Button>
+              <div className="flex items-center my-4">
+                <div className="flex-grow border-t border-gray-300"></div>
+                <span className="mx-2 text-gray-400">Or</span>
+                <div className="flex-grow border-t border-gray-300"></div>
+              </div>
+              <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2 bg-[#f5f6fa] hover:bg-gray-200 border border-gray-200 text-gray-700 font-medium rounded-md py-2">
+                <FaGoogle className="w-5 h-5" /> Sign in with Google
+              </Button>
+              <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2 bg-[#f5f6fa] hover:bg-gray-200 border border-gray-200 text-gray-700 font-medium rounded-md py-2">
+                <FaFacebook className="w-5 h-5" /> Sign in with Facebook
+              </Button>
+              <div className="text-center text-sm mt-4">
+                {isLogin ? (
+                  <>Don't have an account? <button type="button" className="text-blue-600 hover:underline" onClick={toggleMode}>Sign up</button></>
+                ) : (
+                  <>Already a customer? <button type="button" className="text-blue-600 hover:underline" onClick={toggleMode}>Login</button></>
+                )}
+              </div>
+            </form>
           </div>
-          
-          {/* Right side - Form */}
-          <div className="w-full lg:w-1/2 max-w-md order-1 lg:order-2">
-            <Card className="w-full border-0 shadow-none">
-              <CardContent className="p-6">
-                <div className="text-left mb-8">
-                  <h1 className="text-3xl font-bold mb-2">
-                    {isLogin ? 'Welcome Back 👋' : 'Join ZIXX 🎉'}
-                  </h1>
-                  <p className="text-muted-foreground mt-2">
-                    {isLogin 
-                      ? "Sign in to access your account and continue shopping." 
-                      : "Create your account to start your fashion journey with us."
-                    }
-                  </p>
-                </div>
-                
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {!isLogin && (
-                    <div>
-                      <label htmlFor="displayName" className="block text-sm font-medium text-foreground mb-2">
-                        Display Name
-                      </label>
-                      <Input
-                        id="displayName"
-                        type="text"
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        placeholder="Your display name"
-                      />
-                    </div>
-                  )}
-                  
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
-                      Email
-                    </label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="example@email.com"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-foreground mb-2">
-                      Password
-                    </label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder={isLogin ? "Enter your password" : "At least 6 characters"}
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? '🙈' : '👁️'}
-                      </button>
-                    </div>
-                  </div>
-
-                  {!isLogin && (
-                    <div>
-                      <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground mb-2">
-                        Confirm Password
-                      </label>
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Confirm your password"
-                        required
-                      />
-                    </div>
-                  )}
-                  
-                  <Button
-                    type="submit"
-                    className="w-full bg-destructive hover:bg-destructive/90 py-4 text-lg font-semibold rounded-lg"
-                    disabled={loading}
-                  >
-                    {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}
-                  </Button>
-                </form>
-                
-                <div className="text-center mt-8">
-                  <p className="text-muted-foreground">
-                    {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-                    <button
-                      onClick={toggleMode}
-                      className="font-medium text-destructive hover:underline"
-                    >
-                      {isLogin ? 'Sign up' : 'Sign in'}
-                    </button>
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="hidden md:flex flex-1 items-center justify-center bg-[#181818] h-[600px] rounded-2xl overflow-hidden shadow-xl m-4">
+            <img
+              src="https://wintrackinc.com/cdn/shop/articles/pexels-olly-853151_2223d0ec-5853-4769-91e3-b38e2d748494.jpg?v=1738776038&width=2080"
+              alt="Flower Still Life"
+              className="rounded-2xl object-cover w-full h-[99.5%] max-h-[800px] shadow-xl"
+            />
           </div>
         </div>
-      </main>
-      
+      </div>
       <Footer />
-      <ScrollToTop />
-    </div>
+    </>
   );
 };
 

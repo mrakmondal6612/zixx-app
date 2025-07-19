@@ -1,22 +1,21 @@
 const express = require("express");
 const { connection } = require("./config/db");
 const { UserRouter } = require("./routes/user.routes");
-const { CartRouter } = require("./routes/carts.routes");
 const { ProductRouter } = require("./routes/products.routes");
 const cors = require("cors");
+const path = require("path");
 const session = require("express-session");
 
 const app = express();
 require("dotenv").config();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:8080",
+    credentials: true,
+  })
+);
 app.use(express.json());
-
-app.get("/", (req, res) => {
-  res.send("WELCOME TO THE SOULED STORE APP");
-});
-
-// Set up session (new code for google auth)
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
@@ -24,15 +23,29 @@ app.use(
     saveUninitialized: false,
   })
 );
-app.use(UserRouter);
-app.use(ProductRouter);
-app.use(CartRouter);
+
+// ✅ Mount user router under /api
+app.use("/api", UserRouter);
+app.use("/api", ProductRouter)
+
+app.get("/", (req, res) => {
+  res.send("WELCOME TO THE ZIXX APP BACKEND");
+});
+
+if (process.env.NODE_ENV === "production") {
+  const frontendPath = path.join(__dirname, "..", "frontend", "dist");
+  app.use(express.static(frontendPath));
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(frontendPath, "index.html"));
+  });
+}
 
 app.listen(process.env.PORT, async () => {
   try {
     await connection;
-    console.log("Running on PORT", process.env.PORT, " and Connected to DB");
+    console.log("✅ Server running on PORT", process.env.PORT);
+    console.log("✅ Connected to MongoDB");
   } catch (error) {
-    console.log(error);
+    console.log("❌ DB Connection Error:", error);
   }
 });

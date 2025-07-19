@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -7,15 +6,35 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { User, ShoppingBag, Heart, LogOut } from 'lucide-react';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
+import { useAuthContext } from '@/hooks/AuthProvider';
 
 const Account = () => {
+  const { user } = useAuthContext();
+  const [formData, setFormData] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+  });
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        email: user.email || '',
+        phone: user.phone?.toString() || '',
+      });
+    }
+  }, [user]);
+
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Header />
-      
+
       <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-8 py-10">
         <h1 className="text-2xl md:text-3xl font-bold mb-8">My Account</h1>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-8">
           {/* Sidebar Navigation */}
           <aside className="space-y-4">
@@ -27,7 +46,7 @@ const Account = () => {
                 </Link>
               </CardContent>
             </Card>
-            
+
             <Card className="bg-white hover:bg-gray-50 transition-colors">
               <CardContent className="p-4">
                 <Link to="/orders" className="flex items-center gap-3">
@@ -36,7 +55,7 @@ const Account = () => {
                 </Link>
               </CardContent>
             </Card>
-            
+
             <Card className="bg-white hover:bg-gray-50 transition-colors">
               <CardContent className="p-4">
                 <Link to="/wishlist" className="flex items-center gap-3">
@@ -45,7 +64,7 @@ const Account = () => {
                 </Link>
               </CardContent>
             </Card>
-            
+
             <Card className="bg-white hover:bg-gray-50 transition-colors">
               <CardContent className="p-4">
                 <Link to="/logout" className="flex items-center gap-3 text-gray-500">
@@ -55,7 +74,7 @@ const Account = () => {
               </CardContent>
             </Card>
           </aside>
-          
+
           {/* Main Content */}
           <div className="space-y-8">
             <Card>
@@ -68,44 +87,48 @@ const Account = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       First Name
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       className="w-full p-2 border border-gray-300 rounded-md"
-                      defaultValue="John"
+                      value={formData.first_name}
+                      readOnly
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Last Name
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       className="w-full p-2 border border-gray-300 rounded-md"
-                      defaultValue="Doe"
+                      value={formData.last_name}
+                      readOnly
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Email Address
                     </label>
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       className="w-full p-2 border border-gray-300 rounded-md"
-                      defaultValue="john.doe@example.com"
+                      value={formData.email}
+                      readOnly
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Phone Number
                     </label>
-                    <input 
-                      type="tel" 
+                    <input
+                      type="tel"
                       className="w-full p-2 border border-gray-300 rounded-md"
-                      defaultValue="+1 (555) 123-4567"
+                      value={formData.phone}
+                      readOnly
                     />
                   </div>
                 </div>
-                
+
                 <div className="mt-8">
                   <Button className="bg-[#D92030] hover:bg-[#BC1C2A]">
                     Save Changes
@@ -113,7 +136,7 @@ const Account = () => {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle>Shipping Address</CardTitle>
@@ -124,8 +147,8 @@ const Account = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Address Line 1
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       className="w-full p-2 border border-gray-300 rounded-md"
                       defaultValue="123 Main Street"
                     />
@@ -134,8 +157,8 @@ const Account = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Address Line 2 (Optional)
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       className="w-full p-2 border border-gray-300 rounded-md"
                       defaultValue="Apt 4B"
                     />
@@ -144,8 +167,8 @@ const Account = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       City
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       className="w-full p-2 border border-gray-300 rounded-md"
                       defaultValue="New York"
                     />
@@ -154,8 +177,8 @@ const Account = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       State
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       className="w-full p-2 border border-gray-300 rounded-md"
                       defaultValue="NY"
                     />
@@ -164,8 +187,8 @@ const Account = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Zip Code
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       className="w-full p-2 border border-gray-300 rounded-md"
                       defaultValue="10001"
                     />
@@ -174,14 +197,14 @@ const Account = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Country
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       className="w-full p-2 border border-gray-300 rounded-md"
                       defaultValue="United States"
                     />
                   </div>
                 </div>
-                
+
                 <div className="mt-8">
                   <Button className="bg-[#D92030] hover:bg-[#BC1C2A]">
                     Save Address
@@ -189,7 +212,7 @@ const Account = () => {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle>Change Password</CardTitle>
@@ -200,8 +223,8 @@ const Account = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Current Password
                     </label>
-                    <input 
-                      type="password" 
+                    <input
+                      type="password"
                       className="w-full p-2 border border-gray-300 rounded-md"
                     />
                   </div>
@@ -209,8 +232,8 @@ const Account = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       New Password
                     </label>
-                    <input 
-                      type="password" 
+                    <input
+                      type="password"
                       className="w-full p-2 border border-gray-300 rounded-md"
                     />
                   </div>
@@ -218,13 +241,13 @@ const Account = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Confirm New Password
                     </label>
-                    <input 
-                      type="password" 
+                    <input
+                      type="password"
                       className="w-full p-2 border border-gray-300 rounded-md"
                     />
                   </div>
                 </div>
-                
+
                 <div className="mt-8">
                   <Button className="bg-[#D92030] hover:bg-[#BC1C2A]">
                     Update Password
@@ -235,7 +258,7 @@ const Account = () => {
           </div>
         </div>
       </main>
-      
+
       <Footer />
       <ScrollToTop />
     </div>

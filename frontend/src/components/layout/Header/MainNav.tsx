@@ -156,7 +156,7 @@ export const MainNav = () => {
             
             {/* Icons Section */}
             <div className="flex gap-2 sm:gap-3 lg:gap-3.5 items-center flex-shrink-0">
-              <Link to="/auth" aria-label="Login/Account" className={location.pathname === '/auth' ? "relative after:absolute after:-bottom-2 after:left-1/2 after:-translate-x-1/2 after:w-2 after:h-2 after:bg-[#D92030] after:rounded-full" : ""}>
+              <Link to="/account" aria-label="Login/Account" className={location.pathname === '/auth' ? "relative after:absolute after:-bottom-2 after:left-1/2 after:-translate-x-1/2 after:w-2 after:h-2 after:bg-[#D92030] after:rounded-full" : ""}>
                 <User size={20} className="sm:w-6 sm:h-6 hover:opacity-80 transition-opacity" />
               </Link>
               <Link to="/cart" aria-label="Shopping cart" className={isCartPage ? "relative after:absolute after:-bottom-2 after:left-1/2 after:-translate-x-1/2 after:w-2 after:h-2 after:bg-[#D92030] after:rounded-full" : ""}>
