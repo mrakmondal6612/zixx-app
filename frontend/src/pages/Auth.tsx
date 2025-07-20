@@ -21,7 +21,7 @@ const Auth = () => {
   const [dob, setDob] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { user, login } = useAuthContext();
+  const { user, login, setRole } = useAuthContext();
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -50,7 +50,15 @@ const Auth = () => {
     try {
       const payload = isLogin
         ? { email, password }
-        : { first_name: firstName, last_name: lastName, email, password, phone: Number(phone), gender, dob };
+        : {
+            first_name: firstName,
+            last_name: lastName,
+            email,
+            password,
+            phone: Number(phone),
+            gender,
+            dob
+          };
 
       const res = await fetch(isLogin ? '/api/login' : '/api/register', {
         method: 'POST',
@@ -72,12 +80,23 @@ const Auth = () => {
         throw new Error(data?.msg || 'Request failed');
       }
 
-      toast({ title: 'Success!', description: isLogin ? 'Logged in successfully.' : 'Account created.' });
+      toast({
+        title: 'Success!',
+        description: isLogin ? 'Logged in successfully.' : 'Account created.',
+      });
 
+      // ✅ Store token and role after login
       if (data.token && isLogin) {
         setToken(data.token);
+        if (data.role) {
+          localStorage.setItem('role', data.role);
+          if (typeof setRole === 'function') {
+            setRole(data.role);
+          }
+        }
+
         if (typeof login === 'function') {
-          const from = (location.state as any)?.from?.pathname || "/";
+          const from = (location.state as any)?.from?.pathname || '/';
           await login(email, password, from);
           navigate(from, { replace: true });
         }
@@ -85,7 +104,11 @@ const Auth = () => {
         setIsLogin(true);
       }
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -111,27 +134,57 @@ const Auth = () => {
               )}
               <Input type="email" placeholder="Email ID *" value={email} onChange={(e) => setEmail(e.target.value)} required />
               <div className="relative">
-                <Input type={showPassword ? 'text' : 'password'} placeholder={isLogin ? 'Password' : 'Choose New Password *'} value={password} onChange={(e) => setPassword(e.target.value)} required />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-700" tabIndex={-1}>
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder={isLogin ? 'Password' : 'Choose New Password *'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                  tabIndex={-1}
+                >
                   <span>{showPassword ? '🙈' : '👁️'}</span>
                 </button>
               </div>
               {!isLogin && (
                 <>
-                  <Input type={showPassword ? 'text' : 'password'} placeholder="Confirm Password *" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Confirm Password *"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
                   <Input type="date" placeholder="Please enter your birthdate *" value={dob} onChange={(e) => setDob(e.target.value)} required />
                   <Input type="tel" placeholder="+91 Mobile Number *" value={phone} onChange={(e) => setPhone(e.target.value)} required />
                   <div className="flex items-center gap-4 mt-2">
                     <span className="font-medium">Gender</span>
                     {['male', 'female', 'other'].map((g) => (
                       <label key={g} className="flex items-center gap-1">
-                        <input type="radio" name="gender" value={g} checked={gender === g} onChange={() => setGender(g)} required className="accent-red-600" /> {g.charAt(0).toUpperCase() + g.slice(1)}
+                        <input
+                          type="radio"
+                          name="gender"
+                          value={g}
+                          checked={gender === g}
+                          onChange={() => setGender(g)}
+                          required
+                          className="accent-red-600"
+                        />{' '}
+                        {g.charAt(0).toUpperCase() + g.slice(1)}
                       </label>
                     ))}
                   </div>
                 </>
               )}
-              <Button type="submit" className="w-full bg-[#D92030] hover:bg-[#b81a27] text-white text-lg font-semibold rounded-md py-2 mt-2" disabled={loading}>
+              <Button
+                type="submit"
+                className="w-full bg-[#D92030] hover:bg-[#b81a27] text-white text-lg font-semibold rounded-md py-2 mt-2"
+                disabled={loading}
+              >
                 {loading ? 'Loading...' : isLogin ? 'Sign in' : 'REGISTER'}
               </Button>
               <div className="flex items-center my-4">
@@ -139,17 +192,35 @@ const Auth = () => {
                 <span className="mx-2 text-gray-400">Or</span>
                 <div className="flex-grow border-t border-gray-300"></div>
               </div>
-              <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2 bg-[#f5f6fa] hover:bg-gray-200 border border-gray-200 text-gray-700 font-medium rounded-md py-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2 bg-[#f5f6fa] hover:bg-gray-200 border border-gray-200 text-gray-700 font-medium rounded-md py-2"
+              >
                 <FaGoogle className="w-5 h-5" /> Sign in with Google
               </Button>
-              <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2 bg-[#f5f6fa] hover:bg-gray-200 border border-gray-200 text-gray-700 font-medium rounded-md py-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2 bg-[#f5f6fa] hover:bg-gray-200 border border-gray-200 text-gray-700 font-medium rounded-md py-2"
+              >
                 <FaFacebook className="w-5 h-5" /> Sign in with Facebook
               </Button>
               <div className="text-center text-sm mt-4">
                 {isLogin ? (
-                  <>Don't have an account? <button type="button" className="text-blue-600 hover:underline" onClick={toggleMode}>Sign up</button></>
+                  <>
+                    Don't have an account?{' '}
+                    <button type="button" className="text-blue-600 hover:underline" onClick={toggleMode}>
+                      Sign up
+                    </button>
+                  </>
                 ) : (
-                  <>Already a customer? <button type="button" className="text-blue-600 hover:underline" onClick={toggleMode}>Login</button></>
+                  <>
+                    Already a customer?{' '}
+                    <button type="button" className="text-blue-600 hover:underline" onClick={toggleMode}>
+                      Login
+                    </button>
+                  </>
                 )}
               </div>
             </form>

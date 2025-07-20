@@ -10,13 +10,12 @@ const UserRouter = express.Router();
 
 UserRouter.use(passport.initialize());
 UserRouter.use(passport.session());
-
 // =====================
 // ✅ Register New User
 // =====================
 UserRouter.post("/register", async (req, res) => {
   try {
-    const { first_name, last_name, email, password, phone, gender, dob } = req.body;
+    const { first_name, last_name, email, password, phone, gender, dob, role } = req.body;
 
     const existingUser = await UserModel.findOne({ email });
     if (existingUser) {
@@ -27,10 +26,11 @@ UserRouter.post("/register", async (req, res) => {
       first_name,
       last_name,
       email,
-      password, // Will be hashed by schema pre-save
+      password,
       phone,
       gender,
       dob,
+      role: role || "user", // default role is 'user'
     });
 
     await newUser.save();
@@ -53,10 +53,10 @@ UserRouter.post("/login", async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ msg: "Invalid credentials", ok: false });
 
-    const token = jwt.sign({ userid: user._id }, process.env.JWT_SECRET, { expiresIn: "7h" });
+    const token = jwt.sign({ userid: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7h" });
     const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
 
-    res.json({ msg: "Login successful", token, refreshToken, ok: true });
+    res.json({ msg: "Login successful", token, refreshToken, role: user.role, ok: true });
   } catch (error) {
     res.status(500).json({ msg: "Server error", error: error.message, ok: false });
   }

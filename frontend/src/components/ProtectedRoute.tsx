@@ -2,7 +2,8 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '@/hooks/AuthProvider';
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+
+const ProtectedRoute = ({ children, roles }: { children: JSX.Element, roles?: string[] }) => {
   const { user, loading } = useAuthContext();
   const location = useLocation();
 
@@ -11,7 +12,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     // Redirect to login, save current location for redirect after login
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
-  return <>{children}</>;
+  if (roles && !roles.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
 };
 
 export default ProtectedRoute;

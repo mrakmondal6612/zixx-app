@@ -8,12 +8,15 @@ interface User {
   phone: number;
   gender: string;
   dob?: string;
+  role?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
+  role: string | null;
+  setRole: (role: string | null) => void;
   login: (email: string, password: string, redirectTo?: string, navCallback?: (to: string) => void) => Promise<void>;
   logout: (navCallback?: (to: string) => void) => void;
   setUser: (user: User | null) => void;
@@ -24,6 +27,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchUser = async (authToken: string) => {
@@ -45,6 +49,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
+    const storedRole = localStorage.getItem('role');
+    if (storedRole) setRole(storedRole);
 
     const validateTokenAndFetchUser = async () => {
       if (!storedToken) {
@@ -103,6 +109,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setToken(data.token);
       localStorage.setItem('token', data.token);
+      if (data.role) {
+        setRole(data.role);
+        localStorage.setItem('role', data.role);
+      }
       await fetchUser(data.token);
 
       if (navCallback) navCallback(redirectTo || '/');
@@ -117,19 +127,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = (navCallback?: (to: string) => void) => {
     setUser(null);
     setToken(null);
+    setRole(null);
     localStorage.removeItem('token');
+    localStorage.removeItem('role');
     if (navCallback) navCallback('/auth');
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, setUser }}>
+    <AuthContext.Provider value={{ user, token, loading, role, setRole, login, logout, setUser }}>
       {children}
     </AuthContext.Provider>
   );
 };
+
 
 export const useAuthContext = () => {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuthContext must be used within AuthProvider');
   return ctx;
 };
+
+// Alias for consistency with usage in components
+export const useAuth = useAuthContext;

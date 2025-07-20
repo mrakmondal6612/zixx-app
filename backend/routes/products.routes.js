@@ -1,6 +1,6 @@
 const express = require("express");
-// const { authenticator } = require("../middlewares/authenticator.middleware");
 const { ProductModel } = require("../models/products.model");
+const { authenticator } = require("../middlewares/authenticator.middleware");
 const ProductRouter = express.Router();
 ProductRouter.use(express.json());
 
@@ -9,78 +9,24 @@ ProductRouter.get("/products", async (req, res) => {
     const products = await ProductModel.find();
     res.json({ data: products, ok: true });
   } catch (error) {
-    res.send({ msg: "Error**", Error: error.message });
+    res.status(500).send({ msg: "Error fetching all products", error: error.message });
   }
 });
 
 ProductRouter.get("/products/singleproduct/:id", async (req, res) => {
-  const id = req.params.id;
   try {
-    const product = await ProductModel.findById({ _id: id });
+    const product = await ProductModel.findById(req.params.id);
     res.send({ data: product, ok: true });
   } catch (error) {
-    res.send({ msg: "Error**", Error: error.message });
-  }
-});
-
-ProductRouter.get("/products/men/:subcategory", async (req, res) => {
-  const subcategory = req.params.subcategory;
-  try {
-    // const products = await ProductModel.find({ gender: "men", subcategory: subcategory });
-    const products = await ProductModel.find({
-  gender: { $regex: /^men$/i }, // i = ignore case
-  subcategory: subcategory
-});
-    res.send({ data: products, count: products.length, ok: true });
-  } catch (error) {
-    res.send({ msg: "Server error", error: error.message });
-  }
-});
-
-ProductRouter.get("/products/women", async (req, res) => {
-  try {
-    const products = await ProductModel.find({ 
-      gender: { $regex: /^women$/i } 
-    });
-    const count = products.length;
-    res.send({ data: products, count: count, ok: true });
-  } catch (error) {
-    console.log(error);
-    res.send({ msg: "Error**", Error: error });
-  }
-});
-
-ProductRouter.get("/products/men", async (req, res) => {
-  try {
-    const products = await ProductModel.find({
-      gender: { $regex: /^men$/i }
-  }); 
-
-    const count = products.length;
-    res.send({ data: products, count: count, ok: true });
-  } catch (error) {
-    res.send({ msg: "Error", Error: error.message });
-  }
-});
-
-ProductRouter.get("/products/kids", async (req, res) => {
-  try {
-    const products = await ProductModel.find({
-      gender: { $regex: /^kid$/i }
-    });
-    const count = products.length;
-    res.send({ data: products, count: count, ok: true });
-  } catch (error) {
-    res.send({ msg: "Error", Error: error.message });
+    res.status(500).send({ msg: "Error fetching product", error: error.message });
   }
 });
 
 ProductRouter.get("/products/categories/:gender", async (req, res) => {
-  const gender = req.params.gender;
+  const gender = req.params.gender.toLowerCase();
   try {
-    const products = await ProductModel.find({
-      gender: { $regex: new RegExp(`^${gender}$`, "i") }
-    });
+    const query = gender === "all" ? {} : { gender: { $regex: new RegExp(`^${gender}$`, "i") } };
+    const products = await ProductModel.find(query);
 
     const categoriesMap = {};
 
@@ -108,38 +54,83 @@ ProductRouter.get("/products/categories/:gender", async (req, res) => {
   }
 });
 
-ProductRouter.post("/products/add", async (req, res) => {
-  const payload = req.body;
+ProductRouter.post("/products/add", authenticator, async (req, res) => {
   try {
+    const user = req.user;
+
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ ok: false, message: "Access denied" });
+    }
+
+    const payload = {
+      ...req.body,
+      userId: user.userid
+    };
+
     const newProduct = new ProductModel(payload);
     await newProduct.save();
     res.send({ msg: "Product Added Successfully", ok: true });
   } catch (error) {
-    res.send({ msg: "Error", Error: error.message });
+    res.status(500).send({ msg: "Error adding product", error: error.message });
+  }
+});
+
+// other routes...
+ProductRouter.get("/products/men/:subcategory", async (req, res) => {
+  try {
+    const products = await ProductModel.find({
+      gender: { $regex: /^men$/i },
+      subcategory: req.params.subcategory
+    });
+    res.send({ data: products, count: products.length, ok: true });
+  } catch (error) {
+    res.status(500).send({ msg: "Error fetching subcategory", error: error.message });
+  }
+});
+
+ProductRouter.get("/products/men", async (req, res) => {
+  try {
+    const products = await ProductModel.find({ gender: { $regex: /^men$/i } });
+    res.send({ data: products, count: products.length, ok: true });
+  } catch (error) {
+    res.status(500).send({ msg: "Error", error: error.message });
+  }
+});
+
+ProductRouter.get("/products/women", async (req, res) => {
+  try {
+    const products = await ProductModel.find({ gender: { $regex: /^women$/i } });
+    res.send({ data: products, count: products.length, ok: true });
+  } catch (error) {
+    res.status(500).send({ msg: "Error", error: error.message });
+  }
+});
+
+ProductRouter.get("/products/kids", async (req, res) => {
+  try {
+    const products = await ProductModel.find({ gender: { $regex: /^kid$/i } });
+    res.send({ data: products, count: products.length, ok: true });
+  } catch (error) {
+    res.status(500).send({ msg: "Error", error: error.message });
   }
 });
 
 ProductRouter.patch("/products/update/:id", async (req, res) => {
-  const id = req.params.id;
-
   try {
-    const products = await ProductModel.findByIdAndUpdate(
-      { _id: id },
-      req.body
-    );
+    await ProductModel.findByIdAndUpdate(req.params.id, req.body);
     res.send({ msg: "Product updated" });
   } catch (error) {
-    res.send({ msg: "Server error", Error: error.message });
+    res.status(500).send({ msg: "Server error", error: error.message });
   }
 });
 
 ProductRouter.delete("/products/delete/:id", async (req, res) => {
-  const id = req.params.id;
   try {
-    const products = await ProductModel.findByIdAndDelete({ _id: id });
+    await ProductModel.findByIdAndDelete(req.params.id);
     res.send({ msg: "Product deleted" });
   } catch (error) {
-    res.send({ msg: "Server error", Error: error.message });
+    res.status(500).send({ msg: "Server error", error: error.message });
   }
 });
+
 module.exports = { ProductRouter };

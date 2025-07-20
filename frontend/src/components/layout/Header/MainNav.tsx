@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useAuth } from "@/hooks/AuthProvider";
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, User, ShoppingCart, ChevronDown, MapPin } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -24,6 +25,7 @@ export const MainNav = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const { user } = useAuth();
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,9 +171,11 @@ export const MainNav = () => {
                   alt="Wishlist" 
                 />
               </Link>
-              <Link to="/admin" aria-label="Admin panel" className={location.pathname === '/admin' ? "relative after:absolute after:-bottom-2 after:left-1/2 after:-translate-x-1/2 after:w-2 after:h-2 after:bg-[#D92030] after:rounded-full" : ""}>
-                <User size={20} className="sm:w-6 sm:h-6 hover:opacity-80 transition-opacity text-red-600" />
-              </Link>
+              {user?.role === 'admin' && (
+                <Link to="/admin" aria-label="Admin panel" className={location.pathname === '/admin' ? "relative after:absolute after:-bottom-2 after:left-1/2 after:-translate-x-1/2 after:w-2 after:h-2 after:bg-[#D92030] after:rounded-full" : ""}>
+                  <User size={20} className="sm:w-6 sm:h-6 hover:opacity-80 transition-opacity text-red-600" />
+                </Link>
+              )}
             </div>
           </div>
         )}
@@ -229,10 +233,12 @@ export const MainNav = () => {
                 />
                 <span className="text-sm">Wishlist</span>
               </Link>
-              <Link to="/admin" aria-label="Admin panel" className="flex flex-col items-center" onClick={() => setIsMenuOpen(false)}>
-                <User size={24} className="mb-1 text-red-600" />
-                <span className="text-sm">Admin</span>
-              </Link>
+              {user?.role === 'admin' && (
+                <Link to="/admin" aria-label="Admin panel" className="flex flex-col items-center" onClick={() => setIsMenuOpen(false)}>
+                  <User size={24} className="mb-1 text-red-600" />
+                  <span className="text-sm">Admin</span>
+                </Link>
+              )}
             </li>
           </ul>
         </div>
