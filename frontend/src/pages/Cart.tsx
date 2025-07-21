@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
@@ -23,38 +22,154 @@ type CartItem = {
 const Cart = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [promoCode, setPromoCode] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Load cart items from localStorage on component mount
+  // Fetch cart items from backend on mount
   useEffect(() => {
-    const savedCartItems = localStorage.getItem('cartItems');
-    if (savedCartItems) {
-      setCartItems(JSON.parse(savedCartItems));
-    }
+    const fetchCart = async () => {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+          if (!token) {
+            toast.error('Please log in to add to cart');
+            window.location.href = '/auth';
+            return;
+          }
+      try {
+        const res = await fetch('/api/user/getcart', {
+          headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        }
+        });
+        const data = await res.json();
+        if (data.data) {
+          setCartItems(data.data.map((item) => ({
+            id: item._id,
+            productId: item.productId,
+            name: item.title,
+            color: item.color || '',
+            size: item.size || '',
+            price: item.price,
+            quantity: item.Qty,
+            image: Array.isArray(item.image) ? item.image[0] : item.image,
+            brand: item.brand || '',
+          })));
+        } else {
+          setCartItems([]);
+        }
+      } catch (err) {
+        toast.error('Failed to load cart');
+      }
+      setLoading(false);
+    };
+    fetchCart();
   }, []);
 
-  // Save cart items to localStorage whenever cartItems changes
-  useEffect(() => {
-    localStorage.setItem('cartItems', JSON.stringify(cartItems));
-  }, [cartItems]);
-
-  const updateQuantity = (id: string, newQuantity: number) => {
-    if (newQuantity < 1) return;
-    setCartItems(prev => 
-      prev.map(item => 
-        item.id === id ? {...item, quantity: newQuantity} : item
-      )
-    );
-    toast.success('Quantity updated');
+  // Remove product from cart (backend)
+  const removeItem = async (id: string) => {
+    setLoading(true);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Please log in to remove items');
+      window.location.href = '/auth';
+      return;
+    }
+    try {
+      const res = await fetch(`/api/user/remove/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        }
+      });
+      const data = await res.json();
+      if (data.msg === 'Product Removed') {
+        setCartItems(prev => prev.filter(item => item.id !== id));
+        toast.success('Item removed from cart');
+      } else {
+        toast.error('Failed to remove item');
+      }
+    } catch (err) {
+      toast.error('Error removing item');
+    }
+    setLoading(false);
   };
 
-  const removeItem = (id: string) => {
-    setCartItems(prev => prev.filter(item => item.id !== id));
-    toast.success('Item removed from cart');
+  // Buy all products in cart
+  const buyProducts = async () => {
+    setLoading(true);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Please log in to buy products');
+      window.location.href = '/auth';
+      return;
+    }
+    if (cartItems.length === 0) {
+      toast.error('Your cart is empty');
+      setLoading(false);
+      return;
+    }
+    try {
+      // console.log("User ID:", token);
+      // console.log("Request Body:", cartItems);
+      const res = await fetch('/api/order/buy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        }
+      });
+      console.log('Order response:', res);
+      const data = await res.json();
+      console.log('Order response:', data);
+      if (data.msg === 'Order placed successfully') {
+        setCartItems([]);
+        toast.success('Order placed!');
+      } else {
+        toast.error(data.msg || 'Order failed');
+      }
+    } catch (err) {
+      // console.log('Error placing order:', err);
+      toast.error('Error placing order');
+    }
+    setLoading(false);
   };
 
   const applyPromoCode = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Applying promo code:', promoCode);
+    toast.info('Promo code feature coming soon!');
+  };
+
+  // Update product quantity in cart (backend)
+  const updateQuantity = async (id: string, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    setLoading(true);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Please log in to update quantity');
+      window.location.href = '/auth';
+      return;
+    }
+    try {
+      const res = await fetch(`/api/user/updatecart/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ Qty: newQuantity })
+      });
+      const data = await res.json();
+      if (data.msg === 'Cart updated') {
+        setCartItems(prev => prev.map(item => item.id === id ? { ...item, quantity: newQuantity } : item));
+        toast.success('Quantity updated');
+      } else {
+        toast.error('Failed to update quantity');
+      }
+    } catch (err) {
+      toast.error('Error updating quantity');
+    }
+    setLoading(false);
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -97,7 +212,7 @@ const Cart = () => {
                               </div>
                             </div>
                             <div className="text-left sm:text-right flex-shrink-0">
-                              <div className="font-bold text-lg sm:text-xl text-[#D92030]">${item.price.toFixed(2)}</div>
+                              <div className="font-bold text-lg sm:text-xl text-[#D92030]">₹{item.price.toFixed(2)}</div>
                             </div>
                           </div>
                           
@@ -125,6 +240,7 @@ const Cart = () => {
                             <button 
                               onClick={() => removeItem(item.id)}
                               className="flex items-center gap-2 text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg transition-colors w-fit"
+                              disabled={loading}
                             >
                               <Trash2 size={12} />
                               <span className="text-xs sm:text-sm font-medium">Remove</span>
@@ -137,7 +253,7 @@ const Cart = () => {
                 </div>
                 
                 <div className="text-center sm:text-right font-semibold text-base sm:text-lg my-4 sm:my-6 bg-white rounded-lg shadow-sm p-4">
-                  Subtotal ({cartItems.length} items): <span className="text-[#D92030]">${subtotal.toFixed(2)}</span>
+                  Subtotal ({cartItems.length} items): <span className="text-[#D92030]">₹{subtotal.toFixed(2)}</span>
                 </div>
               </>
             ) : (
@@ -160,19 +276,19 @@ const Cart = () => {
                 <div className="space-y-3 mb-4 sm:mb-6">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
-                    <span className="font-medium">${subtotal.toFixed(2)}</span>
+                    <span className="font-medium">₹{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Shipping & Handling</span>
-                    <span className="font-medium">${shipping.toFixed(2)}</span>
+                    <span className="font-medium">₹{shipping.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Estimated Tax</span>
-                    <span className="font-medium">${tax.toFixed(2)}</span>
+                    <span className="font-medium">₹{tax.toFixed(2)}</span>
                   </div>
                   <div className="border-t-2 pt-3 flex justify-between font-bold text-base sm:text-lg">
                     <span>Total</span>
-                    <span className="text-[#D92030]">${total.toFixed(2)}</span>
+                    <span className="text-[#D92030]">₹{total.toFixed(2)}</span>
                   </div>
                 </div>
                 
@@ -194,8 +310,12 @@ const Cart = () => {
                   </div>
                 </form>
                 
-                <Button className="w-full bg-[#D92030] hover:bg-[#BC1C2A] py-3 text-sm sm:text-base font-semibold rounded-lg mb-4 sm:mb-6">
-                  Proceed to Checkout
+                <Button 
+                  className="w-full bg-[#D92030] hover:bg-[#BC1C2A] py-3 text-sm sm:text-base font-semibold rounded-lg mb-4 sm:mb-6"
+                  onClick={buyProducts}
+                  disabled={loading || cartItems.length === 0}
+                >
+                  {loading ? 'Processing...' : 'Buy Products'}
                 </Button>
                 
                 {/* Categories Section with Separate Images */}
@@ -302,9 +422,9 @@ const Cart = () => {
                   </div>
                   <h3 className="text-xs sm:text-sm font-semibold mb-2 line-clamp-2">{product.name}</h3>
                   <div className="flex items-center gap-2">
-                    <div className="text-sm sm:text-lg font-bold text-[#D92030]">${product.price}</div>
+                    <div className="text-sm sm:text-lg font-bold text-[#D92030]">₹{product.price}</div>
                     {product.oldPrice && (
-                      <div className="text-xs sm:text-sm text-gray-500 line-through">${product.oldPrice}</div>
+                      <div className="text-xs sm:text-sm text-gray-500 line-through">₹{product.oldPrice}</div>
                     )}
                   </div>
                 </Link>
@@ -352,9 +472,9 @@ const Cart = () => {
                   </div>
                   <h3 className="text-xs sm:text-sm font-semibold mb-2 line-clamp-2">{product.name}</h3>
                   <div className="flex items-center gap-2">
-                    <div className="text-sm sm:text-lg font-bold text-[#D92030]">${product.price}</div>
+                    <div className="text-sm sm:text-lg font-bold text-[#D92030]">₹{product.price}</div>
                     {product.oldPrice && (
-                      <div className="text-xs sm:text-sm text-gray-500 line-through">${product.oldPrice}</div>
+                      <div className="text-xs sm:text-sm text-gray-500 line-through">₹{product.oldPrice}</div>
                     )}
                   </div>
                 </Link>

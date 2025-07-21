@@ -17,21 +17,25 @@ CartRouter.get("/user/getcart", authenticator, async (req, res) => {
 
 CartRouter.post("/user/addtocart", authenticator, async (req, res) => {
   let payload = req.body;
-  const product_id = req.body.product_id;
+  console.log("Payload:", payload);
+  const productId = req.body.productId;
+  const userId = req.userid;
+
   try {
-    const product = await CartModel.findOne({ product_id });
+    const product = await CartModel.findOne({ productId, userId });
     if (product) {
-      return res.json({ msg: "Product Already Added to Cart" });
+      return res.json({ msg: "Product already in cart" });
     }
-    payload["userid"] = req.userid;
-    const newproduct = await CartModel(payload);
-    newproduct.save();
-    return res.json({ msg: "Product Added to Cart Successfully" });
+
+    payload.userId = userId;
+    const newproduct = new CartModel(payload);
+    await newproduct.save();
+    return res.json({ msg: "Product added to cart successfully", data: newproduct });
   } catch (error) {
-    console.log(error);
-    res.json({ msg: "Error", Error: error.message });
+    res.status(500).json({ msg: "Error", error: error.message });
   }
 });
+
 
 CartRouter.delete("/user/remove/:id", authenticator, async (req, res) => {
   try {

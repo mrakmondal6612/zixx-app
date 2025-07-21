@@ -91,9 +91,9 @@ const FeaturedCollection = () => {
                     <span className="text-sm text-gray-600">({item.reviews})</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xl font-bold text-[#D92030]">${item.price}</span>
+                    <span className="text-xl font-bold text-[#D92030]">₹{item.price}</span>
                     {item.oldPrice && (
-                      <span className="text-sm text-gray-500 line-through">${item.oldPrice}</span>
+                      <span className="text-sm text-gray-500 line-through">₹{item.oldPrice}</span>
                     )}
                   </div>
                 </div>

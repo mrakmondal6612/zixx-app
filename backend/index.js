@@ -5,6 +5,9 @@ const { ProductRouter } = require("./routes/products.routes");
 const cors = require("cors");
 const path = require("path");
 const session = require("express-session");
+const { CartRouter } = require("./routes/carts.routes");
+const { WishlistRouter } = require("./routes/wishlist.route");
+const { OrderRouter } = require("./routes/order.route");
 
 const app = express();
 require("dotenv").config();
@@ -26,7 +29,10 @@ app.use(
 
 // ✅ Mount user router under /api
 app.use("/api", UserRouter);
-app.use("/api", ProductRouter)
+app.use("/api", ProductRouter);
+app.use("/api", CartRouter);
+app.use("/api", WishlistRouter);
+app.use("/api", OrderRouter);
 
 app.get("/", (req, res) => {
   res.send("WELCOME TO THE ZIXX APP BACKEND");

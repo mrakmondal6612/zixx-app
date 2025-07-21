@@ -37,6 +37,7 @@ const Women = () => {
       try {
         const res = await fetch('/api/products/women');
         const result = await res.json();
+        console.log("Fetched products:", result);
         if (!result.ok) throw new Error("API returned not ok");
 
         const grouped: { [category: string]: { [subcategory: string]: Product[] } } = {};
@@ -81,6 +82,10 @@ const Women = () => {
     fetchProducts();
   }, []);
 
+  const allProducts = Object.values(groupedProducts).flatMap(subcategories => Object.values(subcategories).flat());
+  const bestSellers = allProducts.filter(p => p.theme?.toLowerCase() === 'bestseller').slice(0, 8);
+  const newArrivals = allProducts.filter(p => p.theme?.toLowerCase() === 'new arrival').slice(0, 8);
+
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Header />
@@ -104,11 +109,11 @@ const Women = () => {
                     <div className="aspect-square relative">
                       <img
                         src={category.image}
-                        alt={category.category}
+                        alt={category.category} 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
-                        <h3 className="text-white text-xl font-bold">{category.category}</h3>
+                        <h3 className="text-white text-xl font-bold">{category.category.toUpperCase()}</h3>
                       </div>
                     </div>
                   </Card>
@@ -133,7 +138,7 @@ const Women = () => {
         {error && <p className="text-red-500">{error}</p>}
         {!loading && !error && Object.keys(groupedProducts).map((category, i) => (
           <section key={i} className="mb-16">
-            <h2 className="text-2xl font-bold mb-6">{category}</h2>
+            <h2 className="text-2xl font-bold mb-6">{category.toUpperCase()}</h2>
             {Object.keys(groupedProducts[category]).map((subcategory, j) => (
               <div key={j} className="mb-8">
                 <h3 className="text-xl font-semibold mb-4">{subcategory}</h3>
@@ -151,10 +156,10 @@ const Women = () => {
                         <div className="p-4">
                           <h3 className="font-medium">{product.title}</h3>
                           <div className="flex items-center gap-2 mt-2">
-                            <span className="font-bold">${product.price}</span>
+                            <span className="font-bold">₹{product.price}</span>
                             {product.discount > 0 && (
                               <span className="text-gray-500 line-through text-sm">
-                                ${(product.price / (1 - product.discount / 100)).toFixed(2)}
+                                ₹{(product.price / (1 - product.discount / 100)).toFixed(2)}
                               </span>
                             )}
                           </div>
@@ -181,6 +186,8 @@ const Women = () => {
         </section>
         
         {/* Special Sections: Best Seller & New Arrival */}
+
+        {bestSellers.length > 0 && (
         <section className="mb-16">
         <h2 className="text-2xl font-bold mb-6">Best Sellers</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
@@ -201,10 +208,10 @@ const Women = () => {
                   <div className="p-4">
                     <h3 className="font-medium">{product.title}</h3>
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="font-bold">${product.price}</span>
+                      <span className="font-bold">₹{product.price}</span>
                       {product.discount > 0 && (
                         <span className="text-gray-500 line-through text-sm">
-                          ${(product.price / (1 - product.discount / 100)).toFixed(2)}
+                          ₹{(product.price / (1 - product.discount / 100)).toFixed(2)}
                         </span>
                       )}
                     </div>
@@ -214,7 +221,9 @@ const Women = () => {
             ))}
         </div>
         </section>
+        )}
 
+        {newArrivals.length > 0 && (
         <section className="mb-16">
         <h2 className="text-2xl font-bold mb-6">New Arrivals</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
@@ -248,6 +257,7 @@ const Women = () => {
             ))}
         </div>
         </section>
+        )}
 
       </main>
 

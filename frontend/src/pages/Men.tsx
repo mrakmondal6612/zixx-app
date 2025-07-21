@@ -91,10 +91,10 @@ const Men = () => {
                           <div className="p-4">
                             <h3 className="font-medium">{product.title}</h3>
                             <div className="flex items-center gap-2 mt-2">
-                              <span className="font-bold">${product.price}</span>
+                              <span className="font-bold">₹{product.price}</span>
                               {product.discount > 0 && (
                                 <span className="text-gray-500 line-through text-sm">
-                                  ${(product.price / (1 - product.discount / 100)).toFixed(2)}
+                                  ₹{(product.price / (1 - product.discount / 100)).toFixed(2)}
                                 </span>
                               )}
                             </div>

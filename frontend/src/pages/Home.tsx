@@ -139,6 +139,7 @@ const Home = () => {
         </section>
 
         {/* New Arrivals Section */}
+        {newArrivals.length > 0 && (
         <section className="mb-16">
           <h2 className="text-2xl font-bold mb-8">New Arrivals</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
@@ -151,10 +152,10 @@ const Home = () => {
                   <div className="p-4">
                     <h3 className="font-medium">{product.title}</h3>
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="font-bold">${product.price}</span>
+                      <span className="font-bold">₹{product.price}</span>
                       {product.discount > 0 && (
                         <span className="text-gray-500 line-through text-sm">
-                          ${(product.price / (1 - product.discount / 100)).toFixed(2)}
+                          ₹{(product.price / (1 - product.discount / 100)).toFixed(2)}
                         </span>
                       )}
                     </div>
@@ -164,6 +165,7 @@ const Home = () => {
             ))}
           </div>
         </section>
+        )}
 
         {/* Featured Collection Banner */}
         <Banner
@@ -176,6 +178,7 @@ const Home = () => {
         
 
         {/* Best Sellers Section */}
+        {bestSellers.length > 0 && (
         <section>
           <h2 className="text-2xl font-bold mb-8">Best Sellers</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
@@ -201,6 +204,8 @@ const Home = () => {
             ))}
           </div>
         </section>
+        )}
+
       </main>
 
       <Footer />

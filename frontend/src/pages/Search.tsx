@@ -220,10 +220,10 @@ const Search = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Prices</SelectItem>
-                  <SelectItem value="under-50">Under $50</SelectItem>
-                  <SelectItem value="50-100">$50 - $100</SelectItem>
-                  <SelectItem value="100-200">$100 - $200</SelectItem>
-                  <SelectItem value="over-200">Over $200</SelectItem>
+                  <SelectItem value="under-50">Under ₹50</SelectItem>
+                  <SelectItem value="50-100">₹50 - ₹100</SelectItem>
+                  <SelectItem value="100-200">₹100 - ₹200</SelectItem>
+                  <SelectItem value="over-200">Over ₹200</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -286,11 +286,11 @@ const Search = () => {
                   <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
                   
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="font-bold text-destructive">${product.price}</span>
+                    <span className="font-bold text-destructive">₹{product.price}</span>
                     {product.oldPrice && (
                       <>
                         <span className="text-sm text-muted-foreground line-through">
-                          ${product.oldPrice}
+                          ₹{product.oldPrice}
                         </span>
                         <Badge variant="destructive" className="text-xs">
                           {Math.round((1 - product.price / product.oldPrice) * 100)}% OFF

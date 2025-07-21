@@ -71,7 +71,7 @@ const NewArrivals = () => {
                   <div className="p-4 text-left">
                     <h3 className="font-semibold mb-2">{product.title}</h3>
                     <p className="text-gray-600 text-sm mb-2">{product.subcategory}</p>
-                    <div className="font-bold text-[#D92030]">${product.price}</div>
+                    <div className="font-bold text-[#D92030]">₹{product.price}</div>
                     {product.discount > 0 && (
                       <div className="text-gray-500 line-through text-sm">
                         ${(product.price / (1 - product.discount / 100)).toFixed(2)}

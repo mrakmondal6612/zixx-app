@@ -53,6 +53,11 @@ const Kids = () => {
     fetchProducts();
   }, []);
 
+  const allProducts = Object.values(groupedProducts).flatMap(subcategories => Object.values(subcategories).flat());
+  const bestSellers = allProducts.filter(p => p.theme?.toLowerCase() === 'bestseller').slice(0, 8);
+  const newArrivals = allProducts.filter(p => p.theme?.toLowerCase() === 'new arrival').slice(0, 8);
+  
+
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Header />
@@ -89,10 +94,10 @@ const Kids = () => {
                         <div className="p-4">
                           <h3 className="font-medium">{product.title}</h3>
                           <div className="flex items-center gap-2 mt-2">
-                            <span className="font-bold">${product.price}</span>
+                            <span className="font-bold">₹{product.price}</span>
                             {product.discount > 0 && (
                               <span className="text-gray-500 line-through text-sm">
-                                ${(product.price / (1 - product.discount / 100)).toFixed(2)}
+                              ₹{(product.price / (1 - product.discount / 100)).toFixed(2)}
                               </span>
                             )}
                           </div>
@@ -118,6 +123,7 @@ const Kids = () => {
         </section>
 
         {/* Special Sections */}
+        {bestSellers.length > 0 && (
         <section className="mb-16">
           <h2 className="text-2xl font-bold mb-6">Best Sellers</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
@@ -151,7 +157,9 @@ const Kids = () => {
               ))}
           </div>
         </section>
+      )}
 
+      {newArrivals.length > 0 && (
         <section className="mb-16">
           <h2 className="text-2xl font-bold mb-6">New Arrivals</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
@@ -185,6 +193,7 @@ const Kids = () => {
               ))}
           </div>
         </section>
+      )}
       </main>
 
       <Footer />

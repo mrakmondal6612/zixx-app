@@ -7,9 +7,16 @@ import { ScrollToTop } from '@/components/ui/scroll-to-top';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Heart, ShoppingCart, Star, Plus, Minus } from 'lucide-react';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 interface ProductType {
   _id: string;
@@ -25,6 +32,9 @@ interface ProductType {
   inStock: boolean;
   rating: number;
   reviewCount: number;
+  gender?: string;
+  category?: string;
+  theme?: string;
 }
 
 const Product = () => {
@@ -52,44 +62,103 @@ const Product = () => {
   }, [id]);
 
   const handleQuantityChange = (action: 'increase' | 'decrease') => {
-    if (action === 'increase') {
-      setQuantity(prev => prev + 1);
-    } else if (action === 'decrease' && quantity > 1) {
-      setQuantity(prev => prev - 1);
-    }
+    setQuantity((prev) =>
+      action === 'increase' ? prev + 1 : prev > 1 ? prev - 1 : prev
+    );
   };
 
-  const handleAddToCart = () => {
-    if (!product || (product.sizes?.length > 0 && !selectedSize) || (product.colors?.length > 0 && !selectedColor)) {
+  const handleAddToCart = async () => {
+    if (
+      !product ||
+      (product.sizes?.length > 0 && !selectedSize) ||
+      (product.colors?.length > 0 && !selectedColor)
+    ) {
       toast.error('Please select required size and color');
       return;
     }
 
-    const existingCart = JSON.parse(localStorage.getItem('cartItems') || '[]');
-    const cartItem = {
-      id: `${product._id}-${selectedSize}-${selectedColor}`,
-      productId: product._id,
-      name: product.title,
-      price: product.price,
-      image: product.image?.[0] || '',
-      size: selectedSize,
-      color: selectedColor,
-      quantity: quantity,
-      brand: product.brand
-    };
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('You must be logged in to add to cart.');
+        window.location.href = '/login';
+        return;
+      }
+      const res = await axios.post(
+        '/api/user/addtocart',
+        {
+          userId: undefined, // will be set by backend
+          productId: product._id,
+          title: product.title,
+          gender: product.gender || 'Unisex',
+          price: product.price,
+          discount: product.discount || 0,
+          rating: product.rating?.toString() || '0',
+          category: product.category || '',
+          theme: product.theme || '',
+          size: selectedSize || 'Free',
+          image: product.image || [],
+          Qty: quantity,
+          afterQtyprice: (product.price - (product.discount || 0)) * quantity,
+        },
+        {
+          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    const existingItemIndex = existingCart.findIndex(
-      (item: any) => item.productId === product._id && item.size === selectedSize && item.color === selectedColor
-    );
-
-    if (existingItemIndex > -1) {
-      existingCart[existingItemIndex].quantity += quantity;
-    } else {
-      existingCart.push(cartItem);
+      if (res.status === 200 || res.status === 201) {
+        toast.success(`Added ${product.title} to cart!`);
+      } else {
+        toast.error('Failed to add to cart');
+      }
+    } catch (err) {
+      console.error('Add to cart error:', err);
+      if (err?.response?.status === 401) {
+        toast.error('You must be logged in to add to cart.');
+        window.location.href = '/login';
+      } else {
+        toast.error('Add to cart failed (Are you logged in?)');
+      }
     }
+  };
 
-    localStorage.setItem('cartItems', JSON.stringify(existingCart));
-    toast.success(`Added ${product.title} to cart!`);
+  const handleAddToWishlist = async () => {
+    if (!product) return;
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('You must be logged in to add to wishlist.');
+        window.location.href = '/login';
+        return;
+      }
+      const res = await axios.post(
+        '/api/user/wishlist/add',
+        { productId: product._id },
+        {
+          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (res.status === 200) {
+        toast.success(`Added ${product.title} to wishlist!`);
+        setIsWishlisted(true);
+      } else {
+        toast.error('Failed to add to wishlist');
+      }
+    } catch (err) {
+      console.error('Add to wishlist error:', err);
+      if (err?.response?.status === 401) {
+        toast.error('You must be logged in to add to wishlist.');
+        window.location.href = '/login';
+      } else {
+        toast.error('Add to wishlist failed (Are you logged in?)');
+      }
+    }
   };
 
   if (!product) return <div className="text-center py-20">Loading...</div>;
@@ -99,6 +168,7 @@ const Product = () => {
       <Header />
       <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-8 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
+          {/* Product Image Section */}
           <div className="space-y-4">
             <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
               {product.image?.[currentImageIndex] && (
@@ -115,18 +185,27 @@ const Product = () => {
                   key={index}
                   onClick={() => setCurrentImageIndex(index)}
                   className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                    currentImageIndex === index ? 'border-destructive' : 'border-transparent'
+                    currentImageIndex === index
+                      ? 'border-destructive'
+                      : 'border-transparent'
                   }`}
                 >
-                  <img src={image} alt={`${product.title} ${index + 1}`} className="w-full h-full object-cover" />
+                  <img
+                    src={image}
+                    alt={`${product.title} ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
                 </button>
               ))}
             </div>
           </div>
 
+          {/* Product Details Section */}
           <div className="space-y-6">
             <div>
-              <Badge variant="secondary" className="mb-2">{product.brand}</Badge>
+              <Badge variant="secondary" className="mb-2">
+                {product.brand}
+              </Badge>
               <h1 className="text-3xl font-bold mb-2">{product.title}</h1>
               <div className="flex items-center gap-2 mb-4">
                 <div className="flex items-center gap-1">
@@ -134,7 +213,9 @@ const Product = () => {
                     <Star
                       key={star}
                       className={`w-5 h-5 ${
-                        star <= Math.floor(product.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
+                        star <= Math.floor(product.rating)
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'text-gray-300'
                       }`}
                     />
                   ))}
@@ -146,11 +227,17 @@ const Product = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-3xl font-bold text-destructive">${product.price}</span>
+              <span className="text-3xl font-bold text-destructive">
+                ₹{product.price}
+              </span>
               {product.discount > 0 && (
                 <>
                   <span className="text-xl text-muted-foreground line-through">
-                    ${(product.price / (1 - product.discount / 100)).toFixed(2)}
+                    $
+                    {(
+                      product.price /
+                      (1 - product.discount / 100)
+                    ).toFixed(2)}
                   </span>
                   <Badge variant="destructive">
                     {Math.round(product.discount)}% OFF
@@ -159,8 +246,11 @@ const Product = () => {
               )}
             </div>
 
-            <p className="text-muted-foreground leading-relaxed">{product.description}</p>
+            <p className="text-muted-foreground leading-relaxed">
+              {product.description}
+            </p>
 
+            {/* Size Selection */}
             <div>
               <label className="text-sm font-medium mb-2 block">Size</label>
               {product.sizes?.length ? (
@@ -170,15 +260,20 @@ const Product = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {product.sizes.map((size) => (
-                      <SelectItem key={size} value={size}>{size}</SelectItem>
+                      <SelectItem key={size} value={size}>
+                        {size}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               ) : (
-                <p className="text-sm text-gray-500">No size options available</p>
+                <p className="text-sm text-gray-500">
+                  No size options available
+                </p>
               )}
             </div>
 
+            {/* Color Selection */}
             <div>
               <label className="text-sm font-medium mb-2 block">Color</label>
               {product.colors?.length ? (
@@ -188,28 +283,45 @@ const Product = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {product.colors.map((color) => (
-                      <SelectItem key={color} value={color}>{color}</SelectItem>
+                      <SelectItem key={color} value={color}>
+                        {color}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               ) : (
-                <p className="text-sm text-gray-500">No color options available</p>
+                <p className="text-sm text-gray-500">
+                  No color options available
+                </p>
               )}
             </div>
 
+            {/* Quantity Controls */}
             <div>
               <label className="text-sm font-medium mb-2 block">Quantity</label>
               <div className="flex items-center gap-3">
-                <Button variant="outline" size="icon" onClick={() => handleQuantityChange('decrease')} disabled={quantity <= 1}>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleQuantityChange('decrease')}
+                  disabled={quantity <= 1}
+                >
                   <Minus className="w-4 h-4" />
                 </Button>
-                <span className="font-medium text-lg w-8 text-center">{quantity}</span>
-                <Button variant="outline" size="icon" onClick={() => handleQuantityChange('increase')}>
+                <span className="font-medium text-lg w-8 text-center">
+                  {quantity}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleQuantityChange('increase')}
+                >
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
             </div>
 
+            {/* Cart + Wishlist Buttons */}
             <div className="flex gap-4">
               <Button
                 className="flex-1 bg-destructive hover:bg-destructive/90"
@@ -225,13 +337,18 @@ const Product = () => {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setIsWishlisted(!isWishlisted)}
-                className={isWishlisted ? 'text-destructive border-destructive' : ''}
+                onClick={handleAddToWishlist}
+                className={
+                  isWishlisted ? 'text-destructive border-destructive' : ''
+                }
               >
-                <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
+                <Heart
+                  className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`}
+                />
               </Button>
             </div>
 
+            {/* Features Section */}
             <Card className="p-4">
               <h3 className="font-semibold mb-2">Product Features</h3>
               <ul className="text-sm text-muted-foreground space-y-1">
@@ -245,6 +362,7 @@ const Product = () => {
           </div>
         </div>
 
+        {/* Review Section */}
         <div className="border-t pt-16">
           <ReviewSection productId={product._id} />
         </div>
