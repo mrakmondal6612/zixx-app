@@ -22,7 +22,7 @@ CartRouter.post("/user/addtocart", authenticator, async (req, res) => {
   const userId = req.userid;
 
   try {
-    const product = await CartModel.findOne({ productId, userId });
+    const product = await CartModel.findOne({ productId, userId, "variation": { size: payload.variation.size, color: payload.variation.color }  }); 
     if (product) {
       return res.json({ msg: "Product already in cart" });
     }

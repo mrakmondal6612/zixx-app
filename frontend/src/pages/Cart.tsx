@@ -11,6 +11,10 @@ type CartItem = {
   id: string;
   productId: string;
   name: string;
+  gender: string;
+  category: string;
+  theme: string;
+  description: string;
   color: string;
   size: string;
   price: number;
@@ -47,6 +51,10 @@ const Cart = () => {
             id: item._id,
             productId: item.productId,
             name: item.title,
+            gender: item.gender,
+            category: item.category,
+            theme: item.theme,
+            description: item.description || '',
             color: item.color || '',
             size: item.size || '',
             price: item.price,

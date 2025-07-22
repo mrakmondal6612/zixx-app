@@ -21,20 +21,27 @@ import axios from 'axios';
 interface ProductType {
   _id: string;
   title: string;
-  brand: string;
+  description?: string;
+  brand?: string;
   price: number;
   discount: number;
   oldPrice?: number;
-  description: string;
   image?: string[];
-  sizes?: string[];
-  colors?: string[];
+  size?: string[];
+  color?: string[];
   inStock: boolean;
   rating: number;
   reviewCount: number;
   gender?: string;
   category?: string;
   theme?: string;
+  isWishlisted?: boolean;
+  afterQtyprice?: number;
+  vriation?: {
+    size: string;
+    color: string;
+    quantity: number;
+  };
 }
 
 const Product = () => {
@@ -46,13 +53,24 @@ const Product = () => {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         const res = await fetch(`/api/products/singleproduct/${id}`);
         if (!res.ok) throw new Error('Failed to fetch product');
         const result = await res.json();
-        if (result.ok) setProduct(result.data);
+        console.log('Fetched product:', result);
+        if (result.ok) {
+          setProduct(result.data);
+          setSelectedSize(result.data.size?.[0] || '');
+          setSelectedColor(result.data.color?.[0] || '');
+          setIsWishlisted(result.data.isWishlisted || false);
+        } else {
+          toast.error(result.message || 'Failed to load product');
+          console.error('Error fetching product:', result.message);
+          setProduct(null); 
+        }
       } catch (err) {
         console.error('Error loading product:', err);
       }
@@ -70,8 +88,8 @@ const Product = () => {
   const handleAddToCart = async () => {
     if (
       !product ||
-      (product.sizes?.length > 0 && !selectedSize) ||
-      (product.colors?.length > 0 && !selectedColor)
+      (product.size?.length > 0 && !selectedSize) ||
+      (product.color?.length > 0 && !selectedColor)
     ) {
       toast.error('Please select required size and color');
       return;
@@ -90,6 +108,9 @@ const Product = () => {
           userId: undefined, // will be set by backend
           productId: product._id,
           title: product.title,
+          description: product.description || '',
+          brand: product.brand || '',
+          color: selectedColor || 'Default Color',
           gender: product.gender || 'Unisex',
           price: product.price,
           discount: product.discount || 0,
@@ -100,6 +121,12 @@ const Product = () => {
           image: product.image || [],
           Qty: quantity,
           afterQtyprice: (product.price - (product.discount || 0)) * quantity,
+          total: (product.price - (product.discount || 0)) * quantity,
+          variation: {
+            size: selectedSize,
+            color: selectedColor,
+            quantity: quantity,
+          },
         },
         {
           withCredentials: true,
@@ -252,14 +279,14 @@ const Product = () => {
 
             {/* Size Selection */}
             <div>
-              <label className="text-sm font-medium mb-2 block">Size</label>
-              {product.sizes?.length ? (
+              <label className="text-sm font-medium mb-2 block">Size</label> 
+              {product.size?.length ? (
                 <Select value={selectedSize} onValueChange={setSelectedSize}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a size" />
                   </SelectTrigger>
                   <SelectContent>
-                    {product.sizes.map((size) => (
+                    {product.size.map((size) => (
                       <SelectItem key={size} value={size}>
                         {size}
                       </SelectItem>
@@ -276,13 +303,13 @@ const Product = () => {
             {/* Color Selection */}
             <div>
               <label className="text-sm font-medium mb-2 block">Color</label>
-              {product.colors?.length ? (
+              {product.color?.length ? (
                 <Select value={selectedColor} onValueChange={setSelectedColor}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a color" />
                   </SelectTrigger>
                   <SelectContent>
-                    {product.colors.map((color) => (
+                    {product.color.map((color) => (
                       <SelectItem key={color} value={color}>
                         {color}
                       </SelectItem>
@@ -326,8 +353,8 @@ const Product = () => {
               <Button
                 className="flex-1 bg-destructive hover:bg-destructive/90"
                 disabled={
-                  (product.sizes?.length > 0 && !selectedSize) ||
-                  (product.colors?.length > 0 && !selectedColor)
+                  (product.size?.length > 0 && !selectedSize) ||
+                  (product.color?.length > 0 && !selectedColor)
                 }
                 onClick={handleAddToCart}
               >
