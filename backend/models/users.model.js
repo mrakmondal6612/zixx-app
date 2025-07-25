@@ -9,7 +9,25 @@ const userSchema = mongoose.Schema({
   phone: { type: Number, required: true },
   dob: { type: String, required: true },
   gender: { type: String, required: true },
-  role: { type: String, enum: ["admin", "customer"], default: "customer" }  // 👈 Add this
+  address: {
+    personal_address: { type: String, required: true },
+    shoping_address: { type: String, required: true },
+    billing_address: { type: String, required: true },
+    address_village: { type: String, default: "" },
+    landmark: { type: String, default: "" },
+    city: { type: String },
+    state: { type: String },
+    country: { type: String },
+    zip: { type: String },
+  },
+  profile_pic: { type: String, default: "https://example.com/default-profile-pic.png" },
+  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "product" }],
+  orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "order" }],
+  emailVerified: { type: Boolean, default: false },
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+  role: { type: String, enum: ["admin", "customer"], default: "customer" }
 });
 
 userSchema.pre("save", async function (next) {

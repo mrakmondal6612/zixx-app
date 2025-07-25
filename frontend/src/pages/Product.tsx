@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 import { ReviewSection } from '@/components/ReviewSection';
@@ -46,38 +46,56 @@ interface ProductType {
 
 const Product = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [product, setProduct] = useState<ProductType | null>(null);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [reviews, setReviews] = useState([]);
+  const [showAll, setShowAll] = useState(false);
+
+  const handleShowReviews = () => setShowAll((prev) => !prev);
 
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const res = await fetch(`/api/products/singleproduct/${id}`);
+        let apiUrl = '';
+        let byName = false;
+        if (id) {
+          apiUrl = `/api/products/singleproduct/${id}`;
+        } else {
+          // Try to get name from query string
+          const params = new URLSearchParams(location.search);
+          const name = params.get('name');
+          if (name) {
+            apiUrl = `/api/products/byname/${encodeURIComponent(name)}`;
+            byName = true;
+          }
+        }
+        if (!apiUrl) return;
+        const res = await fetch(apiUrl);
         if (!res.ok) throw new Error('Failed to fetch product');
         const result = await res.json();
-        console.log('Fetched product:', result);
         if (result.ok) {
           setProduct(result.data);
           setSelectedSize(result.data.size?.[0] || '');
           setSelectedColor(result.data.color?.[0] || '');
           setIsWishlisted(result.data.isWishlisted || false);
+          setReviews(result.data.reviews || []);
         } else {
           toast.error(result.message || 'Failed to load product');
-          console.error('Error fetching product:', result.message);
-          setProduct(null); 
+          setProduct(null);
         }
       } catch (err) {
         console.error('Error loading product:', err);
       }
     };
-
-    if (id) fetchProduct();
-  }, [id]);
+    fetchProduct();
+  }, [id, location.search]);
 
   const handleQuantityChange = (action: 'increase' | 'decrease') => {
     setQuantity((prev) =>
@@ -138,6 +156,9 @@ const Product = () => {
 
       if (res.status === 200 || res.status === 201) {
         toast.success(`Added ${product.title} to cart!`);
+        setTimeout(() => {
+          navigate('/cart');
+        }, 500);
       } else {
         toast.error('Failed to add to cart');
       }
@@ -204,6 +225,7 @@ const Product = () => {
                   alt={product.title}
                   className="w-full h-full object-cover"
                 />
+              
               )}
             </div>
             <div className="flex gap-2 overflow-x-auto">
@@ -251,8 +273,27 @@ const Product = () => {
                   {product.rating} ({product.reviewCount} reviews)
                 </span>
               </div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-sm text-muted-foreground">
+                  {product.description || 'No description available.'}
+                </div>
+                
+                {/* <Button variant="link" className="p-0 font-normal" onClick={handleShowReviews}>
+                  {showAll ? 'Show less' : 'Show more'}
+                </Button> */}
+              </div>
             </div>
-
+            {/* Features Section */}
+            <Card className="p-4">
+              <h3 className="font-semibold mb-2">Product Features</h3>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• 100% Organic Cotton</li>
+                <li>• Machine Washable</li>
+                <li>• Pre-shrunk Fabric</li>
+                <li>• Comfortable Fit</li>
+                <li>• Eco-friendly Dyes</li>
+              </ul>
+            </Card>
             <div className="flex items-center gap-3">
               <span className="text-3xl font-bold text-destructive">
                 ₹{product.price}
@@ -273,9 +314,7 @@ const Product = () => {
               )}
             </div>
 
-            <p className="text-muted-foreground leading-relaxed">
-              {product.description}
-            </p>
+          
 
             {/* Size Selection */}
             <div>
@@ -375,17 +414,7 @@ const Product = () => {
               </Button>
             </div>
 
-            {/* Features Section */}
-            <Card className="p-4">
-              <h3 className="font-semibold mb-2">Product Features</h3>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• 100% Organic Cotton</li>
-                <li>• Machine Washable</li>
-                <li>• Pre-shrunk Fabric</li>
-                <li>• Comfortable Fit</li>
-                <li>• Eco-friendly Dyes</li>
-              </ul>
-            </Card>
+            
           </div>
         </div>
 

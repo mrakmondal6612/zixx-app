@@ -1,10 +1,14 @@
 const express = require("express");
 const { UserModel } = require("../models/users.model");
+const { OrderModel } = require("../models/order.model");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const passport = require("../oauths/google.oauth");
+
 const { v4: uuidv4 } = require("uuid");
 require("dotenv").config();
+const { upload, cloudinaryUploadMiddleware } = require("../middlewares/cloudinaryUpload");
+const { authenticator } = require("../middlewares/authenticator.middleware");
 
 const UserRouter = express.Router();
 
@@ -15,7 +19,22 @@ UserRouter.use(passport.session());
 // =====================
 UserRouter.post("/register", async (req, res) => {
   try {
-    const { first_name, last_name, email, password, phone, gender, dob, role } = req.body;
+    const {
+      first_name,
+      last_name,
+      email,
+      password,
+      phone,
+      gender,
+      dob,
+      role,
+      address = {},
+      profile_pic,
+      wishlist = [],
+      orders = [],
+      emailVerified = false,
+      isActive = true,
+    } = req.body;
 
     const existingUser = await UserModel.findOne({ email });
     if (existingUser) {
@@ -30,7 +49,13 @@ UserRouter.post("/register", async (req, res) => {
       phone,
       gender,
       dob,
-      role: role || "user", // default role is 'user'
+      role: role || "user",
+      address,
+      profile_pic,
+      wishlist,
+      orders,
+      emailVerified,
+      isActive,
     });
 
     await newUser.save();
@@ -97,19 +122,63 @@ UserRouter.get("/validatetoken", (req, res) => {
   }
 });
 
-// ==========================
-// ✅ Update User Info
-// ==========================
-UserRouter.patch("/update/:id", async (req, res) => {
-  const { id } = req.params;
-  const updates = req.body;
 
-  try {
-    await UserModel.findByIdAndUpdate(id, updates, { new: true });
-    res.json({ msg: "User updated successfully", ok: true });
-  } catch (error) {
-    res.status(500).json({ msg: "Failed to update user", error: error.message, ok: false });
+// ==========================
+// ✅ Update User Info & Profile Photo
+// ==========================
+UserRouter.patch(
+  "/users/me",
+  authenticator,
+  upload.single("profile_pic"),
+  cloudinaryUploadMiddleware,
+  async (req, res) => {
+    try {
+      const userId = req.userid;
+      const updates = req.body;
+      // If phone is present, convert to number
+      if (updates.phone) updates.phone = Number(updates.phone);
+      // If address fields are present, nest them (including city, state, country, zip)
+      if (
+        updates.address_village !== undefined ||
+        updates.landmark !== undefined ||
+        updates.city !== undefined ||
+        updates.state !== undefined ||
+        updates.country !== undefined ||
+        updates.zip !== undefined
+      ) {
+        // Fetch current user to merge address fields
+        const userDoc = await UserModel.findById(userId);
+        const currentAddress = userDoc?.address || {};
+        updates.address = {
+          ...currentAddress,
+          ...(updates.address_village !== undefined ? { address_village: updates.address_village } : {}),
+          ...(updates.landmark !== undefined ? { landmark: updates.landmark } : {}),
+          ...(updates.city !== undefined ? { city: updates.city } : {}),
+          ...(updates.state !== undefined ? { state: updates.state } : {}),
+          ...(updates.country !== undefined ? { country: updates.country } : {}),
+          ...(updates.zip !== undefined ? { zip: updates.zip } : {}),
+        };
+        delete updates.personal_address;
+        delete updates.shoping_address;
+        delete updates.billing_address;
+        delete updates.address_village;
+        delete updates.landmark;
+        delete updates.city;
+        delete updates.state;
+        delete updates.country;
+        delete updates.zip;
+      }
+      const updatedUser = await UserModel.findByIdAndUpdate(userId, updates, { new: true }).select("-password");
+      res.json({ msg: "User updated successfully", user: updatedUser, ok: true });
+    } catch (error) {
+      res.status(500).json({ msg: "Failed to update user", error: error.message, ok: false });
+    }
   }
-});
+);
 
 module.exports = { UserRouter };
+
+// ==========================
+// ✅ Get All Orders for User
+// ==========================
+

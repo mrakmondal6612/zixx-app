@@ -83,10 +83,10 @@ const NewArrivals = () => {
             ))}
           </div>
 
-          {/* Reviews Section */}
-          <div className="mt-16">
-            <ReviewSection />
-          </div>
+          {/* Reviews Section/ */}
+          {/* <div className="mt-16">
+            <ReviewSection productId={newArrivals[0]?._id || ''} />
+          </div> */}
         </div>
       </main>
 

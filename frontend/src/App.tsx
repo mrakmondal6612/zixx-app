@@ -1,4 +1,5 @@
 
+import Buy from './pages/Buy';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,6 +23,7 @@ import OnSale from "./pages/OnSale";
 import NewArrivals from "./pages/NewArrivals";
 import Contact from "./pages/Contact";
 import TrackOrder from "./pages/TrackOrder";
+import Orders from "./pages/Orders";
 import Search from "./pages/Search";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfUse from "./pages/TermsOfUse";
@@ -31,6 +33,7 @@ import Accessories from "./pages/Accessories";
 import Collections from "./pages/Collections";
 import FeaturedCollection from "./pages/FeaturedCollection";
 import Product from "./pages/Product";
+import SingleCartProduct from "./pages/SingleCartProduct";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -47,6 +50,8 @@ const App = () => (
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
+        <Route path="/cart/product/:id" element={<ProtectedRoute><SingleCartProduct /></ProtectedRoute>} />
+        <Route path="/buy" element={<Buy />} />
         <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
         <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
         <Route path="/brands" element={<Brands />} />
@@ -63,6 +68,7 @@ const App = () => (
         <Route path="/new-arrivals" element={<NewArrivals />} />
         <Route path="/contact" element={<ProtectedRoute><Contact /></ProtectedRoute>} />
         <Route path="/track-order" element={<ProtectedRoute><TrackOrder /></ProtectedRoute>} />
+        <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
         <Route path="/search" element={<Search />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfUse />} />

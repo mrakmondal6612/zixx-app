@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 import { Card } from '@/components/ui/card';
@@ -30,132 +30,51 @@ const Search = () => {
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [priceRange, setPriceRange] = useState('all');
   const [sortBy, setSortBy] = useState('relevance');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>(['all']);
+  const [brands, setBrands] = useState<string[]>(['all']);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock products data
-  const products: Product[] = [
-    {
-      id: '1',
-      name: 'ZIXX Classic Fit T-shirt',
-      brand: 'ZIXX',
-      category: 'T-Shirts',
-      price: 49.99,
-      oldPrice: 69.99,
-      image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400',
-      inStock: true
-    },
-    {
-      id: '2',
-      name: 'Premium Denim Jeans',
-      brand: 'Levi\'s',
-      category: 'Jeans',
-      price: 89.99,
-      image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400',
-      inStock: true
-    },
-    {
-      id: '3',
-      name: 'Casual Button Shirt',
-      brand: 'Tommy Hilfiger',
-      category: 'Shirts',
-      price: 79.99,
-      oldPrice: 99.99,
-      image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400',
-      inStock: false
-    },
-    {
-      id: '4',
-      name: 'Leather Jacket',
-      brand: 'Zara',
-      category: 'Jackets',
-      price: 199.99,
-      image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400',
-      inStock: true
-    },
-    {
-      id: '5',
-      name: 'Summer Dress',
-      brand: 'H&M',
-      category: 'Dresses',
-      price: 39.99,
-      image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400',
-      inStock: true
-    },
-    {
-      id: '6',
-      name: 'Sneakers',
-      brand: 'Nike',
-      category: 'Shoes',
-      price: 129.99,
-      image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400',
-      inStock: true
-    }
-  ];
-
-  const categories = ['all', 'T-Shirts', 'Jeans', 'Shirts', 'Jackets', 'Dresses', 'Shoes'];
-  const brands = ['all', 'ZIXX', 'Nike', 'Levi\'s', 'Tommy Hilfiger', 'Zara', 'H&M'];
-
-  const filteredProducts = useMemo(() => {
-    let filtered = products;
-
-    // Filter by search query
-    if (searchQuery) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(product => product.category === selectedCategory);
-    }
-
-    // Filter by brand
-    if (selectedBrand !== 'all') {
-      filtered = filtered.filter(product => product.brand === selectedBrand);
-    }
-
-    // Filter by price range
-    if (priceRange !== 'all') {
-      filtered = filtered.filter(product => {
-        switch (priceRange) {
-          case 'under-50':
-            return product.price < 50;
-          case '50-100':
-            return product.price >= 50 && product.price <= 100;
-          case '100-200':
-            return product.price >= 100 && product.price <= 200;
-          case 'over-200':
-            return product.price > 200;
-          default:
-            return true;
+  // Fetch products from backend
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Build query params
+        const params = new URLSearchParams();
+        if (searchQuery) params.append('q', searchQuery);
+        if (selectedCategory !== 'all') params.append('category', selectedCategory);
+        if (selectedBrand !== 'all') params.append('brand', selectedBrand);
+        if (priceRange !== 'all') params.append('priceRange', priceRange);
+        if (sortBy !== 'relevance') params.append('sort', sortBy);
+        const res = await fetch(`/api/products?${params.toString()}`);
+        const data = await res.json();
+        if (data.ok && Array.isArray(data.products)) {
+          setProducts(data.products);
+          // Optionally update categories/brands from backend
+          if (Array.isArray(data.categories)) setCategories(['all', ...data.categories]);
+          if (Array.isArray(data.brands)) setBrands(['all', ...data.brands]);
+        } else {
+          setError(data.message || 'Failed to fetch products');
         }
-      });
-    }
-
-    // Sort products
-    switch (sortBy) {
-      case 'price-low':
-        filtered.sort((a, b) => a.price - b.price);
-        break;
-      case 'price-high':
-        filtered.sort((a, b) => b.price - a.price);
-        break;
-      case 'name':
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      default:
-        break;
-    }
-
-    return filtered;
+      } catch (err) {
+        setError('Failed to fetch products');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, selectedCategory, selectedBrand, priceRange, sortBy]);
+
+  // No need for filteredProducts, use products from backend
+  const filteredProducts = products;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
-      
       <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-8 py-10">
         {/* Search Header */}
         <div className="mb-8">
@@ -171,14 +90,12 @@ const Search = () => {
             />
           </div>
         </div>
-
         {/* Filters */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
             <Filter className="w-5 h-5" />
             <h2 className="text-lg font-semibold">Filters</h2>
           </div>
-          
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Category</label>
@@ -195,7 +112,6 @@ const Search = () => {
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <label className="text-sm font-medium mb-2 block">Brand</label>
               <Select value={selectedBrand} onValueChange={setSelectedBrand}>
@@ -211,7 +127,6 @@ const Search = () => {
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <label className="text-sm font-medium mb-2 block">Price Range</label>
               <Select value={priceRange} onValueChange={setPriceRange}>
@@ -227,7 +142,6 @@ const Search = () => {
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <label className="text-sm font-medium mb-2 block">Sort By</label>
               <Select value={sortBy} onValueChange={setSortBy}>
@@ -244,17 +158,25 @@ const Search = () => {
             </div>
           </div>
         </div>
-
         {/* Results */}
         <div className="mb-4">
-          <p className="text-muted-foreground">
-            {filteredProducts.length} products found
-            {searchQuery && ` for "${searchQuery}"`}
-          </p>
+          {loading ? (
+            <p className="text-muted-foreground">Loading products...</p>
+          ) : error ? (
+            <p className="text-red-500">{error}</p>
+          ) : (
+            <p className="text-muted-foreground">
+              {filteredProducts.length} products found
+              {searchQuery && ` for "${searchQuery}"`}
+            </p>
+          )}
         </div>
-
         {/* Products Grid */}
-        {filteredProducts.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-16">Loading...</div>
+        ) : error ? (
+          <div className="text-center text-red-500 py-16">{error}</div>
+        ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredProducts.map((product) => (
               <Card key={product.id} className="overflow-hidden hover-shadow">
@@ -277,14 +199,12 @@ const Search = () => {
                     <Heart className="w-4 h-4" />
                   </Button>
                 </div>
-                
                 <div className="p-4">
                   <Badge variant="secondary" className="mb-2">
                     {product.brand}
                   </Badge>
                   <h3 className="font-semibold mb-1">{product.name}</h3>
                   <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
-                  
                   <div className="flex items-center gap-2 mb-3">
                     <span className="font-bold text-destructive">₹{product.price}</span>
                     {product.oldPrice && (
@@ -298,7 +218,6 @@ const Search = () => {
                       </>
                     )}
                   </div>
-                  
                   <Button 
                     className="w-full bg-destructive hover:bg-destructive/90"
                     disabled={!product.inStock}
@@ -331,7 +250,6 @@ const Search = () => {
           </div>
         )}
       </main>
-      
       <Footer />
       <ScrollToTop />
     </div>

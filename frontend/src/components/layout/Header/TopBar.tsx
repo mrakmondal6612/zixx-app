@@ -137,8 +137,12 @@ export const TopBar = () => {
             <div className="text-xs md:text-sm font-normal leading-[19.5px] ml-2">Loading...</div>
           ) : user ? (
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 text-xs md:text-sm font-normal leading-[19.5px] hover:opacity-80 transition-opacity ml-2">
-                <User className="w-4 h-4" />
+              <DropdownMenuTrigger className="flex items-center gap-2 text-xs md:text-sm font-normal leading-[19.5px] hover:opacity-80 transition-opacity ml-2">
+                <img
+                  src={user.profile_pic || "/placeholder.svg"}
+                  alt="Profile"
+                  className="w-7 h-7 rounded-full object-cover border border-gray-300 bg-white"
+                />
                 <span className="hidden md:inline">
                   {user.first_name ? `${user.first_name} ${user.last_name}` : user.email?.split('@')[0] || 'Account'}
                 </span>

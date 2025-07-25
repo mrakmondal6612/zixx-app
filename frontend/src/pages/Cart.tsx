@@ -3,6 +3,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 import { Link } from 'react-router-dom';
 import { Minus, Plus, Trash2, ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
 import { toast } from 'sonner';
@@ -24,6 +25,7 @@ type CartItem = {
 };
 
 const Cart = () => {
+  const navigate = useNavigate();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [promoCode, setPromoCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -200,7 +202,11 @@ const Cart = () => {
                 <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                   <div className="space-y-0">
                     {cartItems.map((item, index) => (
-                      <div key={item.id} className={`responsive-flex p-4 sm:p-6 ${index < cartItems.length - 1 ? 'border-b border-gray-200' : ''}`}>
+                      <div
+                        key={item.id}
+                        className={`responsive-flex p-4 sm:p-6 cursor-pointer hover:bg-gray-100 transition ${index < cartItems.length - 1 ? 'border-b border-gray-200' : ''}`}
+                        onClick={() => navigate(`/cart/product/${item.id}`)}
+                      >
                         <div className="w-full sm:w-20 md:w-24 h-20 md:h-24 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden image-container">
                           <img 
                             src={item.image} 
@@ -208,7 +214,6 @@ const Cart = () => {
                             className="w-full h-full object-contain product-image" 
                           />
                         </div>
-                        
                         <div className="flex-grow space-y-2 min-w-0">
                           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                             <div className="min-w-0">
@@ -223,11 +228,9 @@ const Cart = () => {
                               <div className="font-bold text-lg sm:text-xl text-[#D92030]">₹{item.price.toFixed(2)}</div>
                             </div>
                           </div>
-                          
                           <p className="text-xs sm:text-sm text-green-600 font-medium">Delivery by {new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
-                          
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
-                            <div className="flex items-center gap-0 border border-gray-300 rounded-lg overflow-hidden w-fit">
+                            <div className="flex items-center gap-0 border border-gray-300 rounded-lg overflow-hidden w-fit" onClick={e => e.stopPropagation()}>
                               <button 
                                 onClick={() => updateQuantity(item.id, item.quantity - 1)}
                                 className="px-2 sm:px-3 py-1 hover:bg-gray-100 transition-colors text-gray-800"
@@ -244,9 +247,8 @@ const Cart = () => {
                                 <Plus size={14} />
                               </button>
                             </div>
-                            
                             <button 
-                              onClick={() => removeItem(item.id)}
+                              onClick={e => { e.stopPropagation(); removeItem(item.id); }}
                               className="flex items-center gap-2 text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg transition-colors w-fit"
                               disabled={loading}
                             >
@@ -260,8 +262,9 @@ const Cart = () => {
                   </div>
                 </div>
                 
-                <div className="text-center sm:text-right font-semibold text-base sm:text-lg my-4 sm:my-6 bg-white rounded-lg shadow-sm p-4">
-                  Subtotal ({cartItems.length} items): <span className="text-[#D92030]">₹{subtotal.toFixed(2)}</span>
+                <div className="text-center sm:text-right font-extrabold text-lg sm:text-2xl my-4 sm:my-6 bg-gradient-to-r from-pink-200 via-purple-200 to-indigo-200 rounded-2xl shadow-lg p-4 border-2 border-white/60 animate-gradient-x">
+                  <span className="uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 drop-shadow">Subtotal</span>
+                  <span className="ml-2 text-pink-600 animate-pulse">({cartItems.length} items): ₹{subtotal.toFixed(2)}</span>
                 </div>
               </>
             ) : (
@@ -278,25 +281,24 @@ const Cart = () => {
           {/* Order Summary */}
           {cartItems.length > 0 && (
             <div className="w-full lg:w-[300px] xl:w-[350px] flex-shrink-0">
-              <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 sticky top-28">
-                <h2 className="font-bold text-lg mb-4 sm:mb-6">Order Summary</h2>
-                
+              <div className="bg-gradient-to-br from-pink-100 via-purple-100 to-indigo-100 rounded-3xl shadow-xl p-6 sticky top-28 border-2 border-white/60">
+                <h2 className="font-black text-xl mb-4 sm:mb-6 text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 drop-shadow">Order Summary</h2>
                 <div className="space-y-3 mb-4 sm:mb-6">
-                  <div className="flex justify-between text-sm">
-                    <span>Subtotal</span>
-                    <span className="font-medium">₹{subtotal.toFixed(2)}</span>
+                  <div className="flex justify-between text-base font-semibold">
+                    <span className="text-pink-500">Subtotal</span>
+                    <span className="font-bold text-indigo-600">₹{subtotal.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Shipping & Handling</span>
-                    <span className="font-medium">₹{shipping.toFixed(2)}</span>
+                  <div className="flex justify-between text-base font-semibold">
+                    <span className="text-purple-500">Shipping</span>
+                    <span className="font-bold text-pink-600">₹{shipping.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Estimated Tax</span>
-                    <span className="font-medium">₹{tax.toFixed(2)}</span>
+                  <div className="flex justify-between text-base font-semibold">
+                    <span className="text-indigo-500">Tax</span>
+                    <span className="font-bold text-purple-600">₹{tax.toFixed(2)}</span>
                   </div>
-                  <div className="border-t-2 pt-3 flex justify-between font-bold text-base sm:text-lg">
-                    <span>Total</span>
-                    <span className="text-[#D92030]">₹{total.toFixed(2)}</span>
+                  <div className="border-t-2 border-dashed border-pink-300 pt-3 flex justify-between font-black text-lg sm:text-xl">
+                    <span className="uppercase tracking-widest text-indigo-700">Total</span>
+                    <span className="text-pink-600 animate-pulse">₹{total.toFixed(2)}</span>
                   </div>
                 </div>
                 
@@ -319,11 +321,17 @@ const Cart = () => {
                 </form>
                 
                 <Button 
-                  className="w-full bg-[#D92030] hover:bg-[#BC1C2A] py-3 text-sm sm:text-base font-semibold rounded-lg mb-4 sm:mb-6"
-                  onClick={buyProducts}
-                  disabled={loading || cartItems.length === 0}
+                  className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-indigo-500 hover:to-pink-500 py-3 text-base font-extrabold rounded-2xl mb-4 sm:mb-6 shadow-lg shadow-pink-200/40 border-2 border-white border-dashed tracking-wider uppercase transition-all duration-300 animate-bounce-slow"
+                  style={{ letterSpacing: '0.1em', boxShadow: '0 4px 24px 0 rgba(236, 72, 153, 0.15)' }}
+                  onClick={() => navigate('/buy')}
+                  disabled={cartItems.length === 0}
                 >
-                  {loading ? 'Processing...' : 'Buy Products'}
+                  <span className="flex items-center justify-center gap-2">
+                    <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-white animate-wiggle">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1.35 2.7A2 2 0 007.5 19h9a2 2 0 001.85-1.3L17 13M7 13V6h13" />
+                    </svg>
+                    <span className="bg-white/20 px-3 py-1 rounded-xl text-white font-black text-lg drop-shadow-sm">Buy Products</span>
+                  </span>
                 </Button>
                 
                 {/* Categories Section with Separate Images */}
@@ -420,7 +428,7 @@ const Cart = () => {
               }
             ].map((product, index) => (
               <div key={index} className="bg-white rounded-lg shadow-sm spacing-sm hover:shadow-lg transition-shadow">
-                <Link to="/product" className="block">
+                <Link to={`/product?name=${encodeURIComponent(product.name)}`} className="block">
                   <div className="aspect-square bg-gray-100 mb-3 sm:mb-4 rounded-lg overflow-hidden image-container">
                     <img 
                       src={product.image} 
@@ -470,7 +478,7 @@ const Cart = () => {
               }
             ].map((product, index) => (
               <div key={index} className="bg-white rounded-lg shadow-sm spacing-sm hover:shadow-lg transition-shadow">
-                <Link to="/product" className="block">
+                <Link to={`/product?name=${encodeURIComponent(product.name)}`} className="block">
                   <div className="aspect-square bg-gray-100 mb-3 sm:mb-4 rounded-lg overflow-hidden image-container">
                     <img 
                       src={product.image} 

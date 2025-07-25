@@ -5,10 +5,27 @@ interface User {
   first_name: string;
   last_name: string;
   email: string;
+  password?: string;
   phone: number;
   gender: string;
   dob?: string;
   role?: string;
+  address?: {
+    personal_address?: string;
+    shoping_address?: string;
+    billing_address?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    zip?: string;
+  };
+  profile_pic?: string;
+  wishlist?: string[];
+  orders?: string[];
+  emailVerified?: boolean;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface AuthContextType {

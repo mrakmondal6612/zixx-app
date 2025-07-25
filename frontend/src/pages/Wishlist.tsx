@@ -98,30 +98,49 @@ const Wishlist = () => {
       return;
     }
 
-    // Check if size or color selection is missing
-    if (
-      (Array.isArray(item.size) && item.size.length > 0 && !item.size) ||
-      (Array.isArray(item.color) && item.color.length > 0 && !item.color)
-    ) {
-      toast.error('Please select required size and color');
-      return;
-    }
+    // Always use string for size and color, fallback to 'Free' and 'Default'
+    const size = typeof item.size === 'string' && item.size ? item.size : 'Free';
+    const color = typeof item.color === 'string' && item.color ? item.color : 'Default';
+
+    // Fallbacks for backend-required fields (must be non-empty)
+    const description = (item as any).description || 'No description available';
+    const brand = (item as any).brand || 'No brand';
+    const gender = item.category || 'Unisex';
+    const theme = item.theme || '';
+    const category = item.category || '';
+    const rating = item.rating || '0';
+    const discount = item.discount || 0;
+    const price = item.price;
+    const Qty = 1;
+    const afterQtyprice = (price - discount) * Qty;
+    const total = afterQtyprice;
+    const image = [item.image];
 
     const payload = {
-      userId: undefined, // backend will handle
       productId: item.id,
       title: item.name,
-      gender: item.category || 'Unisex',
-      price: item.price,
-      discount: item.discount || 0,
-      rating: item.rating || '0',
-      category: item.category || '',
-      theme: item.theme || '',
-      size: item.size || 'Free',
-      image: [item.image],
-      Qty: 1,
-      afterQtyprice: (item.price - (item.discount || 0)) * 1,
+      description,
+      brand,
+      color,
+      gender,
+      price,
+      discount,
+      rating,
+      category,
+      theme,
+      size,
+      image,
+      Qty,
+      afterQtyprice,
+      variation: {
+        size,
+        color,
+        quantity: Qty,
+      },
+      total,
     };
+
+    console.log('Sending add to cart payload:', payload);
 
     try {
       const res = await fetch('/api/user/addtocart', {
@@ -132,16 +151,18 @@ const Wishlist = () => {
         },
         body: JSON.stringify(payload),
       });
+      console.log('AddToCart response status:', res.status);
+      const data = await res.json().catch(() => ({}));
+      console.log('AddToCart response data:', data);
 
       if (res.ok) {
         toast.success(`Added "${item.name}" to cart!`);
         setTimeout(() => (window.location.href = '/cart'), 800);
       } else {
-        const error = await res.json().catch(() => ({}));
-        toast.error(error?.msg || 'Failed to add to cart');
+        toast.error(data?.msg || 'Failed to add to cart');
       }
     } catch (err) {
-      console.error('Add to cart error:', err);
+      console.error('Add to cart fetch error:', err);
       toast.error('Could not add to cart');
     }
   }

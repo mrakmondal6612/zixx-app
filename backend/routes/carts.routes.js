@@ -1,9 +1,25 @@
+
 const express = require("express");
 const CartRouter = express.Router();
 require("dotenv").config();
 
 const { CartModel } = require("../models/cart.model");
 const { authenticator } = require("../middlewares/authenticator.middleware");
+
+// Get single cart product by cart item id
+CartRouter.get('/user/getcart/:id', authenticator, async (req, res) => {
+  try {
+    const userId = req.userid;
+    const cartId = req.params.id;
+    const cartItem = await CartModel.findOne({ _id: cartId, userId });
+    if (!cartItem) {
+      return res.status(404).json({ msg: 'Cart item not found' });
+    }
+    res.json({ data: cartItem });
+  } catch (err) {
+    res.status(500).json({ msg: 'Failed to fetch cart item', error: err.message });
+  }
+});
 
 CartRouter.get("/user/getcart", authenticator, async (req, res) => {
   const token = req.headers.authorization;
