@@ -23,7 +23,7 @@ require("dotenv").config();
 
 app.use(
   cors({
-    origin: "http://localhost:8080",
+    origin: process.env.Frontend_URL,
     credentials: true,
   })
 );
