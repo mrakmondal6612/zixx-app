@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from "@/hooks/AuthProvider";
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, User, ShoppingCart, ChevronDown, MapPin } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 export const MainNav = () => {
   const isMobile = useIsMobile();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const { user } = useAuth();
@@ -30,8 +31,8 @@ export const MainNav = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchText.trim()) {
-      // Navigate to search page with query parameter
-      window.location.href = `/search?q=${encodeURIComponent(searchText.trim())}`;
+  // Navigate to search page with query parameter using SPA navigation
+  navigate(`/search?q=${encodeURIComponent(searchText.trim())}`);
     }
   };
   

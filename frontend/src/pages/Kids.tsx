@@ -28,7 +28,7 @@ const Kids = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch('/api/products/kids');
+  const res = await fetch('/clients/products/kids');
         const result = await res.json();
         if (!result.ok) throw new Error("API returned not ok");
 

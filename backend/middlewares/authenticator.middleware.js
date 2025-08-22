@@ -3,12 +3,19 @@ const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 const authenticator = async (req, res, next) => {
+  let token;
+  // 1. Try Authorization header
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  }
+  // 2. Try cookie if no header
+  if (!token && req.cookies && req.cookies.token) {
+    token = req.cookies.token;
+  }
+  if (!token) {
     return res.status(401).json({ msg: "Unauthorized: No token provided or invalid format" });
   }
-
-  const token = authHeader.split(' ')[1];
   try {
     jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
       if (err) {

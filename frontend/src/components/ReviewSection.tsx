@@ -38,7 +38,7 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`/api/reviews/product/${productId}`);
+        const res = await fetch(`/clients/reviews/product/${productId}`);
         const json = await res.json();
         setReviews(json.data.map((r: any) => ({
           id: r._id,
@@ -87,7 +87,7 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
     if (!window.confirm('Are you sure you want to delete your review?')) return;
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/reviews/${reviewId}`, {
+      const res = await fetch(`/clients/reviews/${reviewId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -123,8 +123,8 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
       const token = localStorage.getItem('token');
       const method = editing ? 'PUT' : 'POST';
       const url = editing
-        ? `/api/reviews/${myReview!.id}`
-        : `/api/reviews/product/${productId}`;
+        ? `/clients/reviews/${myReview!.id}`
+        : `/clients/reviews/product/${productId}`;
 
 
       const res = await fetch(url, {

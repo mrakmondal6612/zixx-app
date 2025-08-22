@@ -13,7 +13,7 @@ const Review = ({ productId, reviews }) => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
-      const response = await fetch(`/api/products/${productId}/reviews`, {
+  const response = await fetch(`/clients/products/${productId}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rating, comment }),

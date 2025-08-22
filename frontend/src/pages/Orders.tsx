@@ -47,7 +47,7 @@ const Orders = () => {
         return;
       }
       try {
-        const res = await fetch('/api/user/orders', {
+  const res = await fetch('/clients/user/orders', {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
@@ -80,7 +80,7 @@ const Orders = () => {
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-indigo-100 animate-gradient-x">
       <Header />
       <main className="flex-grow max-w-6xl mx-auto px-4 py-12">
-        <h1 className="text-5xl font-black text-center mb-12 drop-shadow-md text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 tracking-tight animate-bounce-slow">My Orders</h1>
+        <h1 className="text-5xl font-black text-center mb-12 drop-shadow-sm text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 tracking-tight animate-bounce-slow">My Orders</h1>
 
         {loading ? (
           <div className="text-center text-lg font-medium text-gray-500 animate-pulse">Loading...</div>
@@ -97,7 +97,7 @@ const Orders = () => {
                 if (!window.confirm('Are you sure you want to cancel this order?')) return;
                 try {
                   const token = localStorage.getItem('token');
-                  const res = await fetch(`/api/order/cancel/${order._id}`, {
+                  const res = await fetch(`/order/cancel/${order._id}`, {
                     method: 'PATCH',
                     headers: {
                       'Content-Type': 'application/json',

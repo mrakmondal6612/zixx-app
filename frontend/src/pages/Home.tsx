@@ -34,7 +34,7 @@ const Home = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch('/api/products');
+        const res = await fetch('/clients/products');
         if (!res.ok) throw new Error("Failed to fetch products");
         const result = await res.json();
         if (result.ok) setProducts(result.data);
@@ -45,7 +45,7 @@ const Home = () => {
 
     const fetchCategories = async () => {
       try {
-        const res = await fetch('/api/products');
+        const res = await fetch('/clients/products');
         if (!res.ok) throw new Error("Failed to fetch products for categories");
         const result = await res.json();
         if (result.ok) {

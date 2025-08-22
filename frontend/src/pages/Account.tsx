@@ -110,11 +110,13 @@ const Account = () => {
       const form = new FormData();
       form.append('profile_pic', file);
       // Only send image to backend for upload
-      const res = await fetch('/api/users/me', {
+  const res = await fetch('/clients/users/me', {
         method: 'PATCH',
         headers: { Authorization: token ? `Bearer ${token}` : '' },
         body: form,
+        credentials: 'include',
       });
+      console.log("Profile picture upload response:", res);
       const data = await res.json();
       if (data.ok && data.user) {
         setUser(data.user);
@@ -159,10 +161,11 @@ const Account = () => {
       if (profilePic && typeof profilePic !== 'string') {
         form.append('profile_pic', profilePic);
       }
-      const res = await fetch('/api/users/me', {
+  const res = await fetch('/clients/users/me', {
         method: 'PATCH',
         headers: { Authorization: token ? `Bearer ${token}` : '' },
         body: form,
+        credentials: 'include',
       });
       const data = await res.json();
       if (data.ok && data.user) {

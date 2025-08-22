@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 import { Card } from '@/components/ui/card';
@@ -24,6 +25,7 @@ type WishlistItem = {
 
 const Wishlist = () => {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function fetchWishlist() {
@@ -31,7 +33,7 @@ const Wishlist = () => {
       if (!token) return;
 
       try {
-        const res = await fetch('/api/user/wishlist', {
+  const res = await fetch('/clients/user/wishlist', {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -73,7 +75,7 @@ const Wishlist = () => {
     if (!token) return;
 
     try {
-      await fetch('/api/user/wishlist/remove', {
+  await fetch('/clients/user/wishlist/remove', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,8 +95,8 @@ const Wishlist = () => {
   async function handleAddToCart(item: WishlistItem) {
     const token = localStorage.getItem('token');
     if (!token) {
-      toast.error('Please log in to add to cart');
-      window.location.href = '/auth';
+  toast.error('Please log in to add to cart');
+  navigate('/auth');
       return;
     }
 
@@ -143,7 +145,7 @@ const Wishlist = () => {
     console.log('Sending add to cart payload:', payload);
 
     try {
-      const res = await fetch('/api/user/addtocart', {
+  const res = await fetch('/clients/user/addtocart', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -155,9 +157,9 @@ const Wishlist = () => {
       const data = await res.json().catch(() => ({}));
       console.log('AddToCart response data:', data);
 
-      if (res.ok) {
+        if (res.ok) {
         toast.success(`Added "${item.name}" to cart!`);
-        setTimeout(() => (window.location.href = '/cart'), 800);
+        setTimeout(() => navigate('/cart'), 800);
       } else {
         toast.error(data?.msg || 'Failed to add to cart');
       }
@@ -246,7 +248,7 @@ const Wishlist = () => {
               You haven't added any items to your wishlist yet.
             </p>
             <Button
-              onClick={() => (window.location.href = '/')}
+              onClick={() => navigate('/')}
               className="bg-[#D92030] hover:bg-[#BC1C2A]"
             >
               Continue Shopping

@@ -66,13 +66,13 @@ const Product = () => {
         let apiUrl = '';
         let byName = false;
         if (id) {
-          apiUrl = `/api/products/singleproduct/${id}`;
+          apiUrl = `/clients/products/singleproduct/${id}`;
         } else {
           // Try to get name from query string
           const params = new URLSearchParams(location.search);
           const name = params.get('name');
           if (name) {
-            apiUrl = `/api/products/byname/${encodeURIComponent(name)}`;
+            apiUrl = `/clients/products/byname/${encodeURIComponent(name)}`;
             byName = true;
           }
         }
@@ -117,11 +117,11 @@ const Product = () => {
       const token = localStorage.getItem('token');
       if (!token) {
         toast.error('You must be logged in to add to cart.');
-        window.location.href = '/login';
+        navigate('/login');
         return;
       }
       const res = await axios.post(
-        '/api/user/addtocart',
+        '/clients/user/addtocart',
         {
           userId: undefined, // will be set by backend
           productId: product._id,
@@ -166,7 +166,7 @@ const Product = () => {
       console.error('Add to cart error:', err);
       if (err?.response?.status === 401) {
         toast.error('You must be logged in to add to cart.');
-        window.location.href = '/login';
+        navigate('/login');
       } else {
         toast.error('Add to cart failed (Are you logged in?)');
       }
@@ -179,11 +179,11 @@ const Product = () => {
       const token = localStorage.getItem('token');
       if (!token) {
         toast.error('You must be logged in to add to wishlist.');
-        window.location.href = '/login';
+        navigate('/login');
         return;
       }
       const res = await axios.post(
-        '/api/user/wishlist/add',
+        '/clients/user/wishlist/add',
         { productId: product._id },
         {
           withCredentials: true,
@@ -202,7 +202,7 @@ const Product = () => {
       console.error('Add to wishlist error:', err);
       if (err?.response?.status === 401) {
         toast.error('You must be logged in to add to wishlist.');
-        window.location.href = '/login';
+        navigate('/login');
       } else {
         toast.error('Add to wishlist failed (Are you logged in?)');
       }

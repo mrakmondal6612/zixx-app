@@ -1,31 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface User {
   _id?: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  password?: string;
-  phone: number;
-  gender: string;
-  dob?: string;
-  role?: string;
-  address?: {
-    personal_address?: string;
-    shoping_address?: string;
-    billing_address?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-    zip?: string;
-  };
-  profile_pic?: string;
-  wishlist?: string[];
-  orders?: string[];
-  emailVerified?: boolean;
-  isActive?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  // ...other user fields...
 }
 
 interface AuthContextType {
@@ -46,92 +24,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  const fetchUser = async (authToken: string) => {
-    const res = await fetch('/api/users/me', {
-      headers: { Authorization: authToken },
+  // Fetch user info using cookie-based auth
+  const fetchUser = async () => {
+    const res = await fetch('/api/clients/users/me', {
+      credentials: 'include',
     });
-
     const contentType = res.headers.get('content-type');
     if (!contentType?.includes('application/json')) {
       const text = await res.text();
-      if (text.startsWith('<!DOCTYPE')) throw new Error('HTML instead of JSON from /api/users/me');
+      console.error('[AuthProvider] fetchUser - non-json response', res.status, text);
+      if (text.startsWith('<!DOCTYPE')) throw new Error('HTML instead of JSON from /users/me');
       throw new Error('Invalid content-type in user fetch');
     }
-
     const data = await res.json();
-    if (!data?.user) throw new Error('User fetch failed');
+    if (!data?.user) {
+      console.error('[AuthProvider] fetchUser - no user in response', { status: res.status, body: data });
+      throw new Error(`User fetch failed: ${res.status} ${JSON.stringify(data)}`);
+    }
     setUser(data.user);
   };
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedRole = localStorage.getItem('role');
-    if (storedRole) setRole(storedRole);
-
-    const validateTokenAndFetchUser = async () => {
-      if (!storedToken) {
-        setLoading(false);
-        return;
-      }
-
+    const validateAndFetchUser = async () => {
       try {
-        const res = await fetch('/api/validatetoken', {
-          headers: { Authorization: storedToken },
-        });
-
-        const contentType = res.headers.get('content-type');
-        if (!contentType?.includes('application/json')) {
-          const html = await res.text();
-          if (html.startsWith('<!DOCTYPE')) throw new Error('HTML instead of JSON in token validation');
-          throw new Error('Invalid token content-type');
-        }
-
-        const data = await res.json();
-        if (!data.ok) throw new Error('Invalid token');
-
-        setToken(storedToken);
-        await fetchUser(storedToken);
+        await fetchUser();
       } catch (err) {
         console.error('[AuthProvider] Auth failed:', err);
         setUser(null);
         setToken(null);
-        localStorage.removeItem('token');
+        setRole(null);
       } finally {
         setLoading(false);
       }
     };
-
-    validateTokenAndFetchUser();
+    validateAndFetchUser();
+    // eslint-disable-next-line
   }, []);
 
+  // Minimal login/logout logic for cookie-based auth
   const login = async (email: string, password: string, redirectTo?: string, navCallback?: (to: string) => void) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/login', {
+      const res = await fetch('/api/clients/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        credentials: 'include',
       });
-
-      const contentType = res.headers.get('content-type');
-      if (!contentType?.includes('application/json')) {
-        const html = await res.text();
-        if (html.startsWith('<!DOCTYPE')) throw new Error('HTML instead of JSON in login');
-        throw new Error('Invalid login content-type');
+      let data: any;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        const text = await res.text().catch(() => null);
+        console.error('[AuthProvider] login - failed to parse JSON response', { status: res.status, text });
+        if (text && text.startsWith && text.startsWith('<!DOCTYPE')) throw new Error('HTML instead of JSON in login');
+        throw new Error('Invalid login content-type or malformed JSON');
       }
-
-      const data = await res.json();
-      if (!res.ok || !data.ok || !data.token) throw new Error(data.msg || 'Login failed');
-
-      setToken(data.token);
-      localStorage.setItem('token', data.token);
-      if (data.role) {
-        setRole(data.role);
-        localStorage.setItem('role', data.role);
-      }
-      await fetchUser(data.token);
-
+      if (!res.ok || !data.ok) throw new Error(data.msg || 'Login failed');
+      await fetchUser();
+      if (data.role) setRole(data.role);
       if (navCallback) navCallback(redirectTo || '/');
     } catch (err) {
       console.error('[AuthProvider] Login failed:', err);
@@ -142,11 +95,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = (navCallback?: (to: string) => void) => {
+    // For cookie-based logout, you may want to call a backend logout endpoint to clear the cookie
     setUser(null);
     setToken(null);
     setRole(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
     if (navCallback) navCallback('/auth');
   };
 
@@ -157,12 +109,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-
 export const useAuthContext = () => {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuthContext must be used within AuthProvider');
   return ctx;
 };
 
-// Alias for consistency with usage in components
 export const useAuth = useAuthContext;

@@ -48,59 +48,35 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const payload = isLogin
-        ? { email, password }
-        : {
-            first_name: firstName,
-            last_name: lastName,
-            email,
-            password,
-            phone: Number(phone),
-            gender,
-            dob
-          };
-
-      const res = await fetch(isLogin ? '/api/login' : '/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const contentType = res.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const html = await res.text();
-        if (html.startsWith('<!DOCTYPE')) {
-          throw new Error('Received HTML instead of JSON. Check API endpoint.');
-        }
-        throw new Error('Invalid content-type in response.');
-      }
-
-      const data = await res.json();
-      if (!res.ok || !data.ok) {
-        throw new Error(data?.msg || 'Request failed');
-      }
-
-      toast({
-        title: 'Success!',
-        description: isLogin ? 'Logged in successfully.' : 'Account created.',
-      });
-
-      // ✅ Store token and role after login
-      if (data.token && isLogin) {
-        setToken(data.token);
-        if (data.role) {
-          localStorage.setItem('role', data.role);
-          if (typeof setRole === 'function') {
-            setRole(data.role);
-          }
-        }
-
+      if (isLogin) {
+        // use centralized login from AuthProvider (sets token, fetches user)
         if (typeof login === 'function') {
           const from = (location.state as any)?.from?.pathname || '/';
           await login(email, password, from);
+          toast({ title: 'Success!', description: 'Logged in successfully.' });
           navigate(from, { replace: true });
+        } else {
+          throw new Error('Login function not available');
         }
-      } else if (!isLogin) {
+      } else {
+        // Register flow
+        const payload = {
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          password,
+          phone: Number(phone),
+          gender,
+          dob
+        };
+  const res = await fetch('/api/clients/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data?.msg || 'Registration failed');
+        toast({ title: 'Success!', description: 'Account created.' });
         setIsLogin(true);
       }
     } catch (error: any) {

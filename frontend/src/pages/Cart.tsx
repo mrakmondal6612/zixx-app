@@ -37,11 +37,11 @@ const Cart = () => {
       const token = localStorage.getItem('token');
           if (!token) {
             toast.error('Please log in to add to cart');
-            window.location.href = '/auth';
+            navigate('/auth');
             return;
           }
       try {
-        const res = await fetch('/api/user/getcart', {
+  const res = await fetch('/clients/user/getcart', {
           headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -81,11 +81,11 @@ const Cart = () => {
     const token = localStorage.getItem('token');
     if (!token) {
       toast.error('Please log in to remove items');
-      window.location.href = '/auth';
+      navigate('/auth');
       return;
     }
     try {
-      const res = await fetch(`/api/user/remove/${id}`, {
+  const res = await fetch(`/clients/user/remove/${id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -111,7 +111,7 @@ const Cart = () => {
     const token = localStorage.getItem('token');
     if (!token) {
       toast.error('Please log in to buy products');
-      window.location.href = '/auth';
+      navigate('/auth');
       return;
     }
     if (cartItems.length === 0) {
@@ -122,7 +122,7 @@ const Cart = () => {
     try {
       // console.log("User ID:", token);
       // console.log("Request Body:", cartItems);
-      const res = await fetch('/api/order/buy', {
+  const res = await fetch('/clients/order/buy', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -157,11 +157,11 @@ const Cart = () => {
     const token = localStorage.getItem('token');
     if (!token) {
       toast.error('Please log in to update quantity');
-      window.location.href = '/auth';
+      navigate('/auth');
       return;
     }
     try {
-      const res = await fetch(`/api/user/updatecart/${id}`, {
+  const res = await fetch(`/clients/user/updatecart/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

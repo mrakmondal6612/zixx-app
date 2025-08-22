@@ -28,7 +28,7 @@ const NewArrivals = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch('/api/products');
+  const res = await fetch('/clients/products');
         if (!res.ok) throw new Error("Failed to fetch products");
         const result = await res.json();
         if (result.ok) {

@@ -22,7 +22,7 @@ const Brands = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch('/api/brands');
+  const res = await fetch('/clients/brands');
         const data = await res.json();
         if (data.ok && Array.isArray(data.data)) {
           setBrands(data.data);

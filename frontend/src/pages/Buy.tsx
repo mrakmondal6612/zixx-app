@@ -33,11 +33,11 @@ const Buy: React.FC = () => {
       const token = localStorage.getItem('token');
       if (!token) {
         toast.error('Please log in to buy products');
-        window.location.href = '/auth';
+        navigate('/auth');
         return;
       }
       try {
-        const res = await fetch('/api/user/getcart', {
+  const res = await fetch('/clients/user/getcart', {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
@@ -88,12 +88,12 @@ const Buy: React.FC = () => {
     const token = localStorage.getItem('token');
     if (!token) {
       toast.error('Please log in to buy products');
-      window.location.href = '/auth';
+      navigate('/auth');
       return;
     }
     try {
       const selectedItems = cartItems.filter((item) => selected.includes(item.id));
-      const res = await fetch('/api/order/buy', {
+  const res = await fetch('/clients/order/buy', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

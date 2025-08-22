@@ -38,7 +38,7 @@ const SingleCartProduct = () => {
         return;
       }
       try {
-        const res = await fetch(`/api/user/getcart/${id}`, {
+        const res = await fetch(`/clients/user/getcart/${id}`, {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
@@ -83,7 +83,7 @@ const SingleCartProduct = () => {
       return;
     }
     try {
-      const res = await fetch(`/api/order/buy`, {
+      const res = await fetch(`/clients/order/buy`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

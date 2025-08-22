@@ -1,5 +1,5 @@
 import { defineConfig, loadEnv } from "vite";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
 
   // Access VITE_BACKEND_URL from env
   const backendUrl = env.VITE_BACKEND_URL;
+  console.log("VITE_BACKEND_URL:", backendUrl);
   const port = parseInt(env.VITE_PORT);
   return {
     server: {
@@ -18,7 +19,15 @@ export default defineConfig(({ mode }) => {
         "/api": {
           target: backendUrl,
           changeOrigin: true,
-          // rewrite: (path) => path.replace(/^\/api/, ""), // Uncomment if needed
+          // remove the leading /api from the proxied path so targets that already include
+          // "/api" in VITE_BACKEND_URL don't receive /api/api/... (defensive)
+          rewrite: (path) => path.replace(/^\/api/, ''),
+        },
+        // Support calling backend client routes from frontend without '/api' prefix.
+        // Forward '/clients/*' to backend (backendUrl already contains '/api').
+        "/clients": {
+          target: backendUrl,
+          changeOrigin: true,
         },
       },
     },
@@ -31,8 +40,8 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
+    
     define: {
-      // Optional: make backend URL available in your frontend as __BACKEND_URL__
       __BACKEND_URL__: JSON.stringify(backendUrl),
     },
   };

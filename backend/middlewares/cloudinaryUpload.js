@@ -1,16 +1,22 @@
+require('dotenv').config();
+// console.log('Cloudinary ENV:', {
+//   CLD_CLOUD_NAME: process.env.CLD_CLOUD_NAME,
+//   CLD_API_KEY: process.env.CLD_API_KEY,
+//   CLD_API_SECRET: process.env.CLD_API_SECRET
+// });
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
 const streamifier = require('streamifier');
 
 cloudinary.config({
-  cloud_name: process.env.VITE_CLOUDINARY_CLOUD_NAME,
+  cloud_name: process.env.CLD_CLOUD_NAME,
   api_key: process.env.CLD_API_KEY,
   api_secret: process.env.CLD_API_SECRET,
 });
 
-const upload = multer();
+exports.upload = multer();
 
-const cloudinaryUploadMiddleware = async (req, res, next) => {
+exports.cloudinaryUploadMiddleware = async (req, res, next) => {
   if (!req.file) return next();
   try {
     const streamUpload = (req) => {
@@ -32,8 +38,8 @@ const cloudinaryUploadMiddleware = async (req, res, next) => {
     req.body.profile_pic = result.secure_url;
     next();
   } catch (err) {
+    console.log("Cloudinary upload error:", err);
     return res.status(500).json({ msg: 'Image upload failed', error: err.message, ok: false });
   }
 };
 
-module.exports = { upload, cloudinaryUploadMiddleware };
