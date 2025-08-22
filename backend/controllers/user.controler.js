@@ -355,3 +355,30 @@ exports.logoutUser = (req, res) => {
     res.status(500).json({ msg: 'Logout failed', ok: false, error: err.message });
   }
 }
+
+// GET logout that redirects back to frontend - useful for top-level navigation to clear httpOnly cookies
+exports.logoutRedirect = (req, res) => {
+  try {
+    const cookieOpts = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      expires: new Date(0),
+    };
+    res.cookie('token', '', cookieOpts);
+    res.cookie('refreshToken', '', cookieOpts);
+    res.clearCookie('token', cookieOpts);
+    res.clearCookie('refreshToken', cookieOpts);
+    try { if (req.session) req.session.destroy(() => {}); } catch (e) {}
+    // Redirect back to provided returnTo or frontend auth
+    let frontend = process.env.Frontend_URL || `http://${req.hostname}:8080`;
+    const returnTo = req.query.returnTo;
+    if (returnTo) {
+      try { return res.redirect(returnTo); } catch (e) {}
+    }
+    return res.redirect(`${frontend.replace(/\/$/, '')}/auth`);
+  } catch (err) {
+    return res.status(500).json({ msg: 'Logout redirect failed', ok: false, error: err.message });
+  }
+}

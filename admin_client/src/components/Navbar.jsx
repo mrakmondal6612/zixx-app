@@ -139,20 +139,14 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                   handleClose();
                   // Call backend to clear refresh cookie
                   try {
-                    // Determine backend base: prefer VITE_BACKEND_SERVER, fall back to VITE_APP_BASE_URL, then default port 8282
+                    // navigate top-level to backend logout which will clear httpOnly cookies and redirect back to auth
                     let backend = import.meta.env.VITE_BACKEND_SERVER || import.meta.env.VITE_APP_BASE_URL || `http://${window.location.hostname}:8282`;
-                    // If backend contains a trailing /api, strip it so we can append /api/logout reliably
                     backend = backend.replace(/\/?api\/?$/i, '').replace(/\/$/, '');
-                    const logoutUrl = `${backend}/api/logout`;
-                    const res = await fetch(logoutUrl, {
-                      method: 'POST',
-                      mode: 'cors',
-                      credentials: 'include',
-                      headers: { 'Content-Type': 'application/json' },
-                    });
-                    // debug: if server responded, log for developer
-                    try { console.debug('logout response', res.status, await res.clone().text()); } catch (e) {}
-                  } catch (e) { console.debug('logout fetch failed', e); }
+                    const returnTo = encodeURIComponent((import.meta.env.VITE_FRONTEND_URL || `http://${window.location.hostname}:8080`).replace(/\/$/, '') + '/auth');
+                    const logoutUrl = `${backend}/api/logout?returnTo=${returnTo}`;
+                    window.location.href = logoutUrl;
+                    return; // navigation initiated
+                  } catch (e) { console.debug('logout navigate failed', e); }
                   // Remove local token and session
                   try { localStorage.clear(); sessionStorage.clear(); } catch (e) {}
                   // Remove all cookies (admin panel cookies)
