@@ -25,19 +25,29 @@ export default function AdminRouteGuard({ children }) {
   useEffect(() => {
     const checkAccess = async () => {
       try {
-        // Fetch user info using cookie-based auth to backend API base
-        const res = await fetch(`${apiBase}/clients/user/me`, {
-          credentials: 'include',
-        });
-        if (!res.ok) {
-          window.location.replace(mainLogin);
-          return;
+        // 1) Try to fetch current user using cookie-based auth
+        let res = await fetch(`${apiBase}/clients/user/me`, { credentials: 'include' });
+        // 2) If unauthorized, attempt refresh using httpOnly refresh cookie
+        if (res.status === 401) {
+          try {
+            const refreshRes = await fetch(`${apiBase}/clients/refresh`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+            });
+            if (refreshRes.ok) {
+              const rj = await refreshRes.json().catch(() => ({}));
+              if (rj && rj.token) {
+                try { localStorage.setItem('token', rj.token); } catch {}
+              }
+              // retry /me once after refresh
+              res = await fetch(`${apiBase}/clients/user/me`, { credentials: 'include' });
+            }
+          } catch {}
         }
+        if (!res.ok) return window.location.replace(mainLogin);
         const data = await res.json();
-        if (!data?.user || data.user.role !== 'admin') {
-          window.location.replace(mainLogin);
-          return;
-        }
+        if (!data?.user || data.user.role !== 'admin') return window.location.replace(mainLogin);
         setAllowed(true);
       } catch (e) {
         window.location.replace(mainLogin);
