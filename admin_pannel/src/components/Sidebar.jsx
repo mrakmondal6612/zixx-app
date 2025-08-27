@@ -117,14 +117,12 @@ const Sidebar = ({
                   gap="0.5rem"
                   sx={{ cursor: "pointer" }}
                   onClick={() => {
-                    let frontend = import.meta.env.VITE_FRONTEND_URL || `http://${window.location.hostname}:8080`;
-                    try {
-                      // normalize to origin and ensure trailing slash
-                      const u = new URL(frontend);
-                      frontend = u.origin;
-                    } catch (e) {
-                      // keep as-is if invalid URL, still a string
+                    const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
+                    let frontend = import.meta.env.VITE_FRONTEND_URL;
+                    if (!frontend) {
+                      frontend = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}:8080`;
                     }
+                    try { const u = new URL(frontend); frontend = u.origin; } catch (e) {}
                     window.location.href = `${frontend.replace(/\/$/, '')}/`;
                   }}
                 >

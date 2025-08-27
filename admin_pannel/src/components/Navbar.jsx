@@ -148,11 +148,12 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                     // fallback to top-level logout navigation which is most reliable for expiring httpOnly cookies
                     try {
                       const backendOrigin = getApiBase().replace(/\/?api\/?$/i, '').replace(/\/$/, '');
-                      let frontend = import.meta.env.VITE_FRONTEND_URL || `http://${window.location.hostname}:8080`;
-                      try {
-                        const u = new URL(frontend);
-                        frontend = u.origin;
-                      } catch (err) {}
+                      const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
+                      let frontend = import.meta.env.VITE_FRONTEND_URL;
+                      if (!frontend) {
+                        frontend = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}:8080`;
+                      }
+                      try { const u = new URL(frontend); frontend = u.origin; } catch (err) {}
                       const returnTo = encodeURIComponent(`${frontend.replace(/\/$/, '')}/auth`);
                       const fallbackUrl = `${backendOrigin}/api/logout?returnTo=${returnTo}`;
                       window.location.href = fallbackUrl;
@@ -175,13 +176,12 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                   } catch (e) {}
 
                   // Redirect to frontend auth page
-                  let frontend = import.meta.env.VITE_FRONTEND_URL || `http://${window.location.hostname}:8080`;
-                  try {
-                    const u = new URL(frontend);
-                    frontend = u.origin;
-                  } catch (e) {
-                    // keep fallback as-is
+                  const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
+                  let frontend = import.meta.env.VITE_FRONTEND_URL;
+                  if (!frontend) {
+                    frontend = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}:8080`;
                   }
+                  try { const u = new URL(frontend); frontend = u.origin; } catch (e) {}
                   window.location.replace(`${frontend.replace(/\/$/, '')}/auth`);
                 }}
               >

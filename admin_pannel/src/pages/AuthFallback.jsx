@@ -1,13 +1,12 @@
 import React from 'react';
 
 const AuthFallback = () => {
-  let frontend = import.meta.env.VITE_FRONTEND_URL || `http://${window.location.hostname}:8080`;
-  try {
-    const u = new URL(frontend);
-    frontend = u.origin;
-  } catch (e) {
-    // keep string fallback as-is
+  const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
+  let frontend = import.meta.env.VITE_FRONTEND_URL;
+  if (!frontend) {
+    frontend = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}:8080`;
   }
+  try { const u = new URL(frontend); frontend = u.origin; } catch (e) {}
   const token = localStorage.getItem('token');
   if (token) {
     return (

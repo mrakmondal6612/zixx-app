@@ -113,13 +113,12 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
       }
       // final fallback: redirect to frontend login using replace so user can't go back
       if (typeof window !== 'undefined') {
-        let frontend = import.meta.env.VITE_FRONTEND_URL || `http://${window.location.hostname}:8080`;
-        try {
-          const u = new URL(frontend);
-          frontend = u.origin; // normalize
-        } catch (e) {
-          // keep fallback as-is
+        const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
+        let frontend = import.meta.env.VITE_FRONTEND_URL;
+        if (!frontend) {
+          frontend = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}:8080`;
         }
+        try { const u = new URL(frontend); frontend = u.origin; } catch (e) {}
         try { window.location.replace(`${frontend}/auth`); } catch (er) {}
       }
       return result; // return original 401 result
