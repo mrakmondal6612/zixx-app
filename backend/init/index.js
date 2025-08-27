@@ -4,7 +4,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 const mongoose = require("mongoose");
 const initData = require("./data.js");
 const { ProductModel } = require("../models/products.model.js");
-const ADMIN_ID = "687d5030e299a456a31f6916";
+const ADMIN_ID = "";
 const init = async () => {
   try {
     mongoose.set("strictQuery", true);
