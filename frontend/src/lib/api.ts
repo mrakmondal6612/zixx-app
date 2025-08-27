@@ -31,8 +31,11 @@ export type ProductQuery = {
   limit?: number;
 };
 
-// Central API base builder: supports dev proxy and production
-export const RAW_BASE: string = (import.meta as any).env?.VITE_API_BASE || (import.meta as any).env?.VITE_BACKEND_URL || '';
+// Central API base builder
+// In Vite dev, force relative "/api" so requests go through Vite proxy (avoids CORS)
+const ENV_BASE: string = (import.meta as any).env?.VITE_API_BASE || (import.meta as any).env?.VITE_BACKEND_URL || '';
+const IS_DEV: boolean = Boolean((import.meta as any).env?.DEV);
+export const RAW_BASE: string = IS_DEV ? '/api' : ENV_BASE;
 export const TRIMMED_BASE = String(RAW_BASE).replace(/\/$/, '');
 export const HAS_API_IN_BASE = /\/api(\/$)?$/.test(TRIMMED_BASE);
 export const API_ROOT = TRIMMED_BASE

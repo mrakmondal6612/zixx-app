@@ -6,8 +6,11 @@ import react from "@vitejs/plugin-react-swc";
 export default defineConfig(({ mode }) => {
   // Load all envs so we can read PORT and VITE_* vars
   const env = loadEnv(mode, process.cwd(), '');
-  const port = parseInt(env.PORT);
+  const portEnv = parseInt(env.PORT);
+  const port = Number.isFinite(portEnv) ? portEnv : 5173;
   const backendUrl = env.VITE_BACKEND_SERVER;
+  // sanitize backend URL for proxy: remove trailing '/api' to avoid double '/api'
+  const proxyTarget = (backendUrl || '').replace(/\/?api\/?$/i, '');
 
   return {
     plugins: [react()],
@@ -20,9 +23,15 @@ export default defineConfig(({ mode }) => {
       host: "localhost",
       proxy: {
         "/api": {
-          target: backendUrl,
+          target: proxyTarget,
           changeOrigin: true,
           secure: false,
+          // Remove Origin header in dev to bypass backend CORS checks via proxy
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq) => {
+              try { proxyReq.removeHeader && proxyReq.removeHeader('origin'); } catch {}
+            });
+          },
         },
       },
     },

@@ -4,7 +4,10 @@ import path from 'path'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
-  console.log("backendUrl", env.VITE_BACKEND_URL);
+  const rawBackend = env.VITE_BACKEND_URL || ''
+  const proxyTarget = rawBackend.replace(/\/api\/?$/, '')
+  console.log("backendUrl(raw)", rawBackend);
+  console.log("proxyTarget(sanitized)", proxyTarget);
   console.log("Port", env.VITE_PORT);
   
   return {
@@ -19,9 +22,16 @@ export default defineConfig(({ mode }) => {
       host: "localhost",
       proxy: {
         "/api": {
-          target: env.VITE_BACKEND_URL,
+          target: proxyTarget,
           changeOrigin: true,
           secure: false,
+          // Strip Origin header so backend CORS treats as server-to-server in dev
+          // This avoids "Not allowed by CORS" coming from Render when using Vite proxy
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq) => {
+              try { (proxyReq as any).removeHeader?.('origin'); } catch {}
+            });
+          },
         },
       },
     },
