@@ -25,8 +25,20 @@ export default function AdminRouteGuard({ children }) {
   useEffect(() => {
     const checkAccess = async () => {
       try {
-        // 1) Try to fetch current user using cookie-based auth
-        let res = await fetch(`${apiBase}/clients/user/me`, { credentials: 'include' });
+        // helper to build auth headers from localStorage token
+        const buildAuthHeaders = () => {
+          const h = {};
+          try {
+            const t = localStorage.getItem('token');
+            if (t) h['Authorization'] = `Bearer ${t}`;
+          } catch {}
+          return h;
+        };
+        // 1) Try to fetch current user using cookie-based auth plus Bearer if available
+        let res = await fetch(`${apiBase}/clients/user/me`, {
+          credentials: 'include',
+          headers: buildAuthHeaders(),
+        });
         // 2) If unauthorized, attempt refresh using httpOnly refresh cookie
         if (res.status === 401) {
           try {
@@ -41,7 +53,10 @@ export default function AdminRouteGuard({ children }) {
                 try { localStorage.setItem('token', rj.token); } catch {}
               }
               // retry /me once after refresh
-              res = await fetch(`${apiBase}/clients/user/me`, { credentials: 'include' });
+              res = await fetch(`${apiBase}/clients/user/me`, {
+                credentials: 'include',
+                headers: buildAuthHeaders(),
+              });
             }
           } catch {}
         }
