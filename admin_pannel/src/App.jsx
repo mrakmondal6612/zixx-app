@@ -3,7 +3,7 @@ import { CssBaseline, ThemeProvider } from "@mui/material";
 import { createTheme } from "@mui/material/styles";
 import { themeSettings } from "./theme";
 import { useSelector } from "react-redux";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 
 import Layout from "@scenes/layout";
 import AdminRouteGuard from "@components/AdminRouteGuard";
@@ -32,6 +32,21 @@ import "./App.css";
 function App() {
   const mode = useSelector((state) => (state && state.global && state.global.mode) || 'dark');
   const theme = useMemo(() => createTheme(themeSettings(mode || 'dark')), [mode]);
+
+  // Capture token from URL (?t=...) for cross-origin handoff from main site
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      const t = url.searchParams.get('t');
+      if (t) {
+        try { localStorage.setItem('token', t); } catch {}
+        // Clean the URL
+        url.searchParams.delete('t');
+        const clean = url.pathname + (url.search ? url.search : '') + (url.hash || '');
+        window.history.replaceState({}, '', clean);
+      }
+    } catch {}
+  }, []);
 
   return (
     <div className="app">

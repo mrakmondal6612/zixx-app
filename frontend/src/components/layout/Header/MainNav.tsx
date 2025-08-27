@@ -26,7 +26,7 @@ export const MainNav = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   // Admin panel base URL: prefer env var, fallback to deployed admin domain
   const adminUrl = (() => {
     let u = (import.meta as any).env?.VITE_ADMIN_CLIENT_URL || 'https://zixx-admin.vercel.app';
@@ -37,6 +37,8 @@ export const MainNav = () => {
       return u;
     }
   })();
+  // Handoff token via query so admin can bootstrap localStorage
+  const adminHref = token ? `${adminUrl}/?t=${encodeURIComponent(token)}` : adminUrl;
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,7 +185,7 @@ export const MainNav = () => {
                 />
               </Link>
               {user?.role === 'admin' && (
-                <a href={adminUrl} target="_blank" rel="noopener noreferrer" aria-label="Admin panel">
+                <a href={adminHref} target="_blank" rel="noopener noreferrer" aria-label="Admin panel">
                   <User size={20} className="sm:w-6 sm:h-6 hover:opacity-80 transition-opacity text-red-600" />
                 </a>
               )}
@@ -245,7 +247,7 @@ export const MainNav = () => {
                 <span className="text-sm">Wishlist</span>
               </Link>
               {user.role === 'admin' && (
-                <a href={adminUrl} target="_blank" rel="noopener noreferrer" aria-label="Admin panel" className="flex flex-col items-center" onClick={() => setIsMenuOpen(false)}>
+                <a href={adminHref} target="_blank" rel="noopener noreferrer" aria-label="Admin panel" className="flex flex-col items-center" onClick={() => setIsMenuOpen(false)}>
                   <User size={24} className="mb-1 text-red-600" />
                   <span className="text-sm">Admin</span>
                 </a>

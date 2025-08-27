@@ -64,10 +64,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setRole(user?.role ?? null);
   }, [user]);
 
-  // Fetch logged-in user from backend (cookie-based auth)
-  const fetchUser = async () => {
+  // Fetch logged-in user from backend. Prefer cookie, but include Bearer as fallback for mobile browsers blocking cookies.
+  const fetchUser = async (overrideToken?: string) => {
     try {
-      const res = await fetch(apiUrl('/clients/user/me'), { credentials: 'include' });
+      const bearer = overrideToken || token || (() => { try { return localStorage.getItem('token'); } catch { return null; } })() || undefined;
+      const headers: Record<string, string> = {};
+      if (bearer) headers['Authorization'] = `Bearer ${bearer}`;
+      const res = await fetch(apiUrl('/clients/user/me'), { credentials: 'include', headers });
 
       if (res.status === 401) {
         // User is logged out - silently reset state
@@ -108,6 +111,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let shouldFetch = false;
       try {
         shouldFetch = localStorage.getItem('isLoggedIn') === '1';
+        const storedToken = localStorage.getItem('token');
+        if (storedToken) setToken(storedToken);
       } catch {}
 
       if (shouldFetch) {
@@ -147,7 +152,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error(data?.msg || 'Login failed');
       }
 
-      await fetchUser();
+      // Persist bearer token for cross-origin/mobile fallback
+      try {
+        if (data?.token) {
+          localStorage.setItem('token', data.token);
+          setToken(data.token);
+        }
+      } catch {}
+
+      // Immediately fetch user using the fresh token to handle cases where cookies are blocked on mobile
+      await fetchUser(data?.token);
 
       if (data?.user?.role) setRole(data.user.role);
 
