@@ -30,8 +30,8 @@ import Banners from "@scenes/banners";
 import "./App.css";
 
 function App() {
-  const mode = useSelector((state) => state.global.mode);
-  const theme = useMemo(() => createTheme(themeSettings(mode)), [mode]);
+  const mode = useSelector((state) => (state && state.global && state.global.mode) || 'dark');
+  const theme = useMemo(() => createTheme(themeSettings(mode || 'dark')), [mode]);
 
   return (
     <div className="app">
