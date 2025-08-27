@@ -5,7 +5,7 @@ import { Footer } from '@/components/layout/Footer/Footer';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
-import { apiUrl } from '@/lib/api';
+import { apiUrl, getAuthHeaders } from '@/lib/api';
 // Using cookie-based auth across the app
 
 interface OrderItem {
@@ -49,6 +49,7 @@ const Orders = () => {
     try {
       const res = await fetch(apiUrl('/clients/user/orders'), {
         credentials: 'include',
+        headers: { ...getAuthHeaders() },
       });
       if (res.status === 401) {
         setOrders([]);
@@ -130,7 +131,7 @@ const Orders = () => {
                   const res = await fetch(apiUrl(`/clients/order/cancel/${order._id}`), {
                     method: 'PATCH',
                     credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                   });
                   const data = await res.json();
                   if (res.ok && data.ok !== false) {

@@ -109,14 +109,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const init = async () => {
       // Avoid hitting /me when clearly logged out
       let shouldFetch = false;
+      let storedToken: string | null = null;
       try {
         shouldFetch = localStorage.getItem('isLoggedIn') === '1';
-        const storedToken = localStorage.getItem('token');
-        if (storedToken) setToken(storedToken);
+        storedToken = localStorage.getItem('token');
+        if (storedToken) {
+          setToken(storedToken);
+          // If a token exists, attempt to fetch user (mobile fallback when cookies are blocked)
+          shouldFetch = true;
+        }
       } catch {}
 
       if (shouldFetch) {
-        await fetchUser();
+        await fetchUser(storedToken || undefined);
       }
       setLoading(false);
     };

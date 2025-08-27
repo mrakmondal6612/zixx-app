@@ -43,6 +43,15 @@ export const API_ROOT = TRIMMED_BASE
   : '/api';
 export const apiUrl = (p: string) => `${API_ROOT}${p.startsWith('/') ? p : `/${p}`}`;
 
+// Build Authorization header from stored token (mobile fallback when cookies are blocked)
+export function getAuthHeaders(): Record<string, string> {
+  try {
+    const t = localStorage.getItem('token');
+    if (t) return { Authorization: `Bearer ${t}` };
+  } catch {}
+  return {};
+}
+
 function toQuery(params: Record<string, any>): string {
   const usp = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ReviewSection } from '@/components/ReviewSection';
-import { apiUrl } from '@/lib/api';
+import { apiUrl, getAuthHeaders } from '@/lib/api';
 import { Clock, ShieldCheck, Truck, CheckCircle2, XCircle, ShoppingCart, Receipt, CalendarDays, CreditCard, MapPin, Package, Copy, Phone, ExternalLink, Star, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthContext } from '@/hooks/AuthProvider';
@@ -71,7 +71,7 @@ const OrderDetails: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(apiUrl(`/clients/user/orders/${id}`), { credentials: 'include' });
+      const res = await fetch(apiUrl(`/clients/user/orders/${id}`), { credentials: 'include', headers: { ...getAuthHeaders() } });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data?.ok === false) {
         setError(data?.msg || 'Failed to fetch order');
@@ -213,7 +213,7 @@ const OrderDetails: React.FC = () => {
       const res = await fetch(apiUrl('/clients/user/addtocart'), {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify(buildCartPayloadFromOrderItem(item, qty)),
       });
       const data = await res.json().catch(() => ({}));
@@ -240,7 +240,7 @@ const OrderDetails: React.FC = () => {
         const res = await fetch(apiUrl('/clients/user/addtocart'), {
           method: 'POST',
           credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
           body: JSON.stringify(buildCartPayloadFromOrderItem(it, it.quantity || 1)),
         });
         if (res.ok) success += 1;
