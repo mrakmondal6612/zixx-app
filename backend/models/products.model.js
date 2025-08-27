@@ -15,8 +15,9 @@ const productSchema = mongoose.Schema({
   color: { type: [String], default: [] },
   image: { type: [String], default: [] },
   supply: { type: Number, default: 0 },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: false } 
-});
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: false },
+  featured: { type: Boolean, default: false },
+}, { timestamps: true });
 
 const ProductModel = mongoose.model("product", productSchema);
 module.exports = {ProductModel};

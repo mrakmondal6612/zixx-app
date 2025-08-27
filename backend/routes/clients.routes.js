@@ -7,7 +7,9 @@ const {
     SearchRouter,
     UserRouter,
     WishlistRouter,
-    ReviewRouter
+    ReviewRouter,
+    PaymentsRouter,
+    BannersRouter
 } = require("./Client");
 
 const ClientsRouters = express.Router();
@@ -20,7 +22,8 @@ ClientsRouters.use("/clients", ReviewRouter);
 ClientsRouters.use("/clients", SearchRouter);
 ClientsRouters.use("/clients", UserRouter);
 ClientsRouters.use("/clients", WishlistRouter);
-
+ClientsRouters.use("/clients", PaymentsRouter);
+ClientsRouters.use("/clients", BannersRouter);
 
 ClientsRouters.get("/clients", (req, res) => {
   res.send("Welcome to the Clients API");

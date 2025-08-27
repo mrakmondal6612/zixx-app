@@ -42,3 +42,42 @@ This repository contains multiple services used for local development:
 ---
 
 That's a minimal starter guide. Add project-specific scripts or a docker-compose later for a single-command dev start.
+
+## One-time Setup (Payments, Webhooks, Email)
+
+Follow these once per environment (dev/staging/prod):
+
+1. Backend `.env` (in `backend/.env`)
+
+   - RAZORPAY_KEY_ID=your_key_id
+   - RAZORPAY_SECRET=your_secret
+   - RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
+   - SMTP_HOST=smtp.example.com
+   - SMTP_PORT=587
+   - SMTP_USER=user@example.com
+   - SMTP_PASS=your_password
+   - SMTP_FROM="Zixx <no-reply@yourdomain.com>"
+
+2. Install backend deps and restart
+
+   ```bash
+   # from repo root
+   cd backend && npm i && npm run dev
+   ```
+
+3. Razorpay Dashboard → Webhooks
+
+   - URL: `https://<your-host>/api/clients/payments/razorpay/webhook`
+   - Events: payments.authorized, payment.captured, payment.failed
+   - Secret: same as `RAZORPAY_WEBHOOK_SECRET`
+
+4. Email deliverability
+
+   - Configure SPF/DKIM with your SMTP provider for `SMTP_FROM` domain.
+   - Test: place an order and verify receipt email delivery.
+
+5. Admin refund UI usage
+
+   - Open Admin → Orders.
+   - Click "Refund"; enter amount (leave blank for full refund).
+   - Requires admin auth; calls POST `/api/admin/orders/:id/refund`.

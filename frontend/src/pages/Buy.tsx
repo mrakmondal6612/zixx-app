@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
+import { useAuthContext } from '@/hooks/AuthProvider';
+import { apiUrl } from '@/lib/api';
 
 interface CartItem {
   id: string;
@@ -25,24 +27,25 @@ const Buy: React.FC = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const {user} = useAuthContext();
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCart = async () => {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Please log in to buy products');
-        navigate('/auth');
-        return;
-      }
       try {
-  const res = await fetch('/clients/user/getcart', {
+          const res = await fetch(apiUrl('/clients/user/getcart'), {
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
         });
+        if (res.status === 401) {
+          toast.error('Please log in to buy products');
+          navigate('/auth');
+          return;
+        }
         const data = await res.json();
         if (data.data) {
           const items = data.data.map((item: any) => ({
@@ -73,6 +76,15 @@ const Buy: React.FC = () => {
     fetchCart();
   }, []);
 
+  const ensureLoggedIn = () => {
+      if (!user) {
+        toast.error('Please log in to continue');
+        navigate('/auth');
+        return false;
+      }
+      return true;
+    };
+
   const handleSelect = (id: string) => {
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
@@ -84,34 +96,131 @@ const Buy: React.FC = () => {
       toast.error('Please select at least one product to buy.');
       return;
     }
-    setLoading(true);
-    const token = localStorage.getItem('token');
-    if (!token) {
-      toast.error('Please log in to buy products');
+    if (!user) {
+      toast.error('Please log in to continue');
       navigate('/auth');
       return;
     }
+
+    // Razorpay flow for selected items
+    const loadRazorpay = () => new Promise<boolean>((resolve) => {
+      if ((window as any).Razorpay) return resolve(true);
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+
     try {
-      const selectedItems = cartItems.filter((item) => selected.includes(item.id));
-  const res = await fetch('/clients/order/buy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ items: selectedItems }),
-      });
-      const data = await res.json();
-      if (data.msg === 'Order placed successfully') {
-        toast.success('Order placed!');
-        navigate('/orders');
-      } else {
-        toast.error(data.msg || 'Order failed');
+      setPaying(true);
+      const ok = await loadRazorpay();
+      if (!ok) {
+        toast.error('Razorpay SDK failed to load.');
+        setPaying(false);
+        return;
       }
-    } catch (err) {
-      toast.error('Error placing order');
+
+      // Compute amount for selected items (sum of price * quantity)
+      const selectedItems = cartItems.filter((item) => selected.includes(item.id));
+      const amountInPaise = Math.round(selectedItems.reduce((sum, it) => sum + (it.price * it.quantity), 0) * 100);
+      if (amountInPaise <= 0) {
+        toast.error('Invalid amount');
+        setPaying(false);
+        return;
+      }
+
+      // 1) Get key
+      const keyRes = await fetch(apiUrl('/clients/payments/razorpay/key'), { credentials: 'include' });
+      const keyData = await keyRes.json().catch(() => ({}));
+      if (!keyRes.ok || !keyData?.key) {
+        toast.error(keyData?.msg || 'Failed to get payment key');
+        setPaying(false);
+        return;
+      }
+
+      // 2) Create Razorpay order
+      const orderRes = await fetch(apiUrl('/clients/payments/razorpay/order'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amountInPaise, currency: 'INR', notes: { selectedCount: selectedItems.length } })
+      });
+      const orderData = await orderRes.json().catch(() => ({}));
+      if (!orderRes.ok || !orderData?.order?.id) {
+        toast.error(orderData?.msg || 'Failed to initiate payment');
+        setPaying(false);
+        return;
+      }
+
+      const options: any = {
+        key: keyData.key,
+        amount: orderData.order.amount,
+        currency: orderData.order.currency || 'INR',
+        name: 'Zixx',
+        description: 'Order Payment',
+        order_id: orderData.order.id,
+        prefill: { name: user?.name || '', email: user?.email || '', contact: '' },
+        theme: { color: '#D92030' },
+        handler: async (response: any) => {
+          try {
+            // 3) Verify signature
+            const verifyRes = await fetch(apiUrl('/clients/payments/razorpay/verify'), {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              })
+            });
+            const verifyData = await verifyRes.json().catch(() => ({}));
+            if (!verifyRes.ok || verifyData?.ok !== true) {
+              toast.error(verifyData?.msg || 'Payment verification failed');
+              setPaying(false);
+              return;
+            }
+
+            // 4) Place one consolidated order for selected cart items
+            const cartIds = selectedItems.map((it) => it.id);
+            const placeRes = await fetch(apiUrl('/clients/order/buy-selected'), {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                cartIds,
+                paymentDetails: {
+                  provider: 'razorpay',
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id
+                }
+              })
+            });
+            const placeData = await placeRes.json().catch(() => ({}));
+            if (!placeRes.ok || placeData?.ok !== true) {
+              toast.error(placeData?.msg || 'Failed to place consolidated order');
+              setPaying(false);
+              return;
+            }
+
+            toast.success('Payment successful! Order placed.');
+            navigate('/orders');
+          } catch (err) {
+            toast.error('Unexpected error after payment');
+          }
+          setPaying(false);
+        },
+        modal: { ondismiss: () => { setPaying(false); toast.info('Payment cancelled'); } }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (e) {
+      console.error(e);
+      toast.error('Payment initialization failed');
+      setPaying(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -148,9 +257,9 @@ const Buy: React.FC = () => {
             <Button
               className="w-full bg-[#D92030] hover:bg-[#BC1C2A] py-3 text-base font-semibold rounded-lg"
               onClick={handlePlaceOrder}
-              disabled={loading}
+              disabled={loading || paying}
             >
-              {loading ? 'Placing Order...' : 'Place Order'}
+              {paying ? 'Processing...' : (loading ? 'Placing Order...' : 'Place Order')}
             </Button>
           </>
         )}

@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { User, ShoppingBag, Heart, LogOut } from 'lucide-react';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
 import { useAuthContext } from '@/hooks/AuthProvider';
+import { apiUrl } from '@/lib/api';
 
 const Account = () => {
 
@@ -24,21 +25,21 @@ const Account = () => {
   };
 
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    gender: '',
-    dob: '',
-    personal_address: '',
-    shoping_address: '',
-    billing_address: '',
-    address_village: '',
-    landmark: '',
-    city: '',
-    state: '',
-    country: '',
-    zip: '',
+    first_name: "N/A",
+    last_name: "N/A",
+    email: "N/A",
+    phone: "N/A",
+    gender: "N/A",
+    dob: "N/A",
+    personal_address: "N/A",
+    shoping_address: "N/A",
+    billing_address: "N/A",
+    address_village: "N/A",
+    landmark: "N/A",
+    city: "N/A",
+    state: "N/A",
+    country: "N/A",
+    zip: "N/A",
   });
   const [profilePic, setProfilePic] = useState<string>("");
   const [previewPic, setPreviewPic] = useState<string>("");
@@ -48,8 +49,9 @@ const Account = () => {
 
   useEffect(() => {
     if (user) {
+      const u: any = user as any;
       // If address is a string (from backend), parse it
-      let addressObj = user.address;
+      let addressObj = u.address;
       if (typeof addressObj === 'string') {
         try {
           addressObj = JSON.parse(addressObj);
@@ -58,40 +60,26 @@ const Account = () => {
         }
       }
       setFormData({
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        email: user.email || '',
-        phone: user.phone?.toString() || '',
-        gender: user.gender || '',
-        dob: user.dob || '',
-        personal_address: addressObj?.personal_address ?? '',
-        shoping_address: addressObj?.shoping_address ?? '',
-        billing_address: addressObj?.billing_address ?? '',
-        address_village: addressObj?.address_village ?? '',
-        landmark: addressObj?.landmark ?? '',
-        city: addressObj?.city ?? '',
-        state: addressObj?.state ?? '',
-        country: addressObj?.country ?? '',
-        zip: addressObj?.zip ?? '',
+        first_name: u.first_name || "N/A",
+        last_name: u.last_name || "N/A",
+        email: u.email || "N/A",
+        phone: u.phone?.toString() || "N/A",
+        gender: u.gender || "N/A",
+        dob: u.dob || "N/A",
+        personal_address: addressObj?.personal_address ?? "N/A",
+        shoping_address: addressObj?.shoping_address ?? "N/A",
+        billing_address: addressObj?.billing_address ?? "N/A",
+        address_village: addressObj?.address_village ?? "N/A",
+        landmark: addressObj?.landmark ?? "N/A",
+        city: addressObj?.city ?? "N/A",
+        state: addressObj?.state ?? "N/A",
+        country: addressObj?.country ?? "N/A",
+        zip: addressObj?.zip ?? "N/A",
       });
-      setProfilePic(user.profile_pic || "");
-      setPreviewPic(user.profile_pic || "");
+      setProfilePic(u.profile_pic || "");
+      setPreviewPic(u.profile_pic || "");
     }
-  }, [
-    user && user.first_name,
-    user && user.last_name,
-    user && user.email,
-    user && user.phone,
-    user && user.gender,
-    user && user.dob,
-    user && user.address?.address_village,
-    user && user.address?.landmark,
-    user && user.address?.city,
-    user && user.address?.state,
-    user && user.address?.country,
-    user && user.address?.zip,
-    user && user.profile_pic
-  ]);
+  }, [user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -110,13 +98,12 @@ const Account = () => {
       const form = new FormData();
       form.append('profile_pic', file);
       // Only send image to backend for upload
-  const res = await fetch('/clients/users/me', {
+  const res = await fetch(apiUrl('/clients/user/me'), {
         method: 'PATCH',
-        headers: { Authorization: token ? `Bearer ${token}` : '' },
         body: form,
         credentials: 'include',
       });
-      console.log("Profile picture upload response:", res);
+      // console.log("Profile picture upload response:", res);
       const data = await res.json();
       if (data.ok && data.user) {
         setUser(data.user);
@@ -137,18 +124,6 @@ const Account = () => {
     setLoading(true);
     try {
       const form = new FormData();
-      // Prepare address object for backend
-      const address = {
-        personal_address: formData.personal_address,
-        shoping_address: formData.shoping_address,
-        billing_address: formData.billing_address,
-        address_village: formData.address_village,
-        landmark: formData.landmark,
-        city: formData.city,
-        state: formData.state,
-        country: formData.country,
-        zip: formData.zip,
-      };
       // Append non-address fields
       form.append('first_name', formData.first_name);
       form.append('last_name', formData.last_name);
@@ -156,36 +131,45 @@ const Account = () => {
       form.append('phone', formData.phone);
       form.append('gender', formData.gender);
       form.append('dob', formData.dob);
-      // Append address as JSON string
-      form.append('address', JSON.stringify(address));
+      // Append flat address fields (backend merges into address)
+      if (formData.address_village) form.append('address_village', formData.address_village);
+      if (formData.landmark) form.append('landmark', formData.landmark);
+      if (formData.city) form.append('city', formData.city);
+      if (formData.state) form.append('state', formData.state);
+      if (formData.country) form.append('country', formData.country);
+      if (formData.zip) form.append('zip', formData.zip);
       if (profilePic && typeof profilePic !== 'string') {
         form.append('profile_pic', profilePic);
       }
-  const res = await fetch('/clients/users/me', {
+      const res = await fetch(apiUrl('/clients/user/me'), {
         method: 'PATCH',
-        headers: { Authorization: token ? `Bearer ${token}` : '' },
         body: form,
         credentials: 'include',
       });
+      if (res.status === 401) {
+        alert('Please sign in to update your profile.');
+        window.location.href = '/auth';
+        return;
+      }
       const data = await res.json();
       if (data.ok && data.user) {
         setUser(data.user);
         setFormData({
-          first_name: data.user.first_name || '',
-          last_name: data.user.last_name || '',
-          email: data.user.email || '',
-          phone: data.user.phone?.toString() || '',
-          gender: data.user.gender || '',
-          dob: data.user.dob || '',
-          personal_address: data.user.address?.personal_address ?? '',
-          shoping_address: data.user.address?.shoping_address ?? '',
-          billing_address: data.user.address?.billing_address ?? '',
-          address_village: data.user.address?.address_village ?? '',
-          landmark: data.user.address?.landmark ?? '',
-          city: data.user.address?.city ?? '',
-          state: data.user.address?.state ?? '',
-          country: data.user.address?.country ?? '',
-          zip: data.user.address?.zip ?? '',
+          first_name: data.user.first_name || "N/A",
+          last_name: data.user.last_name || "N/A",
+          email: data.user.email || "N/A",
+          phone: data.user.phone?.toString() || "N/A",
+          gender: data.user.gender || "N/A",
+          dob: data.user.dob || "N/A",
+          personal_address: data.user.address?.personal_address ?? "N/A",
+          shoping_address: data.user.address?.shoping_address ?? "N/A",
+          billing_address: data.user.address?.billing_address ?? "N/A",
+          address_village: data.user.address?.address_village ?? "N/A",
+          landmark: data.user.address?.landmark ?? "N/A",
+          city: data.user.address?.city ?? "N/A",
+          state: data.user.address?.state ?? "N/A",
+          country: data.user.address?.country ?? "N/A",
+          zip: data.user.address?.zip ?? "N/A",
         });
         alert('Profile updated!');
       } else {

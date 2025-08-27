@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { StarRating } from "@/components/ui/star-rating";
+import { apiUrl } from "@/lib/api";
 
 const Review = ({ productId, reviews }) => {
   const [rating, setRating] = useState(0);
@@ -10,10 +11,11 @@ const Review = ({ productId, reviews }) => {
     setUserReviews(reviews);
   }, [reviews]);
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
-  const response = await fetch(`/clients/products/${productId}/reviews`, {
+        const response = await fetch(apiUrl(`/clients/reviews/product/${productId}`), {
+        credentials: 'include',
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rating, comment }),
@@ -21,6 +23,7 @@ const Review = ({ productId, reviews }) => {
       const data = await response.json();
       setUserReviews([...userReviews, data]);
     } catch (error) {
+      console.log(error);
       console.error(error);
     }
   };

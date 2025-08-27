@@ -5,6 +5,8 @@ import { Footer } from '@/components/layout/Footer/Footer';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { useAuthContext } from '@/hooks/AuthProvider';
+import { apiUrl } from '@/lib/api';
 
 interface CartProduct {
   id: string;
@@ -27,23 +29,24 @@ const SingleCartProduct = () => {
   const navigate = useNavigate();
   const [product, setProduct] = useState<CartProduct | null>(null);
   const [loading, setLoading] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const { user } = useAuthContext();
 
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Please log in to view product');
-        navigate('/auth');
-        return;
-      }
       try {
-        const res = await fetch(`/clients/user/getcart/${id}`, {
+        const res = await fetch(apiUrl(`/clients/user/getcart/${id}`), {
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
         });
+        if (res.status === 401) {
+          toast.error('Please log in to view product');
+          navigate('/auth');
+          return;
+        }
         const data = await res.json();
         if (data.data) {
           setProduct({
@@ -75,33 +78,121 @@ const SingleCartProduct = () => {
   }, [id, navigate]);
 
   const handleBuy = async () => {
-    setLoading(true);
-    const token = localStorage.getItem('token');
-    if (!token) {
-      toast.error('Please log in to buy product');
+    if (!product) return;
+    if (!user) {
+      toast.error('Please log in to continue');
       navigate('/auth');
       return;
     }
+
+    const loadRazorpay = () => new Promise<boolean>((resolve) => {
+      if ((window as any).Razorpay) return resolve(true);
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+
     try {
-      const res = await fetch(`/clients/order/buy`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ singleCartId: product?.id }),
-      });
-      const data = await res.json();
-      if (data.msg === 'Order placed successfully') {
-        toast.success('Order placed!');
-        navigate('/orders');
-      } else {
-        toast.error(data.msg || 'Order failed');
+      setPaying(true);
+      const ok = await loadRazorpay();
+      if (!ok) {
+        toast.error('Razorpay SDK failed to load.');
+        setPaying(false);
+        return;
       }
-    } catch (err) {
-      toast.error('Error placing order');
+
+      const amountInPaise = Math.round((product.price * product.quantity) * 100);
+      if (amountInPaise <= 0) {
+        toast.error('Invalid amount');
+        setPaying(false);
+        return;
+      }
+
+      // 1) Get key
+      const keyRes = await fetch(apiUrl('/clients/payments/razorpay/key'), { credentials: 'include' });
+      const keyData = await keyRes.json().catch(() => ({}));
+      if (!keyRes.ok || !keyData?.key) {
+        toast.error(keyData?.msg || 'Failed to get payment key');
+        setPaying(false);
+        return;
+      }
+
+      // 2) Create order
+      const orderRes = await fetch(apiUrl('/clients/payments/razorpay/order'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amountInPaise, currency: 'INR', notes: { single: true, cartId: product.id } })
+      });
+      const orderData = await orderRes.json().catch(() => ({}));
+      if (!orderRes.ok || !orderData?.order?.id) {
+        toast.error(orderData?.msg || 'Failed to initiate payment');
+        setPaying(false);
+        return;
+      }
+
+      const options: any = {
+        key: keyData.key,
+        amount: orderData.order.amount,
+        currency: orderData.order.currency || 'INR',
+        name: 'Zixx',
+        description: 'Order Payment',
+        order_id: orderData.order.id,
+        prefill: { name: user?.name || '', email: user?.email || '', contact: '' },
+        theme: { color: '#D92030' },
+        handler: async (response: any) => {
+          try {
+            // 3) Verify signature
+            const verifyRes = await fetch(apiUrl('/clients/payments/razorpay/verify'), {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              })
+            });
+            const verifyData = await verifyRes.json().catch(() => ({}));
+            if (!verifyRes.ok || verifyData?.ok !== true) {
+              toast.error(verifyData?.msg || 'Payment verification failed');
+              setPaying(false);
+              return;
+            }
+
+            // 4) Place order
+            const placeRes = await fetch(apiUrl(`/clients/order/buy`), {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ singleCartId: product.id, paymentDetails: { provider: 'razorpay', razorpay_order_id: response.razorpay_order_id, razorpay_payment_id: response.razorpay_payment_id } }),
+            });
+            const placeData = await placeRes.json().catch(() => ({}));
+            if (!placeRes.ok || placeData?.ok === false) {
+              toast.error(placeData?.msg || 'Order failed');
+              setPaying(false);
+              return;
+            }
+
+            toast.success('Payment successful! Order placed.');
+            navigate('/orders');
+          } catch (err) {
+            toast.error('Unexpected error after payment');
+          }
+          setPaying(false);
+        },
+        modal: { ondismiss: () => { setPaying(false); toast.info('Payment cancelled'); } }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (e) {
+      console.error(e);
+      toast.error('Payment initialization failed');
+      setPaying(false);
     }
-    setLoading(false);
   };
 
   if (loading) return <div className="flex justify-center items-center h-40 text-lg font-semibold text-gray-600 animate-pulse">Loading...</div>;
@@ -132,8 +223,8 @@ const SingleCartProduct = () => {
               </div>
               <div className="text-gray-800 font-bold text-2xl mb-2">Price: <span className="text-purple-700">₹{product.price.toFixed(2)}</span></div>
               <div className="text-gray-700 text-base mb-4 whitespace-pre-line break-words">{product.description}</div>
-              <Button className="w-full md:w-auto mt-2 bg-[#D92030] hover:bg-[#BC1C2A] px-8 py-3 text-white font-bold rounded-lg text-lg shadow-md" onClick={handleBuy} disabled={loading}>
-                {loading ? 'Processing...' : 'Buy Now'}
+              <Button className="w-full md:w-auto mt-2 bg-[#D92030] hover:bg-[#BC1C2A] px-8 py-3 text-white font-bold rounded-lg text-lg shadow-md" onClick={handleBuy} disabled={loading || paying}>
+                {paying ? 'Processing...' : (loading ? 'Loading...' : 'Buy Now')}
               </Button>
             </div>
           </div>

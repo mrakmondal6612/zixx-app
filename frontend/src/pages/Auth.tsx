@@ -8,6 +8,7 @@ import { ScrollToTop } from '@/components/ui/scroll-to-top';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/hooks/AuthProvider';
 import { FaFacebook, FaGoogle } from 'react-icons/fa';
+import { apiUrl } from '@/lib/api';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -40,10 +41,6 @@ const Auth = () => {
 
   if (user) return <Navigate to="/" replace />;
 
-  const setToken = (token: string) => {
-    localStorage.setItem('token', token);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -69,7 +66,8 @@ const Auth = () => {
           gender,
           dob
         };
-  const res = await fetch('/api/clients/register', {
+  const res = await fetch(apiUrl('/clients/register'), {
+          credentials: 'include', 
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),

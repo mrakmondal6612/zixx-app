@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Trash2, ShoppingCart } from 'lucide-react';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
 import { toast } from 'sonner';
+import { useAuthContext } from '@/hooks/AuthProvider';
+import { apiUrl } from '@/lib/api';
 
 type WishlistItem = {
   id: string;
@@ -25,18 +27,16 @@ type WishlistItem = {
 
 const Wishlist = () => {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
+  const { user } = useAuthContext();
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (!user) return;
     async function fetchWishlist() {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
       try {
-  const res = await fetch('/clients/user/wishlist', {
-          headers: { Authorization: `Bearer ${token}` },
+        const res = await fetch(apiUrl('/clients/user/wishlist'), {
+          credentials: 'include',
         });
-
         const data = await res.json();
 
         if (!Array.isArray(data.wishlist)) {
@@ -68,24 +68,36 @@ const Wishlist = () => {
     }
 
     fetchWishlist();
-  }, []);
+  }, [user]);
+
+  const ensureLoggedIn = () => {
+    if (!user) {
+      toast.error('You must be logged in.');
+      navigate('/auth');
+      return false;
+    }
+    return true;
+  };
 
   async function removeItem(id: string) {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
+    if (!ensureLoggedIn()) return;
     try {
-  await fetch('/clients/user/wishlist/remove', {
+      const res = await fetch(apiUrl('/clients/user/wishlist/remove'), {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ productId: id }),
       });
 
-      setWishlistItems((prev) => prev.filter((item) => item.id !== id));
-      toast.success('Removed from wishlist');
+      if (res.ok) {
+        setWishlistItems((prev) => prev.filter((item) => item.id !== id));
+        toast.success('Removed from wishlist');
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        toast.error(errorData?.msg || 'Failed to remove item');
+      }
     } catch (err) {
       console.error('Error removing wishlist item:', err);
       toast.error('Error removing item');
@@ -93,18 +105,10 @@ const Wishlist = () => {
   }
 
   async function handleAddToCart(item: WishlistItem) {
-    const token = localStorage.getItem('token');
-    if (!token) {
-  toast.error('Please log in to add to cart');
-  navigate('/auth');
-      return;
-    }
+    if (!ensureLoggedIn()) return;
 
-    // Always use string for size and color, fallback to 'Free' and 'Default'
     const size = typeof item.size === 'string' && item.size ? item.size : 'Free';
     const color = typeof item.color === 'string' && item.color ? item.color : 'Default';
-
-    // Fallbacks for backend-required fields (must be non-empty)
     const description = (item as any).description || 'No description available';
     const brand = (item as any).brand || 'No brand';
     const gender = item.category || 'Unisex';
@@ -134,30 +138,20 @@ const Wishlist = () => {
       image,
       Qty,
       afterQtyprice,
-      variation: {
-        size,
-        color,
-        quantity: Qty,
-      },
+      variation: { size, color, quantity: Qty },
       total,
     };
 
-    console.log('Sending add to cart payload:', payload);
-
     try {
-  const res = await fetch('/clients/user/addtocart', {
+      const res = await fetch(apiUrl('/clients/user/addtocart'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      console.log('AddToCart response status:', res.status);
-      const data = await res.json().catch(() => ({}));
-      console.log('AddToCart response data:', data);
 
-        if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
         toast.success(`Added "${item.name}" to cart!`);
         setTimeout(() => navigate('/cart'), 800);
       } else {
@@ -180,11 +174,7 @@ const Wishlist = () => {
             {wishlistItems.map((item) => (
               <Card key={item.id} className="overflow-hidden">
                 <div className="aspect-square relative">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                   {!item.inStock && (
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                       <span className="text-white font-bold text-lg">Out of Stock</span>
@@ -193,7 +183,6 @@ const Wishlist = () => {
                 </div>
                 <div className="p-4">
                   <h3 className="font-medium">{item.name}</h3>
-
                   {(item.size || item.color) && (
                     <div className="text-sm text-gray-500 mt-1">
                       {item.size && <span>Size: {item.size}</span>}
@@ -201,27 +190,21 @@ const Wishlist = () => {
                       {item.color && <span>Color: {item.color}</span>}
                     </div>
                   )}
-
                   <div className="flex items-center gap-2 mt-2">
                     <span className="font-bold">₹{item.price}</span>
                     {item.oldPrice && (
                       <>
-                        <span className="text-gray-500 line-through text-sm">
-                          ₹{item.oldPrice}
-                        </span>
+                        <span className="text-gray-500 line-through text-sm">₹{item.oldPrice}</span>
                         <span className="text-[#D92030] text-sm">
                           {Math.round((1 - item.price / item.oldPrice) * 100)}% OFF
                         </span>
                       </>
                     )}
                   </div>
-
                   <div className="flex gap-2 mt-4">
                     <Button
                       className={`flex-1 ${
-                        item.inStock
-                          ? 'bg-[#D92030] hover:bg-[#BC1C2A]'
-                          : 'bg-gray-300 cursor-not-allowed'
+                        item.inStock ? 'bg-[#D92030] hover:bg-[#BC1C2A]' : 'bg-gray-300 cursor-not-allowed'
                       }`}
                       disabled={!item.inStock}
                       onClick={() => handleAddToCart(item)}
@@ -229,11 +212,7 @@ const Wishlist = () => {
                       <ShoppingCart size={18} className="mr-2" />
                       Add to Cart
                     </Button>
-                    <Button
-                      variant="outline"
-                      className="px-3"
-                      onClick={() => removeItem(item.id)}
-                    >
+                    <Button variant="outline" className="px-3" onClick={() => removeItem(item.id)}>
                       <Trash2 size={18} />
                     </Button>
                   </div>
@@ -244,13 +223,8 @@ const Wishlist = () => {
         ) : (
           <div className="text-center py-16 bg-gray-50 rounded-md">
             <h2 className="text-2xl font-bold mb-4">Your wishlist is empty</h2>
-            <p className="mb-8 text-gray-600">
-              You haven't added any items to your wishlist yet.
-            </p>
-            <Button
-              onClick={() => navigate('/')}
-              className="bg-[#D92030] hover:bg-[#BC1C2A]"
-            >
+            <p className="mb-8 text-gray-600">You haven't added any items to your wishlist yet.</p>
+            <Button onClick={() => navigate('/')} className="bg-[#D92030] hover:bg-[#BC1C2A]">
               Continue Shopping
             </Button>
           </div>

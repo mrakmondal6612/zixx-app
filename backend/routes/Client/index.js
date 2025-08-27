@@ -6,6 +6,8 @@ const { ProductRouter } = require("./products.routes");
 const { SearchRouter } = require("./search.routes");
 const { UserRouter } = require("./user.routes");
 const { ReviewRouter } = require("./reviews.routes");
+const { PaymentsRouter } = require("./payments.routes");
+const { BannersRouter } = require("./banners.routes");
 
 module.exports = {
   BrandRouter,
@@ -15,5 +17,7 @@ module.exports = {
   UserRouter,
   WishlistRouter,
   CartRouter,
-  ReviewRouter
+  ReviewRouter,
+  PaymentsRouter,
+  BannersRouter
 };

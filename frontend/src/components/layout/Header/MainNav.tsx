@@ -234,7 +234,7 @@ export const MainNav = () => {
                 />
                 <span className="text-sm">Wishlist</span>
               </Link>
-              {user?.role === 'admin' && (
+              {user.role === 'admin' && (
                 <Link to="/admin" aria-label="Admin panel" className="flex flex-col items-center" onClick={() => setIsMenuOpen(false)}>
                   <User size={24} className="mb-1 text-red-600" />
                   <span className="text-sm">Admin</span>

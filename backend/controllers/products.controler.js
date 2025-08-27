@@ -14,38 +14,90 @@ const { ProductStat } = require("../models/ProductStat.model");
 
 exports.getProducts = async (req, res) => {
   try {
-    // 1️⃣ Fetch all products from main server DB
-    const products = await ProductModel.find().lean(); // lean() gives plain JS objects
+    const {
+      category,
+      subcategory,
+      gender,
+      sizes, // CSV or repeated query param not supported here
+      colors, // CSV
+      priceMin,
+      priceMax,
+      featured,
+      theme,
+      search, // text search on title/description/brand
+      sort, // price_asc | price_desc | newest | rating_desc | discount_desc
+      saleOnly, // when 'true', only items with discount > 0
+      page = 1,
+      limit = 20,
+    } = req.query;
 
-    // 2️⃣ Attach stats for each product
-    const productsWithStats = await Promise.all(
-      products.map(async (product) => {
-        const stat = await ProductStat.find({ productId: product._id }).lean();
-        return { ...product, stat };
-      })
-    );
+    const filter = {};
+    if (category) filter.category = { $regex: new RegExp(`^${category}$`, 'i') };
+    if (subcategory) filter.subcategory = { $regex: new RegExp(`^${subcategory}$`, 'i') };
+    if (gender) filter.gender = { $regex: new RegExp(`^${gender}$`, 'i') };
+    if (theme) filter.theme = { $regex: new RegExp(theme, 'i') };
+    if (featured === 'true') filter.featured = true;
 
-    // 3️⃣ Map products to UI-friendly shape
-    const mapped = productsWithStats.map((p) => ({
-      _id: p._id,
-      name: p.title || p.name || '',
-      description: p.description || '',
-      image: p.image || [],
-      price: p.price || 0,
-      rating: p.rating || 0,
-      color: Array.isArray(p.color) ? p.color.join(", ") : '',
-      size: Array.isArray(p.size) ? p.size.join(", ") : '',
-      category: p.category || '',
-      subcategory: p.subcategory || '',
-      supply: p.supply || p.stock || 0,
-      brand: p.brand || '',
-      stat: p.stat || [],
-    }));
+    if (priceMin || priceMax) {
+      filter.price = {};
+      if (priceMin) filter.price.$gte = Number(priceMin);
+      if (priceMax) filter.price.$lte = Number(priceMax);
+    }
 
-    res.status(200).json({data:mapped, ok: true});
+    // Only discounted products when saleOnly is true
+    if (String(saleOnly).toLowerCase() === 'true') {
+      filter.discount = { $gt: 0 };
+    }
 
+    if (sizes) {
+      const arr = String(sizes)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (arr.length) filter.size = { $in: arr };
+    }
+
+    if (colors) {
+      const arr = String(colors)
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean);
+      if (arr.length) filter.color = { $in: arr };
+    }
+
+    if (search) {
+      const q = String(search).trim();
+      filter.$or = [
+        { title: { $regex: q, $options: 'i' } },
+        { description: { $regex: q, $options: 'i' } },
+        { brand: { $regex: q, $options: 'i' } },
+      ];
+    }
+
+    const sortMap = {
+      price_asc: { price: 1 },
+      price_desc: { price: -1 },
+      newest: { createdAt: -1 },
+      rating_desc: { rating: -1 },
+      discount_desc: { discount: -1 },
+    };
+    const sortSpec = sortMap[sort] || { createdAt: -1 };
+
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.max(1, Math.min(100, Number(limit) || 20));
+
+    const [items, total] = await Promise.all([
+      ProductModel.find(filter)
+        .sort(sortSpec)
+        .skip((pageNum - 1) * limitNum)
+        .limit(limitNum)
+        .lean(),
+      ProductModel.countDocuments(filter),
+    ]);
+
+    res.status(200).json({ ok: true, data: items, total, page: pageNum, limit: limitNum });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ ok: false, message: error.message });
   }
 };
 

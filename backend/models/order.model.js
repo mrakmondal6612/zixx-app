@@ -9,13 +9,28 @@ const orderSchema = new mongoose.Schema({
   totalAmount: { type: Number, required: true },
   shippingAddress: { type: String, required: true },
   paymentMethod: { type: String, enum: ["credit_card", "paypal", "bank_transfer"], default: "credit_card" },
-  paymentStatus: { type: String, enum: ["paid", "unpaid"], default: "unpaid" },
+  paymentStatus: { type: String, enum: ["paid", "unpaid", "refunded"], default: "unpaid" },
   deliveryDate: { type: Date, default: null }, 
   trackingNumber: { type: String, default: null },
+  // Courier/channel info
+  carrier: { type: String, default: null },
+  carrierUrl: { type: String, default: null },
+  courierPhone: { type: String, default: null },
+  courierLogoUrl: { type: String, default: null },
   orderDate: { type: Date, default: Date.now },
   deliveryStatus: { type: String, enum: ["pending", "shipped", "delivered", "returned"], default: "pending" },
   customerNotes: { type: String, default: null },
   adminNotes: { type: String, default: null },
+  // Admin verification flow
+  isVerified: { type: Boolean, default: false },
+  verifiedAt: { type: Date, default: null },
+  verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "user", default: null },
+  // Operational timestamps for lifecycle steps
+  packedAt: { type: Date, default: null },
+  shippedAt: { type: Date, default: null },
+  outForDeliveryAt: { type: Date, default: null },
+  returnedAt: { type: Date, default: null },
+  cancelledAt: { type: Date, default: null },
   isGift: { type: Boolean, default: false },
   giftMessage: { type: String, default: null },
   giftWrap: { type: Boolean, default: false },
@@ -39,16 +54,27 @@ const orderSchema = new mongoose.Schema({
     }
   ],
   paymentDetails: {
+    provider: { type: String, default: null },
     transactionId: { type: String, default: null },
+    razorpay_order_id: { type: String, default: null },
     paymentDate: { type: Date, default: null },
     paymentAmount: { type: Number, default: 0 },
-    paymentStatus: { type: String, enum: ["pending", "completed", "failed"], default: "pending" },
+    paymentStatus: { type: String, enum: ["pending", "completed", "failed", "refunded"], default: "pending" },
   },
   orderHistory: [
     {
       status: { type: String, enum: ["pending", "completed", "cancelled"], required: true },
       updatedAt: { type: Date, default: Date.now },
       notes: { type: String, default: null },
+    }
+  ],
+  // Lightweight audit trail for admin actions
+  auditTrail: [
+    {
+      action: { type: String, required: true }, // e.g., 'packed', 'courier_updated'
+      by: { type: mongoose.Schema.Types.ObjectId, ref: 'user', default: null },
+      at: { type: Date, default: Date.now },
+      meta: { type: Object, default: {} },
     }
   ],
   timestamp: { type: Date, default: Date.now },

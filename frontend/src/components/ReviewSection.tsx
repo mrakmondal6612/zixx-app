@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { StarRating } from '@/components/ui/star-rating';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { MessageCircle, User, Pencil } from 'lucide-react';
+import { apiUrl } from '@/lib/api';
 
 interface Review {
   id: string;
@@ -38,7 +39,7 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`/clients/reviews/product/${productId}`);
+        const res = await fetch(apiUrl(`/clients/reviews/product/${productId}`));
         const json = await res.json();
         setReviews(json.data.map((r: any) => ({
           id: r._id,
@@ -65,7 +66,7 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
 
   const handleShowForm = () => {
     if (!user) {
-      navigate('/login');
+      navigate('/auth');
       return;
     }
     setShowForm(true);
@@ -86,12 +87,9 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
   const handleDeleteReview = async (reviewId: string) => {
     if (!window.confirm('Are you sure you want to delete your review?')) return;
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`/clients/reviews/${reviewId}`, {
+      const res = await fetch(apiUrl(`/clients/reviews/${reviewId}`), {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: 'include',
       });
       const contentType = res.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
@@ -100,6 +98,10 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
         throw new Error('Server error: ' + text.slice(0, 200));
       }
       const json = await res.json();
+      if (res.status === 401) {
+        navigate('/auth');
+        return;
+      }
       if (!res.ok) throw new Error(json.msg);
       setReviews(rs => rs.filter(r => r.id !== reviewId));
       setShowForm(false);
@@ -112,27 +114,59 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
     }
   };
 
+  // Helpers
+  const isValidObjectId = (id?: string | null) => !!id && /^[a-fA-F0-9]{24}$/.test(id);
+  const fetchReviewsRaw = async () => {
+    const res = await fetch(apiUrl(`/clients/reviews/product/${productId}`));
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.msg || 'Failed to refresh reviews');
+    return json.data;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      navigate('/login');
+      navigate('/auth');
       return;
     }
 
+    console.log("myReview", myReview);
+    console.log("product id", productId);
+    if (editing && !myReview) {
+      console.warn('Edit mode but myReview missing; will try to resolve from server');
+    }
     try {
-      const token = localStorage.getItem('token');
+      console.log("myReview", myReview);
       const method = editing ? 'PUT' : 'POST';
+      // Ensure we have a valid review ID when editing
+      let reviewIdForEdit: string | undefined = myReview?.id;
+      if (editing && !isValidObjectId(reviewIdForEdit)) {
+        try {
+          const raw = await fetchReviewsRaw();
+          const mine = raw.find((r: any) => (r.userId?._id || r.userId) === user._id);
+          if (mine && isValidObjectId(mine._id)) {
+            reviewIdForEdit = mine._id;
+          } else {
+            alert('Could not locate your review to edit. Please reload the page.');
+            return;
+          }
+        } catch (e) {
+          console.error('Failed to resolve review ID from server', e);
+          alert('Failed to locate your review. Please reload the page and try again.');
+          return;
+        }
+      }
       const url = editing
-        ? `/clients/reviews/${myReview!.id}`
-        : `/clients/reviews/product/${productId}`;
+        ? apiUrl(`/clients/reviews/${reviewIdForEdit!}`)
+        : apiUrl(`/clients/reviews/product/${productId}`);
 
 
       const res = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        credentials: 'include',
         body: JSON.stringify({
           rating: newReview.rating,
           comment: newReview.comment,
@@ -147,25 +181,23 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
       }
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json.msg);
-
-      const updatedReview: Review = {
-        id: editing ? myReview!.id : json.reviewId || Date.now().toString(),
-        name: user.first_name
-          ? `${user.first_name} ${user.last_name}`
-          : user.email,
-        rating: newReview.rating,
-        comment: newReview.comment,
-        date: new Date().toISOString().split('T')[0],
-        avatar: '',
-        userId: user._id,
-      };
-
-      if (editing) {
-        setReviews(rs => rs.map(r => (r.id === updatedReview.id ? updatedReview : r)));
-      } else {
-        setReviews(rs => [updatedReview, ...rs]);
+      if (res.status === 401) {
+        navigate('/auth');
+        return;
       }
+      if (!res.ok) throw new Error(json.msg);
+      const listRes = await fetch(apiUrl(`/clients/reviews/product/${productId}`));
+      const listJson = await listRes.json();
+      if (!listRes.ok) throw new Error(listJson.msg || 'Failed to refresh reviews');
+      setReviews(listJson.data.map((r: any) => ({
+        id: r._id,
+        name: `${r.userId.first_name} ${r.userId.last_name}`,
+        rating: r.rating,
+        comment: r.comment,
+        date: new Date(r.createdAt).toISOString().split('T')[0],
+        avatar: r.userId.profile_pic || '',
+        userId: r.userId._id,
+      })));
       setShowForm(false);
       setEditing(false);
       setNewReview({ name: '', rating: 0, comment: '' });
@@ -286,7 +318,7 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
               </Button>
             ) : (
               <Button
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/auth')}
                 className="bg-primary text-white font-semibold px-8 py-3 rounded-lg shadow hover:bg-primary/90 transition w-full"
               >
                 Login to Write a Review
@@ -299,9 +331,9 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
                 <Input
                   id="name"
                   value={
-                    user?.first_name
-                      ? `${user.first_name} ${user.last_name}`
-                      : user?.email || ''
+                    (user as any)?.first_name
+                      ? `${(user as any).first_name} ${(user as any).last_name || ''}`
+                      : (user as any)?.email || ''
                   }
                   disabled
                   className="w-full bg-muted/40 border border-muted rounded-lg px-4 py-2 text-base"

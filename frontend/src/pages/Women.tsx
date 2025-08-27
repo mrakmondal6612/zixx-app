@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 import { Card } from '@/components/ui/card';
+import ProductCard from '@/components/ProductCard';
 import { Link } from 'react-router-dom';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
-import { Banner } from '@/components/sections/Banner';
+import { DynamicBanner } from '@/components/sections/DynamicBanner';
+import { apiUrl } from '@lib/api';
 
 interface Product {
   _id: string;
@@ -28,16 +30,18 @@ interface CategoryGroup {
 
 const Women = () => {
   const [groupedProducts, setGroupedProducts] = useState<{ [category: string]: { [subcategory: string]: Product[] } }>({});
+  const [allData, setAllData] = useState<Product[]>([]);
   const [categories, setCategories] = useState<CategoryGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-  const res = await fetch('/clients/products/women');
+        const res = await fetch(apiUrl('/clients/products/women'), { credentials: 'include' });
         const result = await res.json();
-        console.log("Fetched products:", result);
+        console.log("Fetched products:", result.data);
         if (!result.ok) throw new Error("API returned not ok");
 
         const grouped: { [category: string]: { [subcategory: string]: Product[] } } = {};
@@ -50,6 +54,7 @@ const Women = () => {
         });
 
         setGroupedProducts(grouped);
+        setAllData(result.data);
 
         // Prepare unique category + subcategory list
         const imageMap: { [key: string]: string } = {
@@ -73,6 +78,7 @@ const Women = () => {
         setCategories(catList);
         setLoading(false);
       } catch (err: any) {
+        console.log("err", err);
         console.error("Error fetching products:", err);
         setError("Failed to load products");
         setLoading(false);
@@ -82,29 +88,33 @@ const Women = () => {
     fetchProducts();
   }, []);
 
-  const allProducts = Object.values(groupedProducts).flatMap(subcategories => Object.values(subcategories).flat());
-  const bestSellers = allProducts.filter(p => p.theme?.toLowerCase() === 'bestseller').slice(0, 8);
-  const newArrivals = allProducts.filter(p => p.theme?.toLowerCase() === 'new arrival').slice(0, 8);
+  const bestSellers = allData.filter(p => p.theme?.toLowerCase().includes('new'));
+  const newArrivals = allData.filter(p => p.theme?.toLowerCase().includes('new'));
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Header />
-      <Banner
-        imageUrl="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true"
-        heading="Featured Collection"
-        description="Explore our curated selection of the season's must-haves."
-        linkText="Shop Collection"
-        linkUrl="/women/featured-collection"
-      />
 
       <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-8 py-8">
+      <DynamicBanner
+        page="women"
+        position="featured"
+        fallback={{
+          imageUrl: "/placeholder.svg",
+          heading: "Featured Collection",
+          description: "Explore our curated selection of the season's must-haves.",
+          linkText: "Shop Collection",
+          linkUrl: "/women",
+        }}
+        style={{ variant: 'pro', overlay: 'dark', cta: 'brand', radius: '2xl', hover: 'zoom' }}
+      />
         {/* Category Grid */}
         <section className="mb-16">
           <h2 className="text-2xl font-bold mb-8">Shop by Category</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {categories.map((category, index) => (
               <div key={index} className="group">
-                <Link to={`/women/${category.category.toLowerCase()}`}>
+                <Link to={`/category/${category.category.toLowerCase()}`}>
                   <Card className="overflow-hidden">
                     <div className="aspect-square relative">
                       <img
@@ -122,7 +132,7 @@ const Women = () => {
                 <div className="mt-3">
                   <ul className="text-sm text-gray-600 space-y-1">
                     <li className="hover:text-[#D92030]">
-                      <Link to={`/women/${category.category.toLowerCase()}/${category.subcategory.toLowerCase()}`}>
+                      <Link to={`/category/${category.category.toLowerCase()}/${category.subcategory.toLowerCase()}`}>
                         {category.subcategory}
                       </Link>
                     </li>
@@ -143,29 +153,16 @@ const Women = () => {
               <div key={j} className="mb-8">
                 <h3 className="text-xl font-semibold mb-4">{subcategory}</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-                  {groupedProducts[category][subcategory].slice(0, 4).map((product, index) => (
-                    <Link key={index} to={`/product/${product._id}`}>
-                      <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                        <div className="aspect-square">
-                          <img
-                            src={product.image[0]}
-                            alt={product.title}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="p-4">
-                          <h3 className="font-medium">{product.title}</h3>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="font-bold">₹{product.price}</span>
-                            {product.discount > 0 && (
-                              <span className="text-gray-500 line-through text-sm">
-                                ₹{(product.price / (1 - product.discount / 100)).toFixed(2)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </Card>
-                    </Link>
+                  {groupedProducts[category][subcategory].slice(0, 4).map((p, index) => (
+                    <ProductCard
+                      key={index}
+                      id={p._id}
+                      title={p.title}
+                      image={p.image?.[0]}
+                      price={p.price}
+                      discount={p.discount}
+                      badge={p.theme?.toLowerCase().includes('best') ? 'Best Seller' : p.theme?.toLowerCase().includes('new') ? 'New Arrival' : undefined}
+                    />
                   ))}
                 </div>
               </div>
@@ -173,89 +170,61 @@ const Women = () => {
           </section>
         ))}
 
-        {/* Banner */}
-        <section className="mb-16">
-          
-          <Banner
-            imageUrl='https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true'
-            heading="Summer Collection"
-            description="Light fabrics and vibrant colors for the perfect summer look."
-            linkText="Shop Now"
-            linkUrl="/women/summer-collection"
-          />
-        </section>
-        
+
         {/* Special Sections: Best Seller & New Arrival */}
 
         {bestSellers.length > 0 && (
-        <section className="mb-16">
-        <h2 className="text-2xl font-bold mb-6">Best Sellers</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-          {Object.values(groupedProducts)
-            .flatMap((subcategories) => Object.values(subcategories).flat())
-            .filter((product) => product.theme?.toLowerCase() === 'bestseller')
-            .slice(0, 8)
-            .map((product) => (
-              <Link key={product._id} to={`/product/${product._id}`}>
-                <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                  <div className="aspect-square">
-                    <img
-                      src={product.image[0]}
-                      alt={product.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-medium">{product.title}</h3>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="font-bold">₹{product.price}</span>
-                      {product.discount > 0 && (
-                        <span className="text-gray-500 line-through text-sm">
-                          ₹{(product.price / (1 - product.discount / 100)).toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              </Link>
+          <section className="mb-16">
+            {/* Banner */}
+            <section className="mb-16">
+              
+              <DynamicBanner
+                page="women"
+                position="summer"
+                fallback={{
+                  imageUrl: '/placeholder.svg',
+                  heading: "Summer Collection",
+                  description: "Light fabrics and vibrant colors for the perfect summer look.",
+                  linkText: "Shop Now",
+                  linkUrl: "/women",
+                }}
+                style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
+              />
+            </section>
+        
+          <h2 className="text-2xl font-bold mb-6">Best Sellers</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+            {bestSellers.slice(0, 8).map((p) => (
+              <ProductCard
+                key={p._id}
+                id={p._id}
+                title={p.title}
+                image={p.image?.[0]}
+                price={p.price}
+                discount={p.discount}
+                badge={'Best Seller'}
+              />
             ))}
-        </div>
+          </div>
         </section>
         )}
 
         {newArrivals.length > 0 && (
-        <section className="mb-16">
-        <h2 className="text-2xl font-bold mb-6">New Arrivals</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-          {Object.values(groupedProducts)
-            .flatMap((subcategories) => Object.values(subcategories).flat())
-            .filter((product) => product.theme?.toLowerCase() === 'new arrival')
-            .slice(0, 8)
-            .map((product) => (
-              <Link key={product._id} to={`/product/${product._id}`}>
-                <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                  <div className="aspect-square">
-                    <img
-                      src={product.image[0]}
-                      alt={product.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-medium">{product.title}</h3>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="font-bold">${product.price}</span>
-                      {product.discount > 0 && (
-                        <span className="text-gray-500 line-through text-sm">
-                          ${(product.price / (1 - product.discount / 100)).toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              </Link>
-            ))}
-        </div>
+          <section className="mb-16">
+            <h2 className="text-2xl font-bold mb-6">New Arrivals</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              {newArrivals.map((p) => (
+                <ProductCard
+                  key={p._id}
+                  id={p._id}
+                  title={p.title}
+                  image={p.image?.[0]}
+                  price={p.price}
+                  discount={p.discount}
+                  badge={'New Arrival'}
+                />
+              ))}
+            </div>
         </section>
         )}
 

@@ -153,7 +153,7 @@ exports.getCurrentUserInfo = async (req, res) => {
 
     // If authenticator didn't run or didn't populate req.userid, try header
     if (!userId) {
-      let token = req.headers.authorization;
+      let token = req.headers.authorization || req.cookies.token;
       if (!token) return res.status(401).json({ msg: "No token provided", ok: false });
       if (typeof token === 'string' && token.startsWith('Bearer ')) token = token.split(' ')[1];
       // verify and capture decoded payload for debugging
@@ -166,15 +166,15 @@ exports.getCurrentUserInfo = async (req, res) => {
       }
       userId = decoded.userid || decoded.id;
     }
-    console.log('[user.controler] getCurrentUserInfo - resolved userId:', userId);
-    console.log('[user.controler] getCurrentUserInfo - incoming Authorization header:', req.headers.authorization);
+    // console.log('[user.controler] getCurrentUserInfo - resolved userId:', userId);
+    // console.log('[user.controler] getCurrentUserInfo - incoming Authorization header:', req.headers.authorization);
 
     const user = await UserModel.findById(userId).select("-password");
-    console.log('[user.controler] getCurrentUserInfo - db user found:', !!user);
+    // console.log('[user.controler] getCurrentUserInfo - db user found:', !!user);
     if (!user) return res.status(404).json({ msg: "User not found", ok: false });
     res.json({ user, ok: true });
   } catch (err) {
-    console.error('[user.controler] getCurrentUserInfo error:', err);
+    // console.error('[user.controler] getCurrentUserInfo error:', err);
     res.status(401).json({ msg: "Invalid token", ok: false });
   }
 }
@@ -331,30 +331,54 @@ exports.updateUser = async (req, res) => {
     }
 }
 
+// controllers/auth.controller.js (or wherever your logout controller resides)
 exports.logoutUser = (req, res) => {
   try {
-    // Expire cookies explicitly for common paths and with httpOnly options
+    // Cookie options to ensure cookies are properly expired
     const cookieOpts = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === 'production', // secure only in production
       sameSite: 'lax',
       path: '/',
-      expires: new Date(0),
+      expires: new Date(0), // force expire
     };
+
+    // Clear cookies using Express methods
     res.cookie('token', '', cookieOpts);
     res.cookie('refreshToken', '', cookieOpts);
-    // also clear using clearCookie for express-managed cookies
     res.clearCookie('token', cookieOpts);
     res.clearCookie('refreshToken', cookieOpts);
-    // destroy server session if any
+
+    // Set-Cookie headers as a fallback for some browsers
+    const secureFlag = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+    const cookieBase = `Path=/; Expires=${new Date(0).toUTCString()}; HttpOnly; SameSite=Lax${secureFlag}`;
+    res.setHeader('Set-Cookie', [
+      `token=; ${cookieBase}`,
+      `refreshToken=; ${cookieBase}`,
+    ]);
+
+    // Destroy server session if using express-session
     try {
-      if (req.session) req.session.destroy(() => {});
-    } catch (e) {}
-    res.json({ msg: 'Logged out', ok: true });
+      if (req.session) {
+        req.session.destroy(() => {});
+      }
+    } catch (err) {
+      console.error('[logoutUser] session destroy error:', err);
+    }
+
+    // Log incoming cookies for debugging
+    try {
+      console.log('[logoutUser] Incoming cookies:', req.headers.cookie || 'none');
+    } catch (err) {}
+
+    // Send success response
+    return res.json({ msg: 'Logged out', ok: true });
   } catch (err) {
-    res.status(500).json({ msg: 'Logout failed', ok: false, error: err.message });
+    console.error('[logoutUser] Error:', err);
+    return res.status(500).json({ msg: 'Logout failed', ok: false, error: err.message });
   }
-}
+};
+
 
 // GET logout that redirects back to frontend - useful for top-level navigation to clear httpOnly cookies
 exports.logoutRedirect = (req, res) => {
@@ -366,11 +390,24 @@ exports.logoutRedirect = (req, res) => {
       path: '/',
       expires: new Date(0),
     };
+    // Express helpers
     res.cookie('token', '', cookieOpts);
     res.cookie('refreshToken', '', cookieOpts);
     res.clearCookie('token', cookieOpts);
     res.clearCookie('refreshToken', cookieOpts);
+
+    // Fallback: explicit Set-Cookie headers
+    const secureFlag = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+    const cookieBase = `Path=/; Expires=${new Date(0).toUTCString()}; HttpOnly; SameSite=Lax${secureFlag}`;
+    res.setHeader('Set-Cookie', [
+      `token=; ${cookieBase}`,
+      `refreshToken=; ${cookieBase}`,
+    ]);
+
     try { if (req.session) req.session.destroy(() => {}); } catch (e) {}
+    // optional diagnostic log
+    try { console.log('[logoutRedirect] incoming cookies:', req.headers.cookie); } catch (e) {}
+
     // Redirect back to provided returnTo or frontend auth
     let frontend = process.env.Frontend_URL || `http://${req.hostname}:8080`;
     const returnTo = req.query.returnTo;

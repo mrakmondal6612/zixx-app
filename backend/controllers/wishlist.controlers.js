@@ -3,9 +3,9 @@ import { WishlistModel } from "../models/wishlist.model.js";
 export const getWishlist = async (req, res) => {
   try {
     const wishlist = await WishlistModel.findOne({ userId: req.userid }).populate("productIds");
-    res.json({ wishlist: wishlist?.productIds || [] });
+    res.json({ wishlist: wishlist?.productIds, ok: true });
   } catch (error) {
-    res.status(500).json({ msg: "Error", error: error.message });
+    res.status(500).json({ msg: "Error", ok: false, error: error.message });
   }
 }
 
@@ -22,9 +22,9 @@ export const addToWishlist = async (req, res) => {
     }
 
     await wishlist.save();
-    res.json({ msg: "Product added to wishlist" });
+    res.json({ msg: "Product added to wishlist", ok: true, data: wishlist });
   } catch (error) {
-    res.status(500).json({ msg: "Error", error: error.message });
+    res.status(500).json({ msg: "Error", ok: false, error: error.message });
   }
 }
 
@@ -37,8 +37,8 @@ export const removeFromWishlist = async (req, res) => {
       wishlist.productIds = wishlist.productIds.filter(p => p.toString() !== productId);
       await wishlist.save();
     }
-    res.json({ msg: "Product removed from wishlist" });
+    res.json({ msg: "Product removed from wishlist", ok: true });
   } catch (error) {
-    res.status(500).json({ msg: "Error", error: error.message });
+    res.status(500).json({ msg: "Error", ok: false, error: error.message });
   }
 }

@@ -1,4 +1,3 @@
-require('dotenv').config();
 // console.log('Cloudinary ENV:', {
 //   CLD_CLOUD_NAME: process.env.CLD_CLOUD_NAME,
 //   CLD_API_KEY: process.env.CLD_API_KEY,

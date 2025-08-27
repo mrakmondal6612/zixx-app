@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 import { Card } from '@/components/ui/card';
+import ProductCard from '@/components/ProductCard';
 import { Link } from 'react-router-dom';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
-import { Banner } from '@/components/sections/Banner';
+import { DynamicBanner } from '@/components/sections/DynamicBanner';
+import { apiUrl } from '@lib/api';
 
 interface Product {
   _id: string;
@@ -17,14 +19,23 @@ interface Product {
   gender: string;
   theme: string;
   size: string;
+  description: string;
+  brand: string;
   image: string[];
   type?: string;
+  stat?: any;
+  userId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  supply?: number;
+  stock?: number;
+  color?: string;
 }
 
 interface Category {
   name: string;
   image: string;
-  subcategories: string[] | Set<string>;
+  subcategories: string[];
 }
 
 const Home = () => {
@@ -34,7 +45,7 @@ const Home = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch('/clients/products');
+        const res = await fetch(apiUrl('/clients/products'), { credentials: 'include' } );
         if (!res.ok) throw new Error("Failed to fetch products");
         const result = await res.json();
         if (result.ok) setProducts(result.data);
@@ -45,29 +56,28 @@ const Home = () => {
 
     const fetchCategories = async () => {
       try {
-        const res = await fetch('/clients/products');
+        const res = await fetch(apiUrl('/clients/products'), { credentials: 'include' } );
         if (!res.ok) throw new Error("Failed to fetch products for categories");
         const result = await res.json();
         if (result.ok) {
-          const allProducts = result.data;
-          const categoriesMap: { [key: string]: Category } = {};
-
+          const allProducts: Product[] = result.data;
+          const categoriesMap: { [key: string]: { name: string; image: string; subcategories: Set<string> } } = {};
           allProducts.forEach((product: Product) => {
             const { category, subcategory, image } = product;
             if (!categoriesMap[category]) {
               categoriesMap[category] = {
                 name: category,
-                image: image[0],
+                image: image?.[0] || '',
                 subcategories: new Set<string>(),
-              } as Category;
+              };
             }
-            (categoriesMap[category].subcategories as Set<string>).add(subcategory);
+            if (subcategory) categoriesMap[category].subcategories.add(subcategory);
           });
 
           const formatted: Category[] = Object.values(categoriesMap).map(cat => ({
             name: cat.name,
             image: cat.image,
-            subcategories: Array.from(cat.subcategories as Set<string>),
+            subcategories: Array.from(cat.subcategories),
           }));
 
           setCategories(formatted);
@@ -80,30 +90,33 @@ const Home = () => {
     fetchProducts();
     fetchCategories();
   }, []);
-
+ 
   const newArrivals = products.filter(p => p.theme?.toLowerCase().includes('new'));
   const bestSellers = products.filter(p => p.theme?.toLowerCase().includes('best'));
-
+  
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Header />
-        <Banner
-          imageUrl="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/d5b391a024519f0a274f617aaa8e815af74b7883?placeholderIfAbsent=true&height=900&width=2040"
-          heading="Summer Collection"
-          description="Light fabrics and vibrant colors for the perfect summer look."
-          linkText="Shop Now"
-          linkUrl="/women"
-            align="bottom-left-corner"
-        />
       <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-8 py-8">
-        
+        <DynamicBanner
+          page="home"
+          position="hero"
+          fallback={{
+            imageUrl: "/placeholder.svg",
+            heading: "Summer Collection",
+            description: "Light fabrics and vibrant colors for the perfect summer look.",
+            linkText: "Shop Now",
+            linkUrl: "/women",
+          }}
+          style={{ variant: 'pro', overlay: 'dark', cta: 'brand', radius: '2xl', hover: 'zoom' }}
+        />
         {/* Categories Section */}
         <section className="mb-16">
           <h2 className="text-2xl font-bold mb-8">Shop by Category</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {categories.map((category, index) => (
               <div key={index} className="group">
-                <Link to={`/women/${category.name.toLowerCase()}`} className="block">
+                <Link to={`/category/${category.name.toLowerCase()}`} className="block">
                   <Card className="overflow-hidden">
                     <div className="aspect-square relative">
                       <img
@@ -122,12 +135,12 @@ const Home = () => {
                     {Array.isArray(category.subcategories)
                       ? category.subcategories.map((sub, idx) => (
                           <li key={idx} className="hover:text-[#D92030]">
-                            <Link to={`/women/${category.name.toLowerCase()}/${sub.toLowerCase()}`}>{sub}</Link>
+                            <Link to={`/category/${category.name.toLowerCase()}/${sub.toLowerCase()}`}>{sub}</Link>
                           </li>
                         ))
                       : Array.from(category.subcategories as Set<string>).map((sub, idx) => (
                           <li key={idx} className="hover:text-[#D92030]">
-                            <Link to={`/women/${category.name.toLowerCase()}/${sub.toLowerCase()}`}>{sub}</Link>
+                            <Link to={`/category/${category.name.toLowerCase()}/${sub.toLowerCase()}`}>{sub}</Link>
                           </li>
                         ))
                     }
@@ -141,70 +154,103 @@ const Home = () => {
         {/* New Arrivals Section */}
         {newArrivals.length > 0 && (
         <section className="mb-16">
+          <DynamicBanner
+            page="home"
+            position="new-arrivals"
+            fallback={{
+              imageUrl: "/placeholder.svg",
+              heading: "Summer Collection",
+              description: "Light fabrics and vibrant colors for the perfect summer look.",
+              linkText: "Shop Now",
+              linkUrl: "/women",
+            }}
+            style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
+          />
           <h2 className="text-2xl font-bold mb-8">New Arrivals</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-            {newArrivals.map(product => (
-              <Link key={product._id} to={`/product/${product._id}`}>
-                <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                  <div className="aspect-square">
-                    <img src={product.image[0]} alt={product.title} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-medium">{product.title}</h3>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="font-bold">₹{product.price}</span>
-                      {product.discount > 0 && (
-                        <span className="text-gray-500 line-through text-sm">
-                          ₹{(product.price / (1 - product.discount / 100)).toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              </Link>
+            {newArrivals.map(p => (
+              <ProductCard
+                key={p._id}
+                id={p._id}
+                title={p.title}
+                image={p.image?.[0]}
+                price={p.price}
+                discount={p.discount}
+                badge={'New Arrival'}
+              />
             ))}
           </div>
         </section>
         )}
 
         {/* Featured Collection Banner */}
-        <Banner
-          imageUrl="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true"
-            heading="Featured Collection"
-            description="Explore our curated selection of the season's must-haves."
-            linkText="Shop Collection"
-            linkUrl="/women/featured-collection"
+        <DynamicBanner
+          page="home"
+          position="featured"
+          fallback={{
+            imageUrl: "/placeholder.svg",
+            heading: "Featured Collection",
+            description: "Explore our curated selection of the season's must-haves.",
+            linkText: "Shop Collection",
+            linkUrl: "/men",
+          }}
+          style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
         />
         
 
         {/* Best Sellers Section */}
         {bestSellers.length > 0 && (
-        <section>
+        <section className="mb-16">
           <h2 className="text-2xl font-bold mb-8">Best Sellers</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-            {bestSellers.map(product => (
-              <Link key={product._id} to={`/product/${product._id}`}>
-                <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                  <div className="aspect-square">
-                    <img src={product.image[0]} alt={product.title} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-medium">{product.title}</h3>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="font-bold">${product.price}</span>
-                      {product.discount > 0 && (
-                        <span className="text-gray-500 line-through text-sm">
-                          ${(product.price / (1 - product.discount / 100)).toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              </Link>
+            {bestSellers.map(p => (
+              <ProductCard
+                key={p._id}
+                id={p._id}
+                title={p.title}
+                image={p.image?.[0]}
+                price={p.price}
+                discount={p.discount}
+                badge={'Best Seller'}
+              />
             ))}
           </div>
         </section>
         )}
+
+
+        <DynamicBanner
+          page="home"
+          position="men-promo"
+          fallback={{
+            imageUrl: '/placeholder.svg',
+            heading: "Men's Collection",
+            description: "Elevate your style with our versatile men's collection.",
+            linkText: "Shop Now",
+            linkUrl: "/men",
+          }}
+          style={{ variant: 'pro', overlay: 'dark', cta: 'brand', radius: '2xl', hover: 'zoom' }}
+        />
+
+          {products.length > 0 && (
+            <section className="mb-16">
+              <h2 className="text-2xl font-bold mb-8">All Collection</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                {products.map(p => (
+                  <ProductCard
+                    key={p._id}
+                    id={p._id}
+                    title={p.title}
+                    image={p.image?.[0]}
+                    price={p.price}
+                    discount={p.discount}
+                    badge={p.theme?.toLowerCase().includes('best') ? 'Best Seller' : p.theme?.toLowerCase().includes('new') ? 'New Arrival' : undefined}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
 
       </main>
 

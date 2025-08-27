@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuthContext } from '@/hooks/AuthProvider';
 
 const Logout = () => {
@@ -9,13 +8,11 @@ const Logout = () => {
   useEffect(() => {
     const signOut = async () => {
       try {
-        await supabase.auth.signOut(); // Supabase logout
-        localStorage.removeItem('token'); // Clear custom token if any
-        setUser(null); // Clear auth context
-        logout(); // Trigger any extra cleanup in your app context
-      } catch (error) {
-        console.error('Error signing out:', error);
-      }
+        // No Supabase logout; rely on backend logout via AuthProvider
+      } catch (e) { /* noop */ }
+      try { localStorage.removeItem('token'); } catch (e) {}
+      try { await logout(); } catch (e) { console.error('[Logout] logout failed', e); }
+      setUser(null); // Clear auth context
     };
 
     signOut();

@@ -5,7 +5,8 @@ const {
     getCartItemById, 
     getAllCartItems, 
     addToCart,
-    removeFromCart
+    removeFromCart,
+    updateCartItemQty
 } = require("../../controllers/carts.controlers");
 const { authenticator } = require("../../middlewares/authenticator.middleware");
 
@@ -21,5 +22,8 @@ CartRouter.post("/user/addtocart", authenticator, addToCart);
 
 // Remove from Cart
 CartRouter.delete("/user/remove/:id", authenticator, removeFromCart);
+
+// Update Cart Item Quantity
+CartRouter.patch("/user/updatecart/:id", authenticator, updateCartItemQty);
 
 module.exports = { CartRouter };

@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "server": "nodemon index.js"
+    "server": "nodemon index.js",
+    "seed:sales": "node ./init/seedSales.js"
   },
   "keywords": [],
   "author": "Akshay Chavan",
@@ -23,11 +24,12 @@
     "express-session": "^1.17.3",
     "i18n-iso-countries": "^7.14.0",
     "jsonwebtoken": "^9.0.0",
-    "mongodb": "^6.17.0",
-    "mongoose": "^6.13.8",
+    "mongodb": "^6.18.0",
+    "mongoose": "^8.18.0",
     "multer": "^2.0.2",
     "ncrypt": "^1.0.7",
-    "nodemon": "^2.0.22",
+    "nodemailer": "^6.10.1",
+    "nodemon": "^3.1.10",
     "passport": "^0.6.0",
     "passport-google-oauth20": "^2.0.0",
     "streamifier": "^0.1.1",

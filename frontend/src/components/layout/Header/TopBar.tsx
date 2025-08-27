@@ -69,7 +69,7 @@ export const TopBar = () => {
           ))}
 
           {/* Country Selector + Track/Contact - Mobile only inside dropdown */}
-          {isMobile && mobileMenuOpen && user && (
+          {isMobile && mobileMenuOpen && (
             <div className="flex flex-col gap-2 mt-4">
               {/* Country Selector */}
               <DropdownMenu>
@@ -120,17 +120,15 @@ export const TopBar = () => {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Track Order + Contact */}
-          {user && (
-            <>
-              <Link to="/track-order" className="text-white text-xs md:text-sm font-normal leading-[19.5px] hover:underline ml-2">
-                Track Order
-              </Link>
-              <Link to="/contact" className="text-white text-xs md:text-sm font-normal leading-[19.5px] hover:underline ml-2">
-                Contact Us
-              </Link>
-            </>
-          )}
+          {/* Track Order + Contact (visible for all) */}
+          <>
+            <Link to="/track-order" className="text-white text-xs md:text-sm font-normal leading-[19.5px] hover:underline ml-2">
+              Track Order
+            </Link>
+            <Link to="/contact" className="text-white text-xs md:text-sm font-normal leading-[19.5px] hover:underline ml-2">
+              Contact Us
+            </Link>
+          </>
 
           {/* User Dropdown */}
           {loading ? (

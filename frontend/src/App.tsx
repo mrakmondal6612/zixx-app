@@ -7,7 +7,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Cart from "./pages/Cart";
-import Account from "./pages/Account";
 import Wishlist from "./pages/Wishlist";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Brands from "./pages/Brands";
@@ -24,6 +23,7 @@ import NewArrivals from "./pages/NewArrivals";
 import Contact from "./pages/Contact";
 import TrackOrder from "./pages/TrackOrder";
 import Orders from "./pages/Orders";
+import OrderDetails from "./pages/OrderDetails";
 import Search from "./pages/Search";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfUse from "./pages/TermsOfUse";
@@ -38,6 +38,8 @@ import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { ScrollToTop } from "./components/ScrollToTop";
+import Account from './pages/Account';
+import Category from './pages/Category';
 
 const queryClient = new QueryClient();
 
@@ -67,8 +69,9 @@ const App = () => (
         <Route path="/sale" element={<OnSale />} />
         <Route path="/new-arrivals" element={<NewArrivals />} />
         <Route path="/contact" element={<ProtectedRoute><Contact /></ProtectedRoute>} />
-        <Route path="/track-order" element={<ProtectedRoute><TrackOrder /></ProtectedRoute>} />
+        <Route path="/track-order" element={<TrackOrder />} />
         <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+        <Route path="/orders/:id" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
         <Route path="/search" element={<Search />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfUse />} />
@@ -78,10 +81,18 @@ const App = () => (
         <Route path="/accessories" element={<Accessories />} />
         <Route path="/collections" element={<Collections />} />
         <Route path="/featured-collection" element={<FeaturedCollection />} />
+        {/* Shop submenu routes (desktop links use /categories/*) */}
+        <Route path="/categories/clothes" element={<Clothes />} />
+        <Route path="/categories/accessories" element={<Accessories />} />
+        <Route path="/categories/collections" element={<Collections />} />
+        <Route path="/categories/featured" element={<FeaturedCollection />} />
         <Route path="/admin" element={<ProtectedRoute roles={['admin']}><Admin /></ProtectedRoute>} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/product/:id" element={<Product />} />
         <Route path="/product" element={<Product />} />
+        {/* Category routes */}
+        <Route path="/category/:category" element={<Category />} />
+        <Route path="/category/:category/:subcategory" element={<Category />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

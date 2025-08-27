@@ -95,7 +95,7 @@ export const Footer = () => {
               <h3 className="text-xl font-medium mb-6">Account</h3>
               <ul className="space-y-4">
                 <li><Link to="/account" className="hover:underline">My Account</Link></li>
-                <li><Link to="/login" className="hover:underline">Login / Register</Link></li>
+                <li><Link to="/auth" className="hover:underline">Login / Register</Link></li>
                 <li><Link to="/cart" className="hover:underline">Cart</Link></li>
                 <li><Link to="/wishlist" className="hover:underline">Wishlist</Link></li>
                 <li><Link to="/shop" className="hover:underline">Shop</Link></li>

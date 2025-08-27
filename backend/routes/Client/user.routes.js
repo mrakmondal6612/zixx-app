@@ -12,6 +12,7 @@ const {
   validateToken,
   refreshAccessToken,
   logoutUser,
+  logoutRedirect,
   updateUser
 } = require("../../controllers/user.controler");
 const { authenticator } = require("../../middlewares/authenticator.middleware");
@@ -26,11 +27,11 @@ UserRouter.post("/register", userRegister);
 
 UserRouter.post("/login", userLogin);
 
-UserRouter.get("/users/me", authenticator, getCurrentUserInfo);
+UserRouter.get("/user/me", authenticator, getCurrentUserInfo);
 
 UserRouter.get("/users/:id", authenticator, getUserById);
 
-UserRouter.patch("/users/me", authenticator,
+UserRouter.patch("/user/me", authenticator,
   upload.single("profile_pic"),
   cloudinaryUploadMiddleware,
   updateUser
@@ -42,6 +43,15 @@ UserRouter.post("/refresh", authenticator, refreshAccessToken);
 UserRouter.post('/logout', logoutUser);
 // also support GET /logout for top-level navigation logout which can clear httpOnly cookies via redirect
 UserRouter.get('/logout', logoutRedirect);
+
+// Debug: return cookies and headers (use from browser to see what cookies the browser sends)
+UserRouter.get('/debug-cookies', (req, res) => {
+  try {
+    return res.json({ ok: true, cookies: req.cookies || {}, headers: req.headers });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
 
 
 module.exports = { UserRouter };

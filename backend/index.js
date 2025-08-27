@@ -1,5 +1,18 @@
 const cloudinary = require('cloudinary').v2;
-require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
+// Load env from centralized env directory: ../env/.env[.NODE_ENV]
+(() => {
+  const baseDir = path.join(__dirname, '..', 'env');
+  const specific = process.env.NODE_ENV ? path.join(baseDir, `.env.${process.env.NODE_ENV}`) : null;
+  const fallback = path.join(baseDir, '.env');
+  const dotenv = require('dotenv');
+  if (specific && fs.existsSync(specific)) {
+    dotenv.config({ path: specific });
+  } else {
+    dotenv.config({ path: fallback });
+  }
+})();
 cloudinary.config({
   cloud_name: process.env.CLD_CLOUD_NAME,
   api_key: process.env.CLD_API_KEY,
@@ -9,52 +22,64 @@ const express = require("express");
 const cookieParser = require('cookie-parser');
 const { connection } = require("./config/db");
 const cors = require("cors");
-const path = require("path");
+// path is already imported above
 const session = require("express-session");
 const ClientsRouters = require('./routes/clients.routes');
 const AdminsRouters = require('./routes/admins.routes');
+const { autoSeed } = require('./seed/autoSeed');
 
 const app = express();
-require("dotenv").config();
 
-// Allow frontend and admin client origins for credentialed requests
-// Debug: Log all incoming requests
+const FRONTEND_URL = process.env.FRONTEND_URL ;
+const FRONTEND_DEV_URL = process.env.FRONTEND_DEV_URL ;
+const ADMIN_CLIENT_URL = process.env.ADMIN_CLIENT_URL ;
+const allowedOrigins = [FRONTEND_URL, FRONTEND_DEV_URL, ADMIN_CLIENT_URL].filter(Boolean);
+const corsOptions = {
+  origin: function (origin, cb) {
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    console.warn("Blocked CORS origin:", origin);
+    return cb(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+// // Debug
+// app.use((req, res, next) => {
+//   console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+//   next();
+// });
+
+// Parse cookies before anything else
+app.use(cookieParser());
+
+// CORS: allow frontend + admin panel with credentials and handle preflight
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+// Explicit CORS headers safeguard (ensures credentials header is present)
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Vary', 'Origin');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  }
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
   next();
 });
-const FRONTEND_URL = process.env.Frontend_URL;
-const ADMIN_CLIENT_URL = process.env.ADMIN_CLIENT_URL;
-// include common local dev origins so admin client running on :8000 or :8080 can call credentialed APIs
-const allowedOrigins = [
-  FRONTEND_URL,
-  ADMIN_CLIENT_URL,
-  'http://localhost:8080',
-  'http://127.0.0.1:8080',
-  'http://localhost:8000',
-  'http://127.0.0.1:8000',
-].filter(Boolean);
 
-// General CORS for all routes except /api/admin
+// Use JSON parser for all routes except Razorpay webhook, which needs raw body
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api/admin')) return next();
-  return cors({
-    origin: function (origin, cb) {
-      if (!origin) return cb(null, true);
-      if (allowedOrigins.indexOf(origin) !== -1) return cb(null, true);
-      return cb(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
-  })(req, res, next);
+  if (req.originalUrl === '/api/clients/payments/razorpay/webhook') return next();
+  return express.json()(req, res, next);
 });
-
-// CORS for /api/admin* routes: only allow http://localhost:8000
-app.use('/api/admin', cors({
-  origin: 'http://localhost:8000',
-  credentials: true,
-}));
-app.use(express.json());
-app.use(cookieParser());
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
@@ -63,6 +88,7 @@ app.use(
   })
 );
 
+// API Routes
 app.use("/api", ClientsRouters);
 app.use("/api", AdminsRouters);
 
@@ -70,6 +96,7 @@ app.get("/", (req, res) => {
   res.send("WELCOME TO THE ZIXX APP BACKEND");
 });
 
+// Serve frontend in production
 if (process.env.NODE_ENV === "production") {
   const frontendPath = path.join(__dirname, "..", "frontend", "dist");
   app.use(express.static(frontendPath));
@@ -78,7 +105,7 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-// Always return JSON for unknown API routes (prevents HTML error pages)
+// 404 handler for API
 app.use((req, res, next) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ ok: false, msg: 'Not found' });
@@ -86,9 +113,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Error handler: always return JSON
+// Error handler
 app.use((err, req, res, next) => {
-  console.error('API error:', err);
+  console.error("API error:", err);
   if (req.path.startsWith('/api/')) {
     return res.status(500).json({ ok: false, msg: err.message || 'Server error' });
   }
@@ -100,6 +127,18 @@ app.listen(process.env.PORT, async () => {
     await connection;
     console.log("✅ Server running on PORT", process.env.PORT);
     console.log("✅ Connected to MongoDB");
+    console.log("✅ Allowed Origins:", allowedOrigins);
+    // Auto-seed only when explicitly enabled: set AUTO_SEED=true
+    try {
+      const SEED_ENABLED = process.env.AUTO_SEED === 'true';
+      if (SEED_ENABLED) {
+        await autoSeed();
+      } else {
+        console.log('[autoSeed] Skipped (set AUTO_SEED=true to enable)');
+      }
+    } catch (e) {
+      console.warn('[autoSeed] error during startup:', e && e.message ? e.message : e);
+    }
   } catch (error) {
     console.log("❌ DB Connection Error:", error);
   }

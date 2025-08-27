@@ -4,7 +4,7 @@ const { CartModel } = require("../models/cart.model.js");
 exports.getAllCartItems = async (req, res) => {
   const token = req.headers.authorization;
   try {
-    const product = await CartModel.find({ userid: req.userid });
+    const product = await CartModel.find({ userId: req.userid });
     return res.json({ data: product });
   } catch (error) {
     res.json({ msg: "Error", Error: error.message });
@@ -42,9 +42,9 @@ exports.addToCart = async (req, res) => {
     payload.userId = userId;
     const newproduct = new CartModel(payload);
     await newproduct.save();
-    return res.json({ msg: "Product added to cart successfully", data: newproduct });
+    return res.json({ msg: "Product added to cart successfully", ok: true, data: newproduct });
   } catch (error) {
-    res.status(500).json({ msg: "Error", error: error.message });
+    res.status(500).json({ msg: "Error", ok: false, error: error.message });
   }
 }
 
@@ -56,5 +56,31 @@ exports.removeFromCart = async (req, res) => {
     return res.json({ msg: "Product Removed" });
   } catch (error) {
     res.json({ msg: "Error", Error: error.message });
+  }
+}
+
+// Update Cart Item Quantity
+exports.updateCartItemQty = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { Qty } = req.body;
+    if (typeof Qty !== 'number' || Qty < 1) {
+      return res.status(400).json({ msg: 'Invalid quantity' });
+    }
+
+    // Update Qty and keep other fields unchanged
+    const updated = await CartModel.findByIdAndUpdate(
+      { _id: id },
+      { $set: { Qty: Qty, 'variation.quantity': Qty } },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ msg: 'Cart item not found' });
+    }
+
+    return res.json({ msg: 'Cart updated', data: updated });
+  } catch (error) {
+    res.status(500).json({ msg: 'Error', Error: error.message });
   }
 }

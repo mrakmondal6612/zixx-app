@@ -5,7 +5,9 @@ const {
     SalesRouter, 
     TransactionRouter, 
     GeographyRouter,
-    ProductAdminRouter
+    ProductAdminRouter,
+    OrdersRouter,
+    BannersAdminRouter
 } = require("./Admin");
 
 const AdminsRouters = express.Router();
@@ -16,10 +18,11 @@ AdminsRouters.use("/admin", SalesRouter);
 AdminsRouters.use("/admin", TransactionRouter);
 AdminsRouters.use("/admin", GeographyRouter);
 AdminsRouters.use("/admin", ProductAdminRouter);
+AdminsRouters.use("/admin", OrdersRouter);
+AdminsRouters.use("/admin", BannersAdminRouter);
 
 AdminsRouters.get("/", (req, res) => {
   res.send("Welcome to the Admin API");
 });
-
 
 module.exports = AdminsRouters;

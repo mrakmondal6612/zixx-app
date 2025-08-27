@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
@@ -14,9 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Heart, ShoppingCart, Star, Plus, Minus } from 'lucide-react';
+import { Heart, ShoppingCart, Star, Plus, Minus, Truck, RotateCcw, Share2, X, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { useAuthContext } from '@/hooks/AuthProvider';
+import { apiUrl } from '@/lib/api';
+import { title } from 'process';
+
+// Setup axios
+axios.defaults.withCredentials = true;
 
 interface ProductType {
   _id: string;
@@ -29,6 +35,7 @@ interface ProductType {
   image?: string[];
   size?: string[];
   color?: string[];
+  subcategory?: string;
   inStock: boolean;
   rating: number;
   reviewCount: number;
@@ -37,7 +44,7 @@ interface ProductType {
   theme?: string;
   isWishlisted?: boolean;
   afterQtyprice?: number;
-  vriation?: {
+  variation?: {
     size: string;
     color: string;
     quantity: number;
@@ -48,164 +55,180 @@ const Product = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuthContext();
+
   const [product, setProduct] = useState<ProductType | null>(null);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [reviews, setReviews] = useState([]);
-  const [showAll, setShowAll] = useState(false);
-
-  const handleShowReviews = () => setShowAll((prev) => !prev);
-
+  // Image zoom state
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomOrigin, setZoomOrigin] = useState<{ x: string; y: string }>({ x: '50%', y: '50%' });
+  const ZOOM_FACTOR = 1.8;
+  const imageWrapRef = useRef<HTMLDivElement | null>(null);
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const openLightbox = () => setLightboxOpen(true);
+  const closeLightbox = () => setLightboxOpen(false);
+  const showPrev = () => setCurrentImageIndex((i) => {
+    const total = (product?.image?.length || 1);
+    return (i - 1 + total) % total;
+  });
+  const showNext = () => setCurrentImageIndex((i) => {
+    const total = (product?.image?.length || 1);
+    return (i + 1) % total;
+  });
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        let apiUrl = '';
-        let byName = false;
-        if (id) {
-          apiUrl = `/clients/products/singleproduct/${id}`;
-        } else {
-          // Try to get name from query string
-          const params = new URLSearchParams(location.search);
-          const name = params.get('name');
-          if (name) {
-            apiUrl = `/clients/products/byname/${encodeURIComponent(name)}`;
-            byName = true;
+        // let url = '';
+        // if (id) url = apiUrl(`/clients/products/singleproduct/${id}`);
+        // else {
+        //   const name = new URLSearchParams(location.search).get('name');
+        //   if (name) url = apiUrl(`/clients/products/byname/${encodeURIComponent(name)}`);
+        // }
+        // if (!url) return;
+
+        // const res = await axios.get(url);
+        const res = await axios.get(apiUrl(`/clients/products/singleproduct/${id}`) , { 
+          withCredentials: true,
+        });
+
+        if (res.data?.ok || res.data?.success) {
+          const data = res.data.data;
+          const prod = Array.isArray(data) ? data[0] : data;
+          if (!prod) {
+            toast.error('Product not found');
+            return;
           }
-        }
-        if (!apiUrl) return;
-        const res = await fetch(apiUrl);
-        if (!res.ok) throw new Error('Failed to fetch product');
-        const result = await res.json();
-        if (result.ok) {
-          setProduct(result.data);
-          setSelectedSize(result.data.size?.[0] || '');
-          setSelectedColor(result.data.color?.[0] || '');
-          setIsWishlisted(result.data.isWishlisted || false);
-          setReviews(result.data.reviews || []);
+          setProduct(prod);
+          setSelectedSize(prod.size?.[0] || 'N/A');
+          setSelectedColor(prod.color?.[0] || 'N/A');
+          setIsWishlisted(prod.isWishlisted || false);
+        } else toast.error(res.data?.message || 'Failed to load product');
+      } catch (err: any) {
+        console.error('Error loading product:', err, 'URL:', (err?.config && err.config.url) || 'n/a');
+        // Fallback: if searching by name and it 404s, try to find a close match from all products
+        const nameParam = new URLSearchParams(location.search).get('name');
+        if (!id && nameParam && err?.response?.status === 404) {
+          try {
+            const allRes = await axios.get(apiUrl('/clients/products') , { 
+              withCredentials: true,
+            });
+            const list = allRes.data?.data || [];
+            const target = nameParam.toLowerCase();
+            // simple scoring: prefer startsWith, then includes, then highest overlap count
+            let best = null as any;
+            let bestScore = -1;
+            const tokens = target.split(/\s+/).filter(Boolean);
+            for (const p of list) {
+              const title = (p.title || '').toLowerCase();
+              let score = 0;
+              if (title === target) score = 1000;
+              else if (title.startsWith(target)) score = 900;
+              else if (title.includes(target)) score = 800;
+              // token overlap
+              score += tokens.reduce((acc, t) => acc + (title.includes(t) ? 1 : 0), 0);
+              if (score > bestScore) { bestScore = score; best = p; }
+            }
+            if (best) {
+              setProduct(best);
+              setSelectedSize(best.size?.[0] || 'N/A');
+              setSelectedColor(best.color?.[0] || 'N/A');
+              setIsWishlisted(best.isWishlisted || false);
+              toast.message('Showing closest match');
+              return;
+            }
+            toast.error('Product not found');
+          } catch (e) {
+            console.error('Fallback search failed:', e);
+            toast.error('Failed to fetch product');
+          }
         } else {
-          toast.error(result.message || 'Failed to load product');
-          setProduct(null);
+          if (err?.response?.status === 404) toast.error('Product not found');
+          else toast.error('Failed to fetch product');
         }
-      } catch (err) {
-        console.error('Error loading product:', err);
       }
     };
     fetchProduct();
   }, [id, location.search]);
 
+  console.log('Current user:', user);
+  const ensureLoggedIn = () => {
+    if (!user) {
+      toast.error('You must be logged in.');
+      navigate('/auth');
+      return false;
+    }
+    return true;
+  };
+
   const handleQuantityChange = (action: 'increase' | 'decrease') => {
-    setQuantity((prev) =>
-      action === 'increase' ? prev + 1 : prev > 1 ? prev - 1 : prev
-    );
+    setQuantity((prev) => (action === 'increase' ? prev + 1 : prev > 1 ? prev - 1 : prev));
   };
 
   const handleAddToCart = async () => {
-    if (
-      !product ||
-      (product.size?.length > 0 && !selectedSize) ||
-      (product.color?.length > 0 && !selectedColor)
-    ) {
+    if (!ensureLoggedIn() || !product) return;
+    if ((product.size?.length > 0 && !selectedSize) || (product.color?.length > 0 && !selectedColor)) {
       toast.error('Please select required size and color');
       return;
     }
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('You must be logged in to add to cart.');
-        navigate('/login');
-        return;
-      }
-      const res = await axios.post(
-        '/clients/user/addtocart',
-        {
-          userId: undefined, // will be set by backend
-          productId: product._id,
-          title: product.title,
-          description: product.description || '',
-          brand: product.brand || '',
-          color: selectedColor || 'Default Color',
-          gender: product.gender || 'Unisex',
-          price: product.price,
-          discount: product.discount || 0,
-          rating: product.rating?.toString() || '0',
-          category: product.category || '',
-          theme: product.theme || '',
-          size: selectedSize || 'Free',
-          image: product.image || [],
-          Qty: quantity,
-          afterQtyprice: (product.price - (product.discount || 0)) * quantity,
-          total: (product.price - (product.discount || 0)) * quantity,
-          variation: {
-            size: selectedSize,
-            color: selectedColor,
-            quantity: quantity,
-          },
-        },
-        {
-          withCredentials: true,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const res = await axios.post(apiUrl('/clients/user/addtocart'),
+      {
+        productId: product._id,
+        title: product.title,
+        description: product.description || "N/A",  
+        brand: product.brand || "N/A",
+        color: selectedColor || 'Default Color',
+        gender: product.gender || 'Unisex',
+        price: product.price,
+        discount: product.discount || 0,
+        rating: product.rating?.toString() || '0',
+        category: product.category || "N/A",
+        theme: product.theme || "N/A",
+        size: selectedSize || 'Free',
+        image: product.image || [],
+        Qty: quantity,
+        afterQtyprice: (product.price - (product.discount || 0)) * quantity,
+        total: (product.price - (product.discount || 0)) * quantity,
+        variation: { size: selectedSize, color: selectedColor, quantity },
+      });
 
-      if (res.status === 200 || res.status === 201) {
+      if (res.data?.ok || res.data?.success) {
         toast.success(`Added ${product.title} to cart!`);
-        setTimeout(() => {
-          navigate('/cart');
-        }, 500);
-      } else {
-        toast.error('Failed to add to cart');
-      }
-    } catch (err) {
-      console.error('Add to cart error:', err);
-      if (err?.response?.status === 401) {
-        toast.error('You must be logged in to add to cart.');
-        navigate('/login');
-      } else {
-        toast.error('Add to cart failed (Are you logged in?)');
-      }
+        navigate('/cart');
+      } else toast.error(res.data?.message || 'Failed to add to cart');
+    } catch (err: any) {
+      console.error('Add to cart error:', err?.response || err);
+      if (err?.response?.status === 401) navigate('/auth');
+      else toast.error(err?.response?.data?.message || 'Add to cart failed');
     }
   };
 
   const handleAddToWishlist = async () => {
-    if (!product) return;
+    if (!ensureLoggedIn() || !product) return;
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('You must be logged in to add to wishlist.');
-        navigate('/login');
-        return;
-      }
-      const res = await axios.post(
-        '/clients/user/wishlist/add',
-        { productId: product._id },
-        {
-          withCredentials: true,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (res.status === 200) {
+      const res = await axios.post(apiUrl('/clients/user/wishlist/add'), { productId: product._id });
+
+      console.log("Add to Wishlist Responce : ", res);
+
+      if (res.data?.ok || res.data?.success) {
         toast.success(`Added ${product.title} to wishlist!`);
         setIsWishlisted(true);
-      } else {
-        toast.error('Failed to add to wishlist');
-      }
-    } catch (err) {
-      console.error('Add to wishlist error:', err);
-      if (err?.response?.status === 401) {
-        toast.error('You must be logged in to add to wishlist.');
-        navigate('/login');
-      } else {
-        toast.error('Add to wishlist failed (Are you logged in?)');
-      }
+
+        // Re-fetch wishlist to confirm DB update
+        const check = await axios.get(apiUrl('/clients/user/wishlist'));
+        console.log('Updated wishlist from DB:', check.data);
+      } else toast.error(res.data?.message || 'Failed to add to wishlist');
+    } catch (err: any) {
+      console.error('Wishlist error:', err?.response || err);
+      if (err?.response?.status === 401) navigate('/auth');
+      else toast.error(err?.response?.data?.message || 'Add to wishlist failed');
     }
   };
 
@@ -214,77 +237,82 @@ const Product = () => {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
-      <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-8 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-          {/* Product Image Section */}
-          <div className="space-y-4">
-            <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
-              {product.image?.[currentImageIndex] && (
-                <img
-                  src={product.image[currentImageIndex]}
-                  alt={product.title}
-                  className="w-full h-full object-cover"
-                />
-              
-              )}
+      <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-8 py-6 md:py-8">
+        {/* Breadcrumb */}
+        <div className="text-sm text-muted-foreground mb-6">
+          <span className="hover:text-foreground">{product.category || 'Category'}</span>
+          <span className="mx-2">/</span>
+          <span className="hover:text-foreground">{product.subcategory || 'Subcategory'}</span>
+          <span className="mx-2">/</span>
+          <span className="text-foreground font-medium">{product.title}</span>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 mb-8 md:mb-10 items-start">
+          <div className="flex flex-col gap-3">
+
+            <div
+              ref={imageWrapRef}
+              className={`rounded-xl bg-white shadow-md border flex items-center justify-center h-[500px] sm:h-[600px] lg:h-[min(85vh,900px)] p-2 md:p-3 overflow-hidden relative ${isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
+              onMouseEnter={() => setIsZoomed(true)}
+              onMouseLeave={() => setIsZoomed(false)}
+              onMouseMove={(e) => {
+                if (!imageWrapRef.current) return;
+                const rect = imageWrapRef.current.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                const y = ((e.clientY - rect.top) / rect.height) * 100;
+                setZoomOrigin({ x: `${x}%`, y: `${y}%` });
+              }}
+              onClick={() => setIsZoomed((z) => !z)}
+            >
+              {/* Open lightbox button */}
+              <button
+                type="button"
+                aria-label="Open fullscreen"
+                onClick={(e) => { e.stopPropagation(); openLightbox(); }}
+                className="absolute top-2 right-2 z-10 inline-flex items-center justify-center w-9 h-9 rounded-md bg-white/90 hover:bg-white shadow border"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
+              <img
+                src={(product.image && product.image[currentImageIndex])
+                  ? product.image[currentImageIndex]
+                  : `https://source.unsplash.com/featured/1000x1000/${(product.subcategory || product.category || 'fashion').replace(/\s+/g, '+')}`}
+                alt={product.title}
+                className={`h-auto w-auto max-h-full max-w-full object-contain rounded-lg transition-transform duration-300 ease-out pointer-events-none select-none`}
+                style={{
+                  transform: isZoomed ? `scale(${ZOOM_FACTOR})` : 'scale(1)',
+                  transformOrigin: `${zoomOrigin.x} ${zoomOrigin.y}`,
+                }}
+              />
             </div>
-            <div className="flex gap-2 overflow-x-auto">
-              {(product.image ?? []).map((image, index) => (
+            <div className="flex gap-2 md:gap-3 overflow-x-auto pb-1">
+              {((product.image ?? []).length ? product.image : [
+                `https://source.unsplash.com/featured/160x160/${(product.subcategory || product.category || 'fashion').replace(/\s+/g, '+')}`
+              ]).map((image, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentImageIndex(index)}
-                  className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                    currentImageIndex === index
-                      ? 'border-destructive'
-                      : 'border-transparent'
+                  className={`flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden border-2 ${
+                    currentImageIndex === index ? 'border-destructive' : 'border-transparent'
                   }`}
                 >
-                  <img
-                    src={image}
-                    alt={`${product.title} ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={image} alt={`${product.title} ${index + 1}`} className="w-full h-full object-contain bg-white" />
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Product Details Section */}
-          <div className="space-y-6">
-            <div>
-              <Badge variant="secondary" className="mb-2">
-                {product.brand}
-              </Badge>
-              <h1 className="text-3xl font-bold mb-2">{product.title}</h1>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={`w-5 h-5 ${
-                        star <= Math.floor(product.rating)
-                          ? 'fill-yellow-400 text-yellow-400'
-                          : 'text-gray-300'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  {product.rating} ({product.reviewCount} reviews)
-                </span>
+          <div className="space-y-5 lg:sticky lg:top-20 self-start lg:max-h-[calc(100vh-180px)] lg:overflow-auto pr-1">
+            <Badge variant="secondary" className="mb-2">{product.brand}</Badge>
+            <h1 className="text-2xl md:text-3xl font-bold mb-1">{product.title}</h1>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-1">
+                {[1,2,3,4,5].map((star) => (
+                  <Star key={star} className={`w-5 h-5 ${star <= Math.floor(product.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                ))}
               </div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-sm text-muted-foreground">
-                  {product.description || 'No description available.'}
-                </div>
-                
-                {/* <Button variant="link" className="p-0 font-normal" onClick={handleShowReviews}>
-                  {showAll ? 'Show less' : 'Show more'}
-                </Button> */}
-              </div>
+              <span className="text-sm text-muted-foreground">{product.rating} ({product.reviewCount} reviews)</span>
             </div>
-            {/* Features Section */}
-            <Card className="p-4">
+            <Card className="p-3 md:p-4">
               <h3 className="font-semibold mb-2">Product Features</h3>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• 100% Organic Cotton</li>
@@ -295,136 +323,150 @@ const Product = () => {
               </ul>
             </Card>
             <div className="flex items-center gap-3">
-              <span className="text-3xl font-bold text-destructive">
-                ₹{product.price}
-              </span>
+              <span className="text-2xl md:text-3xl font-bold text-destructive">₹{product.price}</span>
               {product.discount > 0 && (
                 <>
-                  <span className="text-xl text-muted-foreground line-through">
-                    $
-                    {(
-                      product.price /
-                      (1 - product.discount / 100)
-                    ).toFixed(2)}
-                  </span>
-                  <Badge variant="destructive">
-                    {Math.round(product.discount)}% OFF
-                  </Badge>
+                  <span className="text-lg md:text-xl text-muted-foreground line-through">₹{(product.price/(1 - product.discount/100)).toFixed(2)}</span>
+                  <Badge variant="destructive">{Math.round(product.discount)}% OFF</Badge>
                 </>
               )}
             </div>
 
-          
-
-            {/* Size Selection */}
+            {/* Size Selector */}
             <div>
-              <label className="text-sm font-medium mb-2 block">Size</label> 
+              <label className="text-sm font-medium mb-2 block">Size</label>
               {product.size?.length ? (
                 <Select value={selectedSize} onValueChange={setSelectedSize}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a size" />
-                  </SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Select a size" /></SelectTrigger>
                   <SelectContent>
-                    {product.size.map((size) => (
-                      <SelectItem key={size} value={size}>
-                        {size}
-                      </SelectItem>
-                    ))}
+                    {product.size.map((size) => (<SelectItem key={size} value={size}>{size}</SelectItem>))}
                   </SelectContent>
                 </Select>
-              ) : (
-                <p className="text-sm text-gray-500">
-                  No size options available
-                </p>
-              )}
+              ) : <p className="text-sm text-gray-500">No size options available</p>}
             </div>
 
-            {/* Color Selection */}
+            {/* Color Selector */}
             <div>
               <label className="text-sm font-medium mb-2 block">Color</label>
               {product.color?.length ? (
                 <Select value={selectedColor} onValueChange={setSelectedColor}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a color" />
-                  </SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Select a color" /></SelectTrigger>
                   <SelectContent>
-                    {product.color.map((color) => (
-                      <SelectItem key={color} value={color}>
-                        {color}
-                      </SelectItem>
-                    ))}
+                    {product.color.map((color) => (<SelectItem key={color} value={color}>{color}</SelectItem>))}
                   </SelectContent>
                 </Select>
-              ) : (
-                <p className="text-sm text-gray-500">
-                  No color options available
-                </p>
-              )}
+              ) : <p className="text-sm text-gray-500">No color options available</p>}
             </div>
 
-            {/* Quantity Controls */}
+            {/* Quantity Selector */}
             <div>
               <label className="text-sm font-medium mb-2 block">Quantity</label>
               <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleQuantityChange('decrease')}
-                  disabled={quantity <= 1}
-                >
+                <Button variant="outline" size="icon" onClick={() => handleQuantityChange('decrease')} disabled={quantity <= 1}>
                   <Minus className="w-4 h-4" />
                 </Button>
-                <span className="font-medium text-lg w-8 text-center">
-                  {quantity}
-                </span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleQuantityChange('increase')}
-                >
+                <span className="font-medium text-lg w-8 text-center">{quantity}</span>
+                <Button variant="outline" size="icon" onClick={() => handleQuantityChange('increase')}>
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
             </div>
 
-            {/* Cart + Wishlist Buttons */}
-            <div className="flex gap-4">
-              <Button
-                className="flex-1 bg-destructive hover:bg-destructive/90"
-                disabled={
-                  (product.size?.length > 0 && !selectedSize) ||
-                  (product.color?.length > 0 && !selectedColor)
-                }
-                onClick={handleAddToCart}
-              >
-                <ShoppingCart className="w-4 h-4 mr-2" />
-                Add to Cart
+            {/* Buttons */}
+            <div className="flex gap-3 md:gap-4">
+              <Button className="flex-1 bg-destructive hover:bg-destructive/90" onClick={handleAddToCart}>
+                <ShoppingCart className="w-4 h-4 mr-2" /> Add to Cart
               </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleAddToWishlist}
-                className={
-                  isWishlisted ? 'text-destructive border-destructive' : ''
-                }
-              >
-                <Heart
-                  className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`}
-                />
+              <Button variant="outline" size="icon" onClick={handleAddToWishlist} className={isWishlisted ? 'text-destructive border-destructive' : ''}>
+                <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
+              </Button>
+              <Button variant="outline" size="icon" onClick={() => navigator?.share?.({ title: product.title, url: window.location.href }).catch(() => {})}>
+                <Share2 className="w-4 h-4" />
               </Button>
             </div>
 
-            
+            {/* Info Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Card className="p-3 md:p-4 flex items-center gap-3">
+                <Truck className="w-5 h-5 text-destructive" />
+                <div>
+                  <p className="text-sm font-medium">Fast Delivery</p>
+                  <p className="text-xs text-muted-foreground">3-5 business days</p>
+                </div>
+              </Card>
+              <Card className="p-3 md:p-4 flex items-center gap-3">
+                <RotateCcw className="w-5 h-5 text-destructive" />
+                <div>
+                  <p className="text-sm font-medium">Easy Returns</p>
+                  <p className="text-xs text-muted-foreground">Within 14 days</p>
+                </div>
+              </Card>
+            </div>
+
+            {/* Description */}
+            <Card className="p-3 md:p-4">
+              <h3 className="font-semibold mb-2">Description</h3>
+              <details open className="text-sm text-muted-foreground leading-relaxed">
+                <summary className="cursor-pointer text-foreground mb-2">Read more</summary>
+                <p>{product.description || 'No description available for this product.'}</p>
+              </details>
+            </Card>
           </div>
         </div>
 
-        {/* Review Section */}
         <div className="border-t pt-16">
           <ReviewSection productId={product._id} />
         </div>
       </main>
       <Footer />
       <ScrollToTop />
+
+      {/* Lightbox Overlay */}
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          onClick={closeLightbox}
+        >
+          <button
+            type="button"
+            aria-label="Close"
+            className="absolute top-4 right-4 text-white/90 hover:text-white"
+            onClick={(e) => { e.stopPropagation(); closeLightbox(); }}
+          >
+            <X className="w-7 h-7" />
+          </button>
+
+          {(product.image?.length || 0) > 1 && (
+            <>
+              <button
+                type="button"
+                aria-label="Previous"
+                className="absolute left-4 md:left-6 text-white/90 hover:text-white"
+                onClick={(e) => { e.stopPropagation(); showPrev(); }}
+              >
+                <ChevronLeft className="w-9 h-9" />
+              </button>
+              <button
+                type="button"
+                aria-label="Next"
+                className="absolute right-4 md:right-6 text-white/90 hover:text-white"
+                onClick={(e) => { e.stopPropagation(); showNext(); }}
+              >
+                <ChevronRight className="w-9 h-9" />
+              </button>
+            </>
+          )}
+
+          <img
+            src={(product.image && product.image[currentImageIndex])
+              ? product.image[currentImageIndex]
+              : `https://source.unsplash.com/featured/1400x1400/${(product.subcategory || product.category || 'fashion').replace(/\s+/g, '+')}`}
+            alt={product.title}
+            className="max-w-[95vw] max-h-[90vh] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 };

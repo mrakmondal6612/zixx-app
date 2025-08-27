@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Minus, Plus, Trash2, ChevronDown } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
 import { toast } from 'sonner';
+import { useAuthContext } from '@/hooks/AuthProvider';
+import { apiUrl } from '@/lib/api';
 
 type CartItem = {
   id: string;
@@ -26,44 +27,44 @@ type CartItem = {
 
 const Cart = () => {
   const navigate = useNavigate();
+  const { user } = useAuthContext();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [promoCode, setPromoCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [paying, setPaying] = useState(false);
 
-  // Fetch cart items from backend on mount
   useEffect(() => {
+    if (!user) return;
     const fetchCart = async () => {
       setLoading(true);
-      const token = localStorage.getItem('token');
-          if (!token) {
-            toast.error('Please log in to add to cart');
-            navigate('/auth');
-            return;
-          }
       try {
-  const res = await fetch('/clients/user/getcart', {
-          headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        }
+        const res = await fetch(apiUrl('/clients/user/getcart'), {
+          credentials: 'include',
         });
+        if (res.status === 401) {
+          toast.error('Session expired, please log in');
+          navigate('/auth');
+          return;
+        }
         const data = await res.json();
-        if (data.data) {
-          setCartItems(data.data.map((item) => ({
-            id: item._id,
-            productId: item.productId,
-            name: item.title,
-            gender: item.gender,
-            category: item.category,
-            theme: item.theme,
-            description: item.description || '',
-            color: item.color || '',
-            size: item.size || '',
-            price: item.price,
-            quantity: item.Qty,
-            image: Array.isArray(item.image) ? item.image[0] : item.image,
-            brand: item.brand || '',
-          })));
+        if (data?.data) {
+          setCartItems(
+            data.data.map((item: any) => ({
+              id: item._id,
+              productId: item.productId,
+              name: item.title,
+              gender: item.gender,
+              category: item.category,
+              theme: item.theme,
+              description: item.description || "N/A",
+              color: item.color || "N/A",
+              size: item.size || "N/A",
+              price: item.price,
+              quantity: item.Qty,
+              image: Array.isArray(item.image) ? item.image[0] : item.image,
+              brand: item.brand || "N/A",
+            }))
+          );
         } else {
           setCartItems([]);
         }
@@ -73,116 +74,207 @@ const Cart = () => {
       setLoading(false);
     };
     fetchCart();
-  }, []);
+  }, [user, navigate]);
 
-  // Remove product from cart (backend)
-  const removeItem = async (id: string) => {
-    setLoading(true);
-    const token = localStorage.getItem('token');
-    if (!token) {
-      toast.error('Please log in to remove items');
+  const ensureLoggedIn = () => {
+    if (!user) {
+      toast.error('Please log in to continue');
       navigate('/auth');
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const removeItem = async (id: string) => {
+    if (!ensureLoggedIn()) return;
+    setLoading(true);
     try {
-  const res = await fetch(`/clients/user/remove/${id}`, {
+      const res = await fetch(apiUrl(`/clients/user/remove/${id}`), {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        }
+        credentials: 'include',
       });
-      const data = await res.json();
-      if (data.msg === 'Product Removed') {
-        setCartItems(prev => prev.filter(item => item.id !== id));
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.msg === 'Product Removed') {
+        setCartItems((prev) => prev.filter((item) => item.id !== id));
         toast.success('Item removed from cart');
       } else {
-        toast.error('Failed to remove item');
+        toast.error(data?.msg || 'Failed to remove item');
       }
-    } catch (err) {
+    } catch {
       toast.error('Error removing item');
     }
     setLoading(false);
   };
 
-  // Buy all products in cart
-  const buyProducts = async () => {
-    setLoading(true);
-    const token = localStorage.getItem('token');
-    if (!token) {
-      toast.error('Please log in to buy products');
-      navigate('/auth');
-      return;
-    }
-    if (cartItems.length === 0) {
-      toast.error('Your cart is empty');
-      setLoading(false);
-      return;
-    }
-    try {
-      // console.log("User ID:", token);
-      // console.log("Request Body:", cartItems);
-  const res = await fetch('/clients/order/buy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        }
-      });
-      console.log('Order response:', res);
-      const data = await res.json();
-      console.log('Order response:', data);
-      if (data.msg === 'Order placed successfully') {
-        setCartItems([]);
-        toast.success('Order placed!');
-      } else {
-        toast.error(data.msg || 'Order failed');
-      }
-    } catch (err) {
-      // console.log('Error placing order:', err);
-      toast.error('Error placing order');
-    }
-    setLoading(false);
-  };
-
-  const applyPromoCode = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.info('Promo code feature coming soon!');
-  };
-
-  // Update product quantity in cart (backend)
   const updateQuantity = async (id: string, newQuantity: number) => {
+    if (!ensureLoggedIn()) return;
     if (newQuantity < 1) return;
     setLoading(true);
-    const token = localStorage.getItem('token');
-    if (!token) {
-      toast.error('Please log in to update quantity');
-      navigate('/auth');
-      return;
-    }
     try {
-  const res = await fetch(`/clients/user/updatecart/${id}`, {
+      const res = await fetch(apiUrl(`/clients/user/updatecart/${id}`), {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ Qty: newQuantity })
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ Qty: newQuantity }),
       });
-      const data = await res.json();
-      if (data.msg === 'Cart updated') {
-        setCartItems(prev => prev.map(item => item.id === id ? { ...item, quantity: newQuantity } : item));
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.msg === 'Cart updated') {
+        setCartItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity: newQuantity } : item)));
         toast.success('Quantity updated');
       } else {
-        toast.error('Failed to update quantity');
+        toast.error(data?.msg || 'Failed to update quantity');
       }
-    } catch (err) {
+    } catch {
       toast.error('Error updating quantity');
     }
     setLoading(false);
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const buyProducts = async () => {
+    if (!ensureLoggedIn()) return;
+    if (cartItems.length === 0) {
+      toast.error('Your cart is empty');
+      return;
+    }
+    // Razorpay flow
+    const loadRazorpay = () => new Promise<boolean>((resolve) => {
+      if ((window as any).Razorpay) return resolve(true);
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+
+    try {
+      setPaying(true);
+      const ok = await loadRazorpay();
+      if (!ok) {
+        toast.error('Razorpay SDK failed to load. Check your network.');
+        setPaying(false);
+        return;
+      }
+
+      // 1) Get key
+      const keyRes = await fetch(apiUrl('/clients/payments/razorpay/key'), { credentials: 'include' });
+      const keyData = await keyRes.json().catch(() => ({}));
+      if (!keyRes.ok || !keyData?.key) {
+        toast.error(keyData?.msg || 'Failed to get payment key');
+        setPaying(false);
+        return;
+      }
+
+      // 2) Create order in backend (amount in paise)
+      const amountInPaise = Math.round((subtotal + shipping + tax) * 100);
+      const orderRes = await fetch(apiUrl('/clients/payments/razorpay/order'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amountInPaise, currency: 'INR', notes: { cartCount: cartItems.length } })
+      });
+      const orderData = await orderRes.json().catch(() => ({}));
+      if (!orderRes.ok || !orderData?.order?.id) {
+        toast.error(orderData?.msg || 'Failed to initiate payment');
+        setPaying(false);
+        return;
+      }
+
+      const options: any = {
+        key: keyData.key,
+        amount: orderData.order.amount,
+        currency: orderData.order.currency || 'INR',
+        name: 'Zixx',
+        description: 'Order Payment',
+        order_id: orderData.order.id,
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || '',
+          contact: ''
+        },
+        theme: { color: '#D92030' },
+        handler: async (response: any) => {
+          try {
+            // 3) Verify signature
+            const verifyRes = await fetch(apiUrl('/clients/payments/razorpay/verify'), {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              })
+            });
+            const verifyData = await verifyRes.json().catch(() => ({}));
+            if (!verifyRes.ok || verifyData?.ok !== true) {
+              toast.error(verifyData?.msg || 'Payment verification failed');
+              setPaying(false);
+              return;
+            }
+
+            // 4) Place one consolidated order for all cart items
+            const cartIds = cartItems.map((it) => it.id);
+            const placeRes = await fetch(apiUrl('/clients/order/buy-selected'), {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                cartIds,
+                paymentDetails: {
+                  provider: 'razorpay',
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id
+                }
+              })
+            });
+            const placeData = await placeRes.json().catch(() => ({}));
+            if (!placeRes.ok || placeData?.ok !== true) {
+              toast.error(placeData?.msg || 'Failed to place order after payment');
+              setPaying(false);
+              return;
+            }
+
+            setCartItems([]);
+            toast.success('Payment successful! Order placed.');
+            navigate('/orders');
+          } catch (err) {
+            toast.error('Unexpected error after payment');
+          }
+          setPaying(false);
+        },
+        modal: {
+          ondismiss: () => {
+            setPaying(false);
+            toast.info('Payment cancelled');
+          }
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Payment initialization failed');
+      setPaying(false);
+    }
+  };
+
+  const applyPromoCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!promoCode.trim()) {
+      toast.error('Please enter a promo code');
+      return;
+    }
+
+    if (promoCode.toLowerCase() === 'save10') {
+      toast.success('Promo code applied! 10% discount');
+    } else {
+      toast.error('Invalid promo code');
+    }
+  };
+
+
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = 5.99;
   const tax = subtotal * 0.09;
   const total = subtotal + shipping + tax;
@@ -313,7 +405,7 @@ const Cart = () => {
                     />
                     <button
                       type="submit"
-                      className="bg-gray-800 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-900 transition-colors font-medium text-sm"
+                      className="bg-gray-800 text-white px-2 sm:px-4 py-2 rounded-lg hover:bg-gray-900 transition-colors font-medium text-sm"
                     >
                       Apply
                     </button>
@@ -323,14 +415,14 @@ const Cart = () => {
                 <Button 
                   className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-indigo-500 hover:to-pink-500 py-3 text-base font-extrabold rounded-2xl mb-4 sm:mb-6 shadow-lg shadow-pink-200/40 border-2 border-white border-dashed tracking-wider uppercase transition-all duration-300 animate-bounce-slow"
                   style={{ letterSpacing: '0.1em', boxShadow: '0 4px 24px 0 rgba(236, 72, 153, 0.15)' }}
-                  onClick={() => navigate('/buy')}
-                  disabled={cartItems.length === 0}
+                  onClick={buyProducts}
+                  disabled={cartItems.length === 0 || paying}
                 >
                   <span className="flex items-center justify-center gap-2">
                     <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-white animate-wiggle">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1.35 2.7A2 2 0 007.5 19h9a2 2 0 001.85-1.3L17 13M7 13V6h13" />
                     </svg>
-                    <span className="bg-white/20 px-3 py-1 rounded-xl text-white font-black text-lg drop-shadow-sm">Buy Products</span>
+                    <span className="bg-white/20 px-3 py-1 rounded-xl text-white font-black text-lg drop-shadow-sm">{paying ? 'Processing...' : 'Buy Products'}</span>
                   </span>
                 </Button>
                 

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
 import { Search as SearchIcon, Filter, ShoppingCart, Heart } from 'lucide-react';
+import { apiUrl } from '@/lib/api';
 
 
 // Types for API results
@@ -58,23 +59,29 @@ const Search = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const fetchSearch = async () => {
     if (!searchQuery) return;
     setLoading(true);
     setError(null);
-  fetch(`/clients/search?q=${encodeURIComponent(searchQuery)}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.ok) {
-          setResults({ products: data.data.products });
-        } else {
-          setError(data.message || 'No results found');
-        }
-        setLoading(false);
-      })
-      .catch(err => {
-        setError('Error fetching search results');
-        setLoading(false);
-      });
+    try {
+      const res = await fetch(apiUrl(`/clients/search?q=${encodeURIComponent(searchQuery)}`), { credentials: 'include' });
+      const data = await res.json();
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.message || `Failed to fetch search results (${res.status})`);
+      }
+      const products = data?.data?.products;
+      if (Array.isArray(products)) {
+        setResults({ products });
+      } else {
+        setResults({ products: [] });
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to fetch search results');
+    } finally {
+      setLoading(false);
+    }
+    };
+    fetchSearch();    
   }, [searchQuery]);
 
   const navigate = useNavigate();
@@ -124,20 +131,18 @@ const Search = () => {
                             onClick={async (e) => {
                           e.stopPropagation();
                           try {
-                            const token = localStorage.getItem('token');
-                            if (!token) {
-                              toast.error('You must be logged in to add to wishlist.');
-                              navigate('/login');
-                              return;
-                            }
                             const res = await axios.post(
-                              '/user/wishlist/add',
+                                apiUrl('/clients/user/wishlist/add'),
                               { productId: product._id },
                               {
                                 withCredentials: true,
-                                headers: { Authorization: `Bearer ${token}` },
                               }
                             );
+                            if (res.status === 401) {
+                              toast.error('You must be logged in to add to wishlist.');
+                              navigate('/auth');
+                              return;
+                            }
                             if (res.status === 200) {
                               toast.success(`Added ${product.title} to wishlist!`);
                             } else {
@@ -165,14 +170,8 @@ const Search = () => {
         onClick={async (e) => {
                           e.stopPropagation();
                           try {
-                            const token = localStorage.getItem('token');
-                            if (!token) {
-                              toast.error('You must be logged in to add to cart.');
-          navigate('/login');
-                              return;
-                            }
                             const res = await axios.post(
-                              '/user/addtocart',
+                              apiUrl('/clients/user/addtocart'),
                               {
                                 productId: product._id,
                                 title: product.title,
@@ -198,9 +197,13 @@ const Search = () => {
                               },
                               {
                                 withCredentials: true,
-                                headers: { Authorization: `Bearer ${token}` },
                               }
                             );
+                            if (res.status === 401) {
+                              toast.error('You must be logged in to add to cart.');
+                              navigate('/auth');
+                              return;
+                            }
                             if (res.status === 200 || res.status === 201) {
                               toast.success(`Added ${product.title} to cart!`);
                             } else {
