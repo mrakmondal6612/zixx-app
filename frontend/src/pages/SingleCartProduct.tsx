@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { useAuthContext } from '@/hooks/AuthProvider';
-import { apiUrl } from '@/lib/api';
+import { apiUrl, getAuthHeaders } from '@/lib/api';
 
 interface CartProduct {
   id: string;
@@ -40,6 +40,7 @@ const SingleCartProduct = () => {
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
+            ...getAuthHeaders(),
           },
         });
         if (res.status === 401) {
@@ -111,7 +112,7 @@ const SingleCartProduct = () => {
       }
 
       // 1) Get key
-      const keyRes = await fetch(apiUrl('/clients/payments/razorpay/key'), { credentials: 'include' });
+      const keyRes = await fetch(apiUrl('/clients/payments/razorpay/key'), { credentials: 'include', headers: { ...getAuthHeaders() } });
       const keyData = await keyRes.json().catch(() => ({}));
       if (!keyRes.ok || !keyData?.key) {
         toast.error(keyData?.msg || 'Failed to get payment key');
@@ -123,7 +124,7 @@ const SingleCartProduct = () => {
       const orderRes = await fetch(apiUrl('/clients/payments/razorpay/order'), {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ amountInPaise, currency: 'INR', notes: { single: true, cartId: product.id } })
       });
       const orderData = await orderRes.json().catch(() => ({}));
@@ -148,7 +149,7 @@ const SingleCartProduct = () => {
             const verifyRes = await fetch(apiUrl('/clients/payments/razorpay/verify'), {
               method: 'POST',
               credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
               body: JSON.stringify({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
@@ -166,7 +167,7 @@ const SingleCartProduct = () => {
             const placeRes = await fetch(apiUrl(`/clients/order/buy`), {
               method: 'POST',
               credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
               body: JSON.stringify({ singleCartId: product.id, paymentDetails: { provider: 'razorpay', razorpay_order_id: response.razorpay_order_id, razorpay_payment_id: response.razorpay_payment_id } }),
             });
             const placeData = await placeRes.json().catch(() => ({}));

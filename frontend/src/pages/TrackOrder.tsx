@@ -5,7 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, CheckCircle2, Truck, MapPin, PackageCheck, XCircle, RotateCcw, ExternalLink, Package, Phone, Clock } from 'lucide-react';
-import { apiUrl } from '@/lib/api';
+import { apiUrl, getAuthHeaders } from '@/lib/api';
 
 interface OrderItem {
   productId: string;
@@ -220,7 +220,10 @@ const TrackOrder = () => {
       if (/^[a-f0-9]{24}$/i.test(input)) {
         targetId = input;
       } else {
-        const listRes = await fetch(apiUrl('/clients/user/orders'), { credentials: 'include' });
+        const listRes = await fetch(apiUrl('/clients/user/orders'), {
+          credentials: 'include',
+          headers: { ...getAuthHeaders() },
+        });
         if (listRes.status === 401) {
           throw new Error('Please log in to track your order or provide your email to use public tracking.');
         }
@@ -240,7 +243,10 @@ const TrackOrder = () => {
         else throw new Error('No matching order found for the provided code.');
       }
 
-      const res = await fetch(apiUrl(`/clients/user/orders/${targetId}`), { credentials: 'include' });
+      const res = await fetch(apiUrl(`/clients/user/orders/${targetId}`), {
+        credentials: 'include',
+        headers: { ...getAuthHeaders() },
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.ok === false) throw new Error(data.msg || 'Failed to fetch order.');
       setOrder(data.order as Order);

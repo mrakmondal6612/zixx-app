@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
 import { toast } from 'sonner';
 import { useAuthContext } from '@/hooks/AuthProvider';
-import { apiUrl } from '@/lib/api';
+import { apiUrl, getAuthHeaders } from '@/lib/api';
 
 type CartItem = {
   id: string;
@@ -40,6 +40,9 @@ const Cart = () => {
       try {
         const res = await fetch(apiUrl('/clients/user/getcart'), {
           credentials: 'include',
+          headers: {
+            ...getAuthHeaders(),
+          },
         });
         if (res.status === 401) {
           toast.error('Session expired, please log in');
@@ -92,6 +95,9 @@ const Cart = () => {
       const res = await fetch(apiUrl(`/clients/user/remove/${id}`), {
         method: 'DELETE',
         credentials: 'include',
+        headers: {
+          ...getAuthHeaders(),
+        },
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.msg === 'Product Removed') {
@@ -114,7 +120,7 @@ const Cart = () => {
       const res = await fetch(apiUrl(`/clients/user/updatecart/${id}`), {
         method: 'PATCH',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ Qty: newQuantity }),
       });
       const data = await res.json().catch(() => ({}));
@@ -156,7 +162,7 @@ const Cart = () => {
       }
 
       // 1) Get key
-      const keyRes = await fetch(apiUrl('/clients/payments/razorpay/key'), { credentials: 'include' });
+      const keyRes = await fetch(apiUrl('/clients/payments/razorpay/key'), { credentials: 'include', headers: { ...getAuthHeaders() } });
       const keyData = await keyRes.json().catch(() => ({}));
       if (!keyRes.ok || !keyData?.key) {
         toast.error(keyData?.msg || 'Failed to get payment key');
@@ -169,7 +175,7 @@ const Cart = () => {
       const orderRes = await fetch(apiUrl('/clients/payments/razorpay/order'), {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ amountInPaise, currency: 'INR', notes: { cartCount: cartItems.length } })
       });
       const orderData = await orderRes.json().catch(() => ({}));
@@ -198,7 +204,7 @@ const Cart = () => {
             const verifyRes = await fetch(apiUrl('/clients/payments/razorpay/verify'), {
               method: 'POST',
               credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
               body: JSON.stringify({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
@@ -217,7 +223,7 @@ const Cart = () => {
             const placeRes = await fetch(apiUrl('/clients/order/buy-selected'), {
               method: 'POST',
               credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
               body: JSON.stringify({
                 cartIds,
                 paymentDetails: {

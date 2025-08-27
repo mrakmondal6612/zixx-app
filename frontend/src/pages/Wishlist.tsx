@@ -8,7 +8,7 @@ import { Trash2, ShoppingCart } from 'lucide-react';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
 import { toast } from 'sonner';
 import { useAuthContext } from '@/hooks/AuthProvider';
-import { apiUrl } from '@/lib/api';
+import { apiUrl, getAuthHeaders } from '@/lib/api';
 
 type WishlistItem = {
   id: string;
@@ -36,7 +36,13 @@ const Wishlist = () => {
       try {
         const res = await fetch(apiUrl('/clients/user/wishlist'), {
           credentials: 'include',
+          headers: { ...getAuthHeaders() },
         });
+        if (res.status === 401) {
+          toast.error('Session expired, please log in');
+          navigate('/auth');
+          return;
+        }
         const data = await res.json();
 
         if (!Array.isArray(data.wishlist)) {
@@ -87,6 +93,7 @@ const Wishlist = () => {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({ productId: id }),
       });
@@ -146,7 +153,7 @@ const Wishlist = () => {
       const res = await fetch(apiUrl('/clients/user/addtocart'), {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify(payload),
       });
 
