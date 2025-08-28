@@ -1,7 +1,7 @@
 import React from "react";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useNavigation, useLocation } from "react-router-dom";
-import { Loader } from "@/components/ui/loader";
+import { FullScreenLoader } from "@/components/ui/loader";
 import { useGlobalLoading } from "@/hooks/GlobalLoading";
 
 // A subtle, non-blocking global loader that appears during navigations or background fetches
@@ -56,20 +56,5 @@ export default function GlobalLoadingOverlay() {
 
   if (!visible) return null;
 
-  return (
-    <div className="pointer-events-none fixed inset-0 z-40">
-      {/* Top progress bar */}
-      <div className="absolute left-0 right-0 top-0 h-0.5 overflow-hidden">
-        <div className="h-full w-1/3 animate-[progress_1.1s_infinite_linear] rounded-r bg-primary/90 drop-shadow-md" />
-      </div>
-
-      {/* Corner spinner (non-blocking) */}
-      <div className="absolute bottom-4 right-4">
-        <div className="pointer-events-auto flex items-center gap-2 rounded-full border bg-background/90 px-3 py-2 shadow-sm">
-          <Loader size="sm" />
-          <span className="text-xs text-muted-foreground">Loading…</span>
-        </div>
-      </div>
-    </div>
-  );
+  return <FullScreenLoader message="Loading…" variant="ring" />;
 }
