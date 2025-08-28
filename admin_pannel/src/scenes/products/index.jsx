@@ -112,6 +112,14 @@ const Product = ({ product, onDelete, onUpdate }) => {
             <TextField
               fullWidth
               margin="dense"
+              name="theme"
+              label="Theme"
+              value={editedProduct.theme}
+              onChange={handleInputChange}
+            />
+            <TextField
+              fullWidth
+              margin="dense"
               name="subCategory"
               label="Sub Category"
               value={editedProduct.subCategory}
