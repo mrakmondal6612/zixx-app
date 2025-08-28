@@ -60,20 +60,7 @@ const Product = ({ product, onDelete, onUpdate }) => {
           color={theme.palette.secondary[600]}
           gutterBottom
         >
-          {product.category}
-        </Typography>
-        <Typography
-          style={{ 
-            fontSize: 13, 
-            fontWeight: 600, 
-            textTransform: "uppercase", 
-            color: theme.palette.mode === "dark" ? `#F6F1C1` : `#665F0F`, 
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center", 
-          }}
-        >
-          {product.theme}
+          {product.category} {"        "} {product.theme}
         </Typography>
 
         {/* Image */}
