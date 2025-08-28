@@ -29,6 +29,18 @@ interface BannerProps {
   radius?: 'none' | 'xl' | '2xl' | 'full';
   // New: hover animation
   hover?: 'none' | 'zoom';
+  // Optional: extra classes to override container sizing (e.g., heights)
+  containerClassName?: string;
+  // Optional: extra classes for the <img> (e.g., object-contain, h-auto)
+  imageClassName?: string;
+  // Optional: hide base overlay entirely
+  hideOverlay?: boolean;
+  // Optional: hide the side gradient overlay
+  hideSideGradient?: boolean;
+  // Optional: hide the bottom gradient overlay
+  hideBottomGradient?: boolean;
+  // Optional: extra classes for CTA Link/Anchor (e.g., w-full)
+  ctaClassName?: string;
 }
 
 export const Banner: React.FC<BannerProps> = ({
@@ -43,6 +55,12 @@ export const Banner: React.FC<BannerProps> = ({
   cta = 'brand',
   radius = 'xl',
   hover = 'zoom',
+  containerClassName,
+  imageClassName,
+  hideOverlay,
+  hideSideGradient,
+  hideBottomGradient,
+  ctaClassName,
 }) => {
   const [src, setSrc] = useState(imageUrl);
   const alignmentClasses: Record<BannerAlignment, string> = {
@@ -98,22 +116,28 @@ export const Banner: React.FC<BannerProps> = ({
 
   return (
     <section className="mb-16">
-      <div className={`group relative w-full h-[320px] md:h-[480px] lg:h-[560px] ${radiusClass} overflow-hidden shadow-sm`}>
+      <div className={`group relative w-full h-[320px] md:h-[480px] lg:h-[560px] ${radiusClass} overflow-hidden shadow-sm ${containerClassName ?? ''}`}>
         <img
           src={src}
           alt={heading}
-          className={`w-full h-full object-cover transition-transform duration-700 ease-out ${hoverClass}`}
+          className={`w-full h-full object-cover transition-transform duration-700 ease-out ${hoverClass} ${imageClassName ?? ''}`}
           loading="lazy"
           onError={() => {
             if (src !== '/placeholder.svg') setSrc('/placeholder.svg');
           }}
         />
         {/* Base readability overlay */}
-        <div className={`absolute inset-0 ${overlayBase}`} />
+        {!hideOverlay && (
+          <div className={`absolute inset-0 ${overlayBase}`} />
+        )}
         {/* Alignment-aware side gradient */}
-        <div className={`pointer-events-none absolute inset-0 bg-gradient-to-r ${sideGradient}`} />
+        {!hideSideGradient && (
+          <div className={`pointer-events-none absolute inset-0 bg-gradient-to-r ${sideGradient}`} />
+        )}
         {/* Subtle bottom gradient for depth */}
-        <div className={`pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t ${overlayBottom} to-transparent`} />
+        {!hideBottomGradient && (
+          <div className={`pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t ${overlayBottom} to-transparent`} />
+        )}
         <div
           className={`absolute inset-0 flex flex-col p-6 md:p-10 lg:p-14 ${alignmentClasses[align]}`}
         >
@@ -127,7 +151,7 @@ export const Banner: React.FC<BannerProps> = ({
             {/^https?:\/\//i.test(linkUrl) ? (
               <a
                 href={linkUrl}
-                className={`inline-flex items-center gap-2 px-6 md:px-8 py-2.5 md:py-3 rounded-full font-semibold shadow-lg transition-colors border ${cta === 'brand' ? 'bg-[#D92030] text-white hover:bg-[#c41c2a] border-transparent' : 'bg-white/90 text-black hover:bg-white border-white/70'}`}
+                className={`inline-flex items-center gap-2 px-6 md:px-8 py-2.5 md:py-3 rounded-full font-semibold shadow-lg transition-colors border ${cta === 'brand' ? 'bg-[#D92030] text-white hover:bg-[#c41c2a] border-transparent' : 'bg-white/90 text-black hover:bg-white border-white/70'} ${ctaClassName ?? ''}`}
                 rel="noopener noreferrer"
               >
                 {linkText}
@@ -135,7 +159,7 @@ export const Banner: React.FC<BannerProps> = ({
             ) : (
               <Link
                 to={linkUrl}
-                className={`inline-flex items-center gap-2 px-6 md:px-8 py-2.5 md:py-3 rounded-full font-semibold shadow-lg transition-colors border ${cta === 'brand' ? 'bg-[#D92030] text-white hover:bg-[#c41c2a] border-transparent' : 'bg-white/90 text-black hover:bg-white border-white/70'}`}
+                className={`inline-flex items-center gap-2 px-6 md:px-8 py-2.5 md:py-3 rounded-full font-semibold shadow-lg transition-colors border ${cta === 'brand' ? 'bg-[#D92030] text-white hover:bg-[#c41c2a] border-transparent' : 'bg-white/90 text-black hover:bg-white border-white/70'} ${ctaClassName ?? ''}`}
               >
                 {linkText}
               </Link>

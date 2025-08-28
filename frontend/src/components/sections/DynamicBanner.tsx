@@ -72,20 +72,49 @@ export const DynamicBanner: React.FC<DynamicBannerProps> = ({ page, position, fa
     linkUrl = '/' + linkUrl;
   }
   const align = fallback.align;
+  // Mobile-specific tweaks: shorter description and safer defaults
+  const mobileDesc = (desc || '').length > 90 ? `${desc?.slice(0, 90)}…` : (desc || '');
 
   return (
-    <Banner
-      imageUrl={img}
-      heading={heading}
-      description={desc}
-      linkText={linkText}
-      linkUrl={linkUrl}
-      align={align}
-      variant={style?.variant}
-      overlay={style?.overlay}
-      cta={style?.cta}
-      radius={style?.radius}
-      hover={style?.hover}
-    />
+    <>
+      {/* Mobile variant */}
+      <div className="md:hidden">
+        <Banner
+          imageUrl={img}
+          heading={heading}
+          description={mobileDesc}
+          linkText={linkText}
+          linkUrl={linkUrl}
+          align={'center'}
+          variant={'classic'}
+          overlay={'light'}
+          cta={style?.cta ?? 'brand'}
+          radius={style?.radius ?? '2xl'}
+          hover={'none'}
+          containerClassName={'h-[55vh] min-h-[240px] max-h-[65vh] bg-black'}
+          imageClassName={'object-contain'}
+          hideSideGradient
+          hideBottomGradient
+          ctaClassName={'w-full sm:w-auto justify-center'}
+        />
+      </div>
+
+      {/* Desktop / tablet variant */}
+      <div className="hidden md:block">
+        <Banner
+          imageUrl={img}
+          heading={heading}
+          description={desc}
+          linkText={linkText}
+          linkUrl={linkUrl}
+          align={align}
+          variant={style?.variant}
+          overlay={style?.overlay}
+          cta={style?.cta}
+          radius={style?.radius}
+          hover={style?.hover}
+        />
+      </div>
+    </>
   );
 };

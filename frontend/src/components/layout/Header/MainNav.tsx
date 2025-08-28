@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from "@/hooks/AuthProvider";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, User, ShoppingCart, ChevronDown, MapPin } from 'lucide-react';
+import { Menu, X, User, ShoppingCart, ChevronDown, MapPin } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
   NavigationMenu,
@@ -25,6 +25,7 @@ export const MainNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [shopOpen, setShopOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const { user, token } = useAuth();
   // Admin panel base URL: prefer env var, fallback to deployed admin domain
@@ -39,6 +40,25 @@ export const MainNav = () => {
   })();
   // Handoff token via query so admin can bootstrap localStorage
   const adminHref = token ? `${adminUrl}/?t=${encodeURIComponent(token)}` : adminUrl;
+  
+  // Lock body scroll when drawer is open on mobile
+  useEffect(() => {
+    if (isMobile && isMenuOpen) {
+      const original = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = original || '';
+      };
+    }
+    return () => {};
+  }, [isMenuOpen, isMobile]);
+
+  // Close any expanded submenus when drawer closes
+  useEffect(() => {
+    if (!isMenuOpen) {
+      setShopOpen(false);
+    }
+  }, [isMenuOpen]);
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,67 +214,209 @@ export const MainNav = () => {
         )}
       </div>
       
-      {/* Mobile menu */}
-      {isMobile && isMenuOpen && (
-        <div className="absolute top-full left-0 w-full bg-white z-50 shadow-lg p-4 border-t border-gray-200">
-          <ul className="flex flex-col gap-4">
-            <li>
-              <Link to="/shop" className="text-lg font-medium flex items-center justify-between" onClick={() => setIsMenuOpen(false)}>
-                Shop
-                <span>→</span>
-              </Link>
-            </li>
-            <li>
-              <Link to="/sale" className="text-lg" onClick={() => setIsMenuOpen(false)}>On Sale</Link>
-            </li>
-            <li>
-              <Link to="/new-arrivals" className="text-lg" onClick={() => setIsMenuOpen(false)}>New Arrivals</Link>
-            </li>
-            <li>
-              <Link to="/brands" className="text-lg" onClick={() => setIsMenuOpen(false)}>Brands</Link>
-            </li>
-            <li className="mt-4">
-              <form onSubmit={handleSearch} className="bg-[rgba(240,240,240,1)] flex gap-3 overflow-hidden rounded-[62px] px-4 py-3 w-full">
-                <img 
-                  src="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/6b478e42f8403dc6f5eae99c7cf3bb374642f221?placeholderIfAbsent=true"
-                  className="aspect-[1] object-contain w-5 shrink-0" 
-                  alt="Search" 
-                />
-                <input 
-                  type="text"
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  placeholder="Search for products..."
-                  className="bg-transparent outline-none w-full"
-                />
-              </form>
-            </li>
-            <li className="flex gap-4 mt-4 justify-around">
-              <Link to="/account" aria-label="User account" className="flex flex-col items-center" onClick={() => setIsMenuOpen(false)}>
-                <User size={24} className="mb-1" />
-                <span className="text-sm">Account</span>
-              </Link>
-              <Link to="/cart" aria-label="Shopping cart" className={`flex flex-col items-center ${isCartPage ? 'text-[#D92030]' : ''}`} onClick={() => setIsMenuOpen(false)}>
-                <ShoppingCart size={24} className="mb-1" />
-                <span className="text-sm">Cart</span>
-              </Link>
-              <Link to="/wishlist" aria-label="Wishlist" className="flex flex-col items-center" onClick={() => setIsMenuOpen(false)}>
-                <img 
-                  src="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/ac715f0dd7f9aaef44ddb1306739d29ec63e93de?placeholderIfAbsent=true" 
-                  className="aspect-[1] object-contain w-6 mb-1" 
-                  alt="Wishlist" 
-                />
-                <span className="text-sm">Wishlist</span>
-              </Link>
-              {user?.role === 'admin' && (
-                <a href={adminHref} target="_blank" rel="noopener noreferrer" aria-label="Admin panel" className="flex flex-col items-center" onClick={() => setIsMenuOpen(false)}>
-                  <User size={24} className="mb-1 text-red-600" />
-                  <span className="text-sm">Admin</span>
-                </a>
-              )}
-            </li>
-          </ul>
-        </div>
+      {/* Mobile menu: slide-in drawer with backdrop */}
+      {isMobile && (
+        <>
+          {/* Backdrop */}
+          <div
+            className={`fixed inset-0 z-40 bg-black/40 transition-opacity duration-300 ${
+              isMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}
+            onClick={() => setIsMenuOpen(false)}
+          />
+
+          {/* Drawer */}
+          <aside
+            className={`fixed top-0 left-0 z-50 h-full w-[85%] max-w-[360px] bg-white shadow-xl transform transition-transform duration-300 ${
+              isMenuOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Drawer header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-2">
+                <Link to="/" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-2">
+                  <img 
+                    src="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/7cca860fedc8680dd550e361a158b91fff3bb621?placeholderIfAbsent=true" 
+                    className="w-7 h-7 object-contain" 
+                    alt="Logo" 
+                  />
+                  <span className="text-lg font-bold">ZIXX</span>
+                </Link>
+              </div>
+              <button
+                onClick={() => setIsMenuOpen(false)}
+                aria-label="Close menu"
+                className="p-2 rounded-md hover:bg-gray-100 active:bg-gray-200"
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* Drawer body */}
+            <div className="flex flex-col h-[calc(100%-60px)]">
+              <div className="p-4 border-b">
+                <form onSubmit={handleSearch} className="bg-[rgba(240,240,240,1)] flex gap-3 overflow-hidden rounded-[62px] px-4 py-3 w-full">
+                  <img 
+                    src="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/6b478e42f8403dc6f5eae99c7cf3bb374642f221?placeholderIfAbsent=true"
+                    className="aspect-[1] object-contain w-5 shrink-0" 
+                    alt="Search" 
+                  />
+                  <input 
+                    type="text"
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    placeholder="Search for products..."
+                    className="bg-transparent outline-none w-full"
+                  />
+                </form>
+              </div>
+
+              {/* Quick category links */}
+              <div className="p-3 border-b">
+                <div className="flex gap-2">
+                  <Link
+                    to="/men"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex-1 text-center rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 py-2 px-4 font-semibold ring-1 ring-gray-200 shadow-sm transition-colors"
+                  >
+                    Men
+                  </Link>
+                  <Link
+                    to="/women"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex-1 text-center rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 py-2 px-4 font-semibold ring-1 ring-gray-200 shadow-sm transition-colors"
+                  >
+                    Women
+                  </Link>
+                  <Link
+                    to="/kids"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex-1 text-center rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 py-2 px-4 font-semibold ring-1 ring-gray-200 shadow-sm transition-colors"
+                  >
+                    Kids
+                  </Link>
+                </div>
+              </div>
+
+              <nav className="p-2 flex-1 overflow-y-auto">
+                <ul className="flex flex-col">
+                  <li>
+                    <button
+                      type="button"
+                      className="w-full group flex items-center justify-between px-3 py-3 text-left text-base font-medium rounded-lg transition-all duration-200 hover:bg-gray-50 active:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                      onClick={() => setShopOpen(prev => !prev)}
+                      aria-expanded={shopOpen}
+                      aria-controls="mobile-shop-submenu"
+                    >
+                      Shop
+                      <ChevronDown
+                        className={`h-5 w-5 text-gray-500 transition-transform duration-200 ${shopOpen ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+                    {shopOpen && (
+                      <ul id="mobile-shop-submenu" className="mt-1 mb-2 ml-2 border-l pl-3 space-y-1">
+                        <li>
+                          <Link
+                            to="/categories/featured"
+                            className="block px-2 py-2 rounded-md text-[15px] hover:bg-gray-50 active:bg-gray-100"
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            Featured Collection
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            to="/categories/clothes"
+                            className="block px-2 py-2 rounded-md text-[15px] hover:bg-gray-50 active:bg-gray-100"
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            Clothes
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            to="/categories/accessories"
+                            className="block px-2 py-2 rounded-md text-[15px] hover:bg-gray-50 active:bg-gray-100"
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            Accessories
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            to="/categories/collections"
+                            className="block px-2 py-2 rounded-md text-[15px] hover:bg-gray-50 active:bg-gray-100"
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            Collections
+                          </Link>
+                        </li>
+                      </ul>
+                    )}
+                  </li>
+                  <li>
+                    <Link
+                      to="/sale"
+                      className="group flex items-center justify-between px-3 py-3 text-base rounded-lg transition-all duration-200 hover:bg-gray-50 active:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      On Sale
+                      <span className="text-gray-400 transition-transform duration-200 group-hover:translate-x-0.5">→</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/new-arrivals"
+                      className="group flex items-center justify-between px-3 py-3 text-base rounded-lg transition-all duration-200 hover:bg-gray-50 active:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      New Arrivals
+                      <span className="text-gray-400 transition-transform duration-200 group-hover:translate-x-0.5">→</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/brands"
+                      className="group flex items-center justify-between px-3 py-3 text-base rounded-lg transition-all duration-200 hover:bg-gray-50 active:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Brands
+                      <span className="text-gray-400 transition-transform duration-200 group-hover:translate-x-0.5">→</span>
+                    </Link>
+                  </li>
+                </ul>
+              </nav>
+
+              {/* Drawer footer shortcuts */}
+              <div className="mt-auto border-t p-3 flex items-center justify-around">
+                <Link to="/account" aria-label="User account" className="flex flex-col items-center text-sm" onClick={() => setIsMenuOpen(false)}>
+                  <User size={22} className="mb-1" />
+                  <span>Account</span>
+                </Link>
+                <Link to="/cart" aria-label="Shopping cart" className={`flex flex-col items-center text-sm ${isCartPage ? 'text-[#D92030]' : ''}`} onClick={() => setIsMenuOpen(false)}>
+                  <ShoppingCart size={22} className="mb-1" />
+                  <span>Cart</span>
+                </Link>
+                <Link to="/wishlist" aria-label="Wishlist" className="flex flex-col items-center text-sm" onClick={() => setIsMenuOpen(false)}>
+                  <img 
+                    src="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/ac715f0dd7f9aaef44ddb1306739d29ec63e93de?placeholderIfAbsent=true" 
+                    className="aspect-[1] object-contain w-6 mb-1" 
+                    alt="Wishlist" 
+                  />
+                  <span>Wishlist</span>
+                </Link>
+                {user?.role === 'admin' && (
+                  <a href={adminHref} target="_blank" rel="noopener noreferrer" aria-label="Admin panel" className="flex flex-col items-center text-sm" onClick={() => setIsMenuOpen(false)}>
+                    <User size={22} className="mb-1 text-red-600" />
+                    <span>Admin</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          </aside>
+        </>
       )}
     </>
   );

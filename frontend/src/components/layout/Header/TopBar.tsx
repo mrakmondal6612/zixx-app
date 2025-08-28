@@ -48,13 +48,13 @@ export const TopBar = () => {
 
         {/* Nav Links */}
         <nav className={
-          `${isMobile ? (mobileMenuOpen ? 'flex flex-col absolute top-[48px] left-0 right-0 bg-[rgba(34,40,40,1)] z-50 p-3 space-y-2' : 'hidden') : 'flex flex-row'} items-stretch text-sm font-bold text-center uppercase ml-0`
+          `${isMobile ? (mobileMenuOpen ? 'flex flex-row flex-wrap justify-center absolute top-[48px] left-0 right-0 bg-[rgba(34,40,40,1)] z-50 p-3 gap-2' : 'hidden') : 'flex flex-row'} items-stretch text-sm font-bold text-center uppercase ml-0`
         }>
           {['women', 'men', 'kids'].map(tab => (
             <Link 
               key={tab}
               to={`/${tab}`}
-              className={`w-[70px] md:w-[114px] px-px border-x border-[#52505] transition-all duration-300 hover:scale-105 ${
+              className={`flex-1 md:flex-none min-w-[90px] md:min-w-0 md:w-[114px] px-px border-x border-[#52505] transition-all duration-300 hover:scale-105 ${
                 activeTab === tab 
                   ? 'bg-white text-black transform scale-105' 
                   : 'text-white hover:bg-gray-700'
@@ -68,34 +68,7 @@ export const TopBar = () => {
             </Link>
           ))}
 
-          {/* Country Selector + Track/Contact - Mobile only inside dropdown */}
-          {isMobile && mobileMenuOpen && (
-            <div className="flex flex-col gap-2 mt-4">
-              {/* Country Selector */}
-              <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center gap-2 text-xs font-bold whitespace-nowrap leading-[1.1] bg-white/10 rounded px-2 py-1 text-white">
-                  <img src="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/c20d732439d086a64aed116707cf0bd74a991145?placeholderIfAbsent=true" className="w-4" alt="Location" />
-                  <span>{selectedCountry}</span>
-                  <ChevronDown className="w-3 h-3 text-white" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-48 bg-white border border-gray-200 shadow-lg z-50">
-                  {countries.map(country => (
-                    <DropdownMenuItem
-                      key={country}
-                      onClick={() => setSelectedCountry(country)}
-                      className={`cursor-pointer px-3 py-2 text-sm hover:bg-gray-100 ${selectedCountry === country ? 'bg-gray-50 font-medium' : ''}`}
-                    >
-                      {country}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Track/Contact */}
-              <Link to="/track-order" className="text-white text-xs py-1 px-2 rounded bg-white/10 text-center">Track Order</Link>
-              <Link to="/contact" className="text-white text-xs py-1 px-2 rounded bg-white/10 text-center">Contact Us</Link>
-            </div>
-          )}
+          {/* Mobile dropdown stripped: show only Women/Men/Kids in hamburger */}
         </nav>
 
         {/* Account + Location + Actions — Always Visible */}
