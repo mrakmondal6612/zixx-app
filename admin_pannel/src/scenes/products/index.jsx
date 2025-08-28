@@ -60,7 +60,7 @@ const Product = ({ product, onDelete, onUpdate }) => {
           color={theme.palette.secondary[600]}
           gutterBottom
         >
-          {product.category} &nbsp; &nbsp; &nbsp; &nbsp; {"theme : "} {product.theme}
+          {product.category}
         </Typography>
 
         {/* Image */}
@@ -213,6 +213,12 @@ const Product = ({ product, onDelete, onUpdate }) => {
               sx={{ mt: 1, fontWeight: "bold", color: theme.palette.mode === "dark" ? "#A692F6" : "#87068F" }}
             >
               ${Number(product.price).toFixed(2)}
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ mt: 1, color: theme.palette.text.secondary, color: theme.palette.mode === "dark" ? "white" : "black" }}
+            >
+              {product.theme}
             </Typography>
           </>
         )}
