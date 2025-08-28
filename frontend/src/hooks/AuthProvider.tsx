@@ -129,6 +129,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Sync logout across apps/tabs: react to Admin panel broadcasts and storage events
+  useEffect(() => {
+    const applyExternalLogout = () => {
+      setUser(null);
+      setToken(null);
+      setRole(null);
+      try { localStorage.removeItem('token'); } catch {}
+      try { localStorage.removeItem('isLoggedIn'); } catch {}
+      try { navigate('/auth'); } catch {}
+    };
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('auth');
+      bc.onmessage = (ev: MessageEvent) => {
+        try {
+          const t = (ev && (ev as any).data && (ev as any).data.type) || undefined;
+          if (t === 'logout') applyExternalLogout();
+        } catch {}
+      };
+    } catch {}
+
+    const onCustom = () => applyExternalLogout();
+    const onStorage = (e: StorageEvent) => {
+      try {
+        if (e.key === 'auth_logout') applyExternalLogout();
+      } catch {}
+    };
+
+    try { window.addEventListener('auth:logout', onCustom as any); } catch {}
+    try { window.addEventListener('storage', onStorage); } catch {}
+
+    return () => {
+      try { if (bc) { bc.onmessage = null; bc.close(); } } catch {}
+      try { window.removeEventListener('auth:logout', onCustom as any); } catch {}
+      try { window.removeEventListener('storage', onStorage); } catch {}
+    };
+  }, [navigate]);
+
+  // Cross-origin logout detection: on tab focus/visibility, re-check session
+  useEffect(() => {
+    let lastCheck = 0;
+    const MIN_MS = 8000; // throttle checks
+    const check = () => {
+      const now = Date.now();
+      if (now - lastCheck < MIN_MS) return;
+      lastCheck = now;
+      fetchUser().catch(() => {});
+    };
+
+    const onFocus = () => check();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') check();
+    };
+
+    try { window.addEventListener('focus', onFocus); } catch {}
+    try { document.addEventListener('visibilitychange', onVisibility); } catch {}
+
+    return () => {
+      try { window.removeEventListener('focus', onFocus); } catch {}
+      try { document.removeEventListener('visibilitychange', onVisibility); } catch {}
+    };
+  }, []);
+
   // Login using cookie-based auth
   const login = async (
     email: string,
