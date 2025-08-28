@@ -59,6 +59,17 @@ export const MainNav = () => {
       setShopOpen(false);
     }
   }, [isMenuOpen]);
+
+  // Auto-expand Shop submenu by default on gender routes while drawer is open on mobile
+  useEffect(() => {
+    if (!isMobile || !isMenuOpen) return;
+    const path = location.pathname.toLowerCase();
+    const genders = ['men', 'women', 'kids'];
+    const shouldOpen = genders.some((g) =>
+      path.startsWith(`/${g}`) || path.startsWith(`/categories/${g}`)
+    );
+    setShopOpen(shouldOpen);
+  }, [location.pathname, isMenuOpen, isMobile]);
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +86,10 @@ export const MainNav = () => {
   // Check if current route is cart to highlight the cart icon
   const isCartPage = location.pathname === '/cart';
   const isWishlistPage = location.pathname === '/wishlist';
+  const isActiveCategory = (slug: string) => {
+    const p = location.pathname.toLowerCase();
+    return p.startsWith(`/${slug}`) || p.startsWith(`/categories/${slug}`);
+  };
 
   return (
     <>
@@ -279,21 +294,36 @@ export const MainNav = () => {
                   <Link
                     to="/men"
                     onClick={() => setIsMenuOpen(false)}
-                    className="flex-1 text-center rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 py-2 px-4 font-semibold ring-1 ring-gray-200 shadow-sm transition-colors"
+                    className={cn(
+                      "flex-1 text-center rounded-full py-2 px-4 font-semibold ring-1 shadow-sm transition-colors",
+                      isActiveCategory('men')
+                        ? "bg-black text-white ring-black"
+                        : "bg-gray-100 text-gray-900 hover:bg-gray-200 active:bg-gray-300 ring-gray-200"
+                    )}
                   >
                     Men
                   </Link>
                   <Link
                     to="/women"
                     onClick={() => setIsMenuOpen(false)}
-                    className="flex-1 text-center rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 py-2 px-4 font-semibold ring-1 ring-gray-200 shadow-sm transition-colors"
+                    className={cn(
+                      "flex-1 text-center rounded-full py-2 px-4 font-semibold ring-1 shadow-sm transition-colors",
+                      isActiveCategory('women')
+                        ? "bg-black text-white ring-black"
+                        : "bg-gray-100 text-gray-900 hover:bg-gray-200 active:bg-gray-300 ring-gray-200"
+                    )}
                   >
                     Women
                   </Link>
                   <Link
                     to="/kids"
                     onClick={() => setIsMenuOpen(false)}
-                    className="flex-1 text-center rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 py-2 px-4 font-semibold ring-1 ring-gray-200 shadow-sm transition-colors"
+                    className={cn(
+                      "flex-1 text-center rounded-full py-2 px-4 font-semibold ring-1 shadow-sm transition-colors",
+                      isActiveCategory('kids')
+                        ? "bg-black text-white ring-black"
+                        : "bg-gray-100 text-gray-900 hover:bg-gray-200 active:bg-gray-300 ring-gray-200"
+                    )}
                   >
                     Kids
                   </Link>
@@ -315,46 +345,60 @@ export const MainNav = () => {
                         className={`h-5 w-5 text-gray-500 transition-transform duration-200 ${shopOpen ? 'rotate-180' : ''}`}
                       />
                     </button>
-                    {shopOpen && (
-                      <ul id="mobile-shop-submenu" className="mt-1 mb-2 ml-2 border-l pl-3 space-y-1">
-                        <li>
-                          <Link
-                            to="/categories/featured"
-                            className="block px-2 py-2 rounded-md text-[15px] hover:bg-gray-50 active:bg-gray-100"
-                            onClick={() => setIsMenuOpen(false)}
-                          >
-                            Featured Collection
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            to="/categories/clothes"
-                            className="block px-2 py-2 rounded-md text-[15px] hover:bg-gray-50 active:bg-gray-100"
-                            onClick={() => setIsMenuOpen(false)}
-                          >
-                            Clothes
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            to="/categories/accessories"
-                            className="block px-2 py-2 rounded-md text-[15px] hover:bg-gray-50 active:bg-gray-100"
-                            onClick={() => setIsMenuOpen(false)}
-                          >
-                            Accessories
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            to="/categories/collections"
-                            className="block px-2 py-2 rounded-md text-[15px] hover:bg-gray-50 active:bg-gray-100"
-                            onClick={() => setIsMenuOpen(false)}
-                          >
-                            Collections
-                          </Link>
-                        </li>
-                      </ul>
-                    )}
+                    <div
+                      id="mobile-shop-submenu"
+                      aria-hidden={!shopOpen}
+                      className={cn(
+                        "ml-2 border-l pl-3 transition-all duration-300",
+                        shopOpen ? "mt-1 mb-2" : "mt-0 mb-0"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "overflow-hidden transition-all duration-300",
+                          shopOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0 pointer-events-none"
+                        )}
+                      >
+                        <ul className="space-y-1">
+                          <li>
+                            <Link
+                              to="/categories/featured"
+                              className="block px-2 py-2 rounded-md text-[15px] hover:bg-gray-50 active:bg-gray-100"
+                              onClick={() => setIsMenuOpen(false)}
+                            >
+                              Featured Collection
+                            </Link>
+                          </li>
+                          <li>
+                            <Link
+                              to="/categories/clothes"
+                              className="block px-2 py-2 rounded-md text-[15px] hover:bg-gray-50 active:bg-gray-100"
+                              onClick={() => setIsMenuOpen(false)}
+                            >
+                              Clothes
+                            </Link>
+                          </li>
+                          <li>
+                            <Link
+                              to="/categories/accessories"
+                              className="block px-2 py-2 rounded-md text-[15px] hover:bg-gray-50 active:bg-gray-100"
+                              onClick={() => setIsMenuOpen(false)}
+                            >
+                              Accessories
+                            </Link>
+                          </li>
+                          <li>
+                            <Link
+                              to="/categories/collections"
+                              className="block px-2 py-2 rounded-md text-[15px] hover:bg-gray-50 active:bg-gray-100"
+                              onClick={() => setIsMenuOpen(false)}
+                            >
+                              Collections
+                            </Link>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
                   </li>
                   <li>
                     <Link

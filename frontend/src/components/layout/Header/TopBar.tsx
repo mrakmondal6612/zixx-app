@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Menu, MapPin, ChevronDown, User, LogOut } from 'lucide-react';
+import { ChevronDown, User, LogOut } from 'lucide-react';
 import { useAuthContext } from '@/hooks/AuthProvider';
 import {
   DropdownMenu,
@@ -22,7 +22,6 @@ export const TopBar = () => {
   });
 
   const isMobile = useIsMobile();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState('India');
   const { user, logout, loading } = useAuthContext();
 
@@ -35,20 +34,11 @@ export const TopBar = () => {
   return (
     <div className="bg-[rgba(34,40,40,1)] w-full flex flex-col items-stretch justify-center px-3 md:px-6 lg:px-80">
       <div className="flex min-h-[45px] w-full items-center gap-2 md:gap-8 justify-between flex-wrap sm:flex-nowrap">
-        {/* Mobile Menu Toggle */}
-        {isMobile && (
-          <button 
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="text-white p-2 rounded-md border border-white/20 bg-white/10 focus:outline-none focus:ring-2 focus:ring-white"
-            aria-label="Toggle mobile menu"
-          >
-            <Menu size={24} />
-          </button>
-        )}
+        {/* Mobile Menu Toggle removed: Men/Women/Kids now live in MainNav drawer */}
 
         {/* Nav Links */}
         <nav className={
-          `${isMobile ? (mobileMenuOpen ? 'flex flex-row flex-wrap justify-center absolute top-[48px] left-0 right-0 bg-[rgba(34,40,40,1)] z-50 p-3 gap-2' : 'hidden') : 'flex flex-row'} items-stretch text-sm font-bold text-center uppercase ml-0`
+          `${isMobile ? 'hidden' : 'flex flex-row'} items-stretch text-sm font-bold text-center uppercase ml-0`
         }>
           {['women', 'men', 'kids'].map(tab => (
             <Link 
@@ -61,14 +51,13 @@ export const TopBar = () => {
               }`}
               onClick={() => {
                 setActiveTab(tab);
-                if (isMobile) setMobileMenuOpen(false);
               }}
             >
               <div className="font-bold leading-[21px] py-3">{tab.toUpperCase()}</div>
             </Link>
           ))}
 
-          {/* Mobile dropdown stripped: show only Women/Men/Kids in hamburger */}
+          {/* Desktop-only tabs; mobile uses MainNav drawer quick links */}
         </nav>
 
         {/* Account + Location + Actions — Always Visible */}
