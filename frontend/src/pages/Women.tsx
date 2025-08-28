@@ -100,7 +100,7 @@ const Women = () => {
         page="women"
         position="featured"
         fallback={{
-          imageUrl: "https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true",
+          imageUrl: "https://res.cloudinary.com/dxtle1heo/image/upload/v1756038296/profile_pics/gatpp49d6jwhb9q2l6yv.png",
           heading: "Featured Collection",
           description: "Explore our curated selection of the season's must-haves.",
           linkText: "Shop Collection",
@@ -172,7 +172,6 @@ const Women = () => {
 
 
         {/* Special Sections: Best Seller & New Arrival */}
-        222222
 
         {bestSellers.length > 0 && (
           <section className="mb-16">
@@ -184,9 +183,9 @@ const Women = () => {
                 position="summer"
                 fallback={{
                   imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true',
-                  heading: "Summer Collection",
-                  description: "Light fabrics and vibrant colors for the perfect summer look.",
-                  linkText: "Shop Now",
+                  heading: "Best Sellers",
+                  description: "Explore our curated selection of the season's must-haves.",
+                  linkText: "Shop Collection",
                   linkUrl: "/women",
                 }}
                 style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
@@ -212,6 +211,18 @@ const Women = () => {
 
         {newArrivals.length > 0 && (
           <section className="mb-16">
+            <DynamicBanner
+              page="women"
+              position="new"
+              fallback={{
+                imageUrl: "https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/d5b391a024519f0a274f617aaa8e815af74b7883?placeholderIfAbsent=true",
+                heading: "New Arrivals",
+                description: "Explore our curated selection of the season's must-haves.",
+                linkText: "Shop Collection",
+                linkUrl: "/women",
+              }}
+              style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
+            />
             <h2 className="text-2xl font-bold mb-6">New Arrivals</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
               {newArrivals.map((p) => (

@@ -158,7 +158,7 @@ const Home = () => {
             page="home"
             position="new-arrivals"
             fallback={{
-              imageUrl: "/placeholder.svg",
+              imageUrl: "https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true",
               heading: "Summer Collection",
               description: "Light fabrics and vibrant colors for the perfect summer look.",
               linkText: "Shop Now",
@@ -188,7 +188,7 @@ const Home = () => {
           page="home"
           position="featured"
           fallback={{
-            imageUrl: "/placeholder.svg",
+            imageUrl: "https://res.cloudinary.com/dxtle1heo/image/upload/v1756038296/profile_pics/gatpp49d6jwhb9q2l6yv.png",
             heading: "Featured Collection",
             description: "Explore our curated selection of the season's must-haves.",
             linkText: "Shop Collection",
@@ -223,7 +223,7 @@ const Home = () => {
           page="home"
           position="men-promo"
           fallback={{
-            imageUrl: '/placeholder.svg',
+            imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/d5b391a024519f0a274f617aaa8e815af74b7883?placeholderIfAbsent=true',
             heading: "Men's Collection",
             description: "Elevate your style with our versatile men's collection.",
             linkText: "Shop Now",
