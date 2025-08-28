@@ -272,6 +272,12 @@ function Customers() {
                 onChange={handleChange}
               />
               <TextField
+                label="Middle Name"
+                name="middle_name"
+                value={editUser.middle_name || "N/A"}
+                onChange={handleChange}
+              />
+              <TextField
                 label="Last Name"
                 name="last_name"
                 value={editUser.last_name || "N/A"}
@@ -311,6 +317,85 @@ function Customers() {
                 label="Profile Pic URL"
                 name="profile_pic"
                 value={editUser.profile_pic || ""}
+                onChange={handleChange}
+              />
+              {/* this is Address format {"personal_address":"","shoping_address":"","billing_address":"","address_village":"Boinchigram","landmark":"Hospital","city":"","state":"West Bengal","country":"India","zip":"712135"} */}
+              <TextField
+                label="Address"
+                name="address"
+                value={editUser.address || ""}
+                onChange={handleChange}
+              />
+              <TextField
+                label="Personal Address"
+                name="personal_address"
+                value={editUser.personal_address || ""}
+                onChange={handleChange}
+              />
+              <TextField
+                label="Shoping Address"
+                name="shoping_address"
+                value={editUser.shoping_address || ""}
+                onChange={handleChange}
+              />
+              <TextField
+                label="Billing Address"
+                name="billing_address"
+                value={editUser.billing_address || ""}
+                onChange={handleChange}
+              />
+              <TextField
+                label="Address Village"
+                name="address_village"
+                value={editUser.address_village || ""}
+                onChange={handleChange}
+              />
+              <TextField
+                label="Landmark"
+                name="landmark"
+                value={editUser.landmark || ""}
+                onChange={handleChange}
+              />
+              <TextField
+                label="City"
+                name="city"
+                value={editUser.city || ""}
+                onChange={handleChange}
+              />
+              <TextField
+                label="State"
+                name="state"
+                value={editUser.state || ""}
+                onChange={handleChange}
+              />
+              <TextField
+                label="Country"
+                name="country"
+                value={editUser.country || ""}
+                onChange={handleChange}
+              />
+              <TextField
+                label="Zip"
+                name="zip"
+                value={editUser.zip || ""}
+                onChange={handleChange}
+              />
+              <TextField
+                label="Account Status"
+                name="isActive"
+                value={editUser.isActive || ""}
+                onChange={handleChange}
+              />
+              <TextField
+                label="Email Status"
+                name="emailVerified"
+                value={editUser.emailVerified || ""}
+                onChange={handleChange}
+              />
+              <TextField
+                label="Phone Status"
+                name="phoneVerified"
+                value={editUser.phoneVerified || ""}
                 onChange={handleChange}
               />
             </>

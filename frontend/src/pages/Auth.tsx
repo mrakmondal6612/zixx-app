@@ -52,32 +52,94 @@ const Auth = () => {
     const provider = params.get('provider');
     const ok = params.get('ok');
     const next = params.get('next');
-    if (token && provider === 'google' && ok === '1') {
-      (async () => {
+    
+    // Only proceed if we have all required parameters
+    if (!token || provider !== 'google' || ok !== '1') return;
+    
+    // Use a ref to track if the effect has already run
+    const effectRun = React.useRef(false);
+    
+    if (!effectRun.current) {
+      effectRun.current = true;
+      
+      const processOAuth = async () => {
         try {
+          // Store the token in localStorage for persistence
           try {
             localStorage.setItem('token', token);
             localStorage.setItem('isLoggedIn', '1');
-          } catch {}
+          } catch (e) {
+            console.error('Failed to store auth data:', e);
+          }
+          
+          // Fetch user data with the token
           const res = await fetch(apiUrl('/clients/user/me'), {
             credentials: 'include',
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}` 
+            },
           });
-          const data = await res.json().catch(() => ({}));
-          if (data && data.user) {
-            setUser(data.user);
-            if (data.user.role) setRole(data.user.role);
-            toast({ title: 'Success!', description: 'Logged in with Google.' });
+          
+          if (!res.ok) {
+            throw new Error('Failed to fetch user data');
           }
-        } catch (e: any) {
-          toast({ title: 'Login error', description: e?.message || 'Failed to complete Google login', variant: 'destructive' });
-        } finally {
-          const from = next || (location.state as any)?.from?.pathname || '/';
-          navigate(from, { replace: true });
+          
+          const data = await res.json().catch(() => ({}));
+          
+          if (data && data.user) {
+            // Update auth state
+            setUser(data.user);
+            if (data.user.role) {
+              setRole(data.user.role);
+            }
+            
+            // Show success message
+            toast({ 
+              title: 'Success!', 
+              description: 'Successfully logged in with Google.',
+              duration: 3000,
+            });
+            
+            // Navigate to the intended destination or home
+            const redirectPath = next || (location.state as any)?.from?.pathname || '/';
+            navigate(redirectPath, { 
+              replace: true,
+              state: { from: location.state?.from },
+            });
+          }
+        } catch (error: any) {
+          console.error('OAuth error:', error);
+          toast({ 
+            title: 'Login Error', 
+            description: error?.message || 'Failed to complete Google login', 
+            variant: 'destructive',
+            duration: 5000,
+          });
+          
+          // Redirect to login page on error
+          navigate('/auth', { 
+            replace: true,
+            state: { 
+              error: 'login_failed',
+              from: location.state?.from || { pathname: '/' },
+            },
+          });
         }
-      })();
+      };
+      
+      processOAuth();
     }
-  }, [location.search, navigate, setRole, setUser, toast]);
+    
+    // Cleanup function to prevent memory leaks
+    return () => {
+      // Clear the URL parameters after processing
+      if (window.location.search) {
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    };
+  }, [location.search, location.state, navigate, setRole, setUser, toast]);
 
   const handleGoogleSignIn = () => {
     try {
@@ -91,6 +153,14 @@ const Auth = () => {
       // Build the OAuth URL with the correct returnTo parameter
       const oauthUrl = apiUrl(`/clients/auth/google?returnTo=${encodeURIComponent(returnTo)}`);
       
+      // Clear any existing auth data before starting new OAuth flow
+      try {
+        localStorage.removeItem('token');
+        localStorage.removeItem('isLoggedIn');
+      } catch (e) {
+        console.warn('Failed to clear auth data:', e);
+      }
+      
       console.log('Initiating Google OAuth with URL:', oauthUrl);
       
       // Redirect to the OAuth URL
@@ -101,6 +171,7 @@ const Auth = () => {
         title: 'Error',
         description: 'Failed to start Google sign-in. Please try again.',
         variant: 'destructive',
+        duration: 5000,
       });
     }
   };
