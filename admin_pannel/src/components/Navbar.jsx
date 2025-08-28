@@ -175,6 +175,23 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                     }
                   } catch (e) {}
 
+                  // Also notify main site origin instantly via hidden iframe to /logout-sync.html
+                  // This makes zixx.vercel.app tabs receive storage/BroadcastChannel events on their origin
+                  try {
+                    const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
+                    let frontendOrigin = import.meta.env.VITE_FRONTEND_URL;
+                    if (!frontendOrigin) {
+                      frontendOrigin = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}:8080`;
+                    }
+                    try { const u = new URL(frontendOrigin); frontendOrigin = u.origin; } catch (e) {}
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.referrerPolicy = 'no-referrer';
+                    iframe.src = `${frontendOrigin.replace(/\/$/, '')}/logout-sync.html`;
+                    document.body.appendChild(iframe);
+                    setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) {} }, 4000);
+                  } catch (e) {}
+
                   // Redirect to frontend auth page
                   const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
                   let frontend = import.meta.env.VITE_FRONTEND_URL;
