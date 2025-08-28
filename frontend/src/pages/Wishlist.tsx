@@ -180,8 +180,8 @@ const Wishlist = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {wishlistItems.map((item) => (
               <Card key={item.id} className="overflow-hidden">
-                <div className="aspect-square relative">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                <div className="aspect-square relative bg-gray-100 overflow-hidden">
+                  <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
                   {!item.inStock && (
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                       <span className="text-white font-bold text-lg">Out of Stock</span>

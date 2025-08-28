@@ -531,7 +531,7 @@ const Cart = () => {
                     <img 
                       src={product.image} 
                       alt={product.name} 
-                      className="w-full h-full object-cover product-image" 
+                      className="w-full h-full object-contain product-image" 
                     />
                   </div>
                   <h3 className="text-xs sm:text-sm font-semibold mb-2 line-clamp-2">{product.name}</h3>
@@ -581,7 +581,7 @@ const Cart = () => {
                     <img 
                       src={product.image} 
                       alt={product.name} 
-                      className="w-full h-full object-cover product-image" 
+                      className="w-full h-full object-contain product-image" 
                     />
                   </div>
                   <h3 className="text-xs sm:text-sm font-semibold mb-2 line-clamp-2">{product.name}</h3>

@@ -18,8 +18,7 @@ import { Heart, ShoppingCart, Star, Plus, Minus, Truck, RotateCcw, Share2, X, Ch
 import { toast } from 'sonner';
 import axios from 'axios';
 import { useAuthContext } from '@/hooks/AuthProvider';
-import { apiUrl } from '@/lib/api';
-import { title } from 'process';
+import { apiUrl, getAuthHeaders } from '@/lib/api';
 
 // Setup axios
 axios.defaults.withCredentials = true;
@@ -84,16 +83,15 @@ const Product = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        // let url = '';
-        // if (id) url = apiUrl(`/clients/products/singleproduct/${id}`);
-        // else {
-        //   const name = new URLSearchParams(location.search).get('name');
-        //   if (name) url = apiUrl(`/clients/products/byname/${encodeURIComponent(name)}`);
-        // }
-        // if (!url) return;
+        let url = '';
+        if (id) url = apiUrl(`/clients/products/singleproduct/${id}`);
+        else {
+          const name = new URLSearchParams(location.search).get('name');
+          if (name) url = apiUrl(`/clients/products/byname/${encodeURIComponent(name)}`);
+        }
+        if (!url) return;
 
-        // const res = await axios.get(url);
-        const res = await axios.get(apiUrl(`/clients/products/singleproduct/${id}`) , { 
+        const res = await axios.get(url , { 
           withCredentials: true,
         });
 
@@ -197,6 +195,10 @@ const Product = () => {
         afterQtyprice: (product.price - (product.discount || 0)) * quantity,
         total: (product.price - (product.discount || 0)) * quantity,
         variation: { size: selectedSize, color: selectedColor, quantity },
+      },
+      {
+        withCredentials: true,
+        headers: { ...getAuthHeaders() },
       });
 
       if (res.data?.ok || res.data?.success) {
@@ -213,7 +215,11 @@ const Product = () => {
   const handleAddToWishlist = async () => {
     if (!ensureLoggedIn() || !product) return;
     try {
-      const res = await axios.post(apiUrl('/clients/user/wishlist/add'), { productId: product._id });
+      const res = await axios.post(
+        apiUrl('/clients/user/wishlist/add'),
+        { productId: product._id },
+        { withCredentials: true, headers: { ...getAuthHeaders() } }
+      );
 
       console.log("Add to Wishlist Responce : ", res);
 
@@ -222,7 +228,10 @@ const Product = () => {
         setIsWishlisted(true);
 
         // Re-fetch wishlist to confirm DB update
-        const check = await axios.get(apiUrl('/clients/user/wishlist'));
+        const check = await axios.get(
+          apiUrl('/clients/user/wishlist'),
+          { withCredentials: true, headers: { ...getAuthHeaders() } }
+        );
         console.log('Updated wishlist from DB:', check.data);
       } else toast.error(res.data?.message || 'Failed to add to wishlist');
     } catch (err: any) {

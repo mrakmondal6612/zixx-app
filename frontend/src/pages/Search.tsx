@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
 import { Search as SearchIcon, Filter, ShoppingCart, Heart } from 'lucide-react';
-import { apiUrl } from '@/lib/api';
+import { apiUrl, getAuthHeaders } from '@/lib/api';
 
 
 // Types for API results
@@ -136,6 +136,7 @@ const Search = () => {
                               { productId: product._id },
                               {
                                 withCredentials: true,
+                                headers: { ...getAuthHeaders() },
                               }
                             );
                             if (res.status === 401) {
@@ -197,6 +198,7 @@ const Search = () => {
                               },
                               {
                                 withCredentials: true,
+                                headers: { ...getAuthHeaders() },
                               }
                             );
                             if (res.status === 401) {
