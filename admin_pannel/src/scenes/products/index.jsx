@@ -60,7 +60,7 @@ const Product = ({ product, onDelete, onUpdate }) => {
           color={theme.palette.secondary[600]}
           gutterBottom
         >
-          {product.category} &nbsp; &nbsp; &nbsp; {"theme : "} {product.theme}
+          {product.category} &nbsp; &nbsp; &nbsp; &nbsp; {"theme : "} {product.theme}
         </Typography>
 
         {/* Image */}
