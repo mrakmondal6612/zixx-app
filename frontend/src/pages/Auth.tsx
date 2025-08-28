@@ -16,10 +16,12 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [firstName, setFirstName] = useState('');
+  const [middleName, setMiddleName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [gender, setGender] = useState('');
   const [dob, setDob] = useState('');
+  const [dobInputType, setDobInputType] = useState<'text' | 'date'>('text');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user, login, setRole } = useAuthContext();
@@ -33,10 +35,12 @@ const Auth = () => {
     setPassword('');
     setConfirmPassword('');
     setFirstName('');
+    setMiddleName('');
     setLastName('');
     setPhone('');
     setGender('');
     setDob('');
+    setDobInputType('text');
   };
 
   if (user) return <Navigate to="/" replace />;
@@ -59,6 +63,7 @@ const Auth = () => {
         // Register flow
         const payload = {
           first_name: firstName,
+          middle_name: middleName,
           last_name: lastName,
           email,
           password,
@@ -101,8 +106,9 @@ const Auth = () => {
             <p className="mb-8 text-gray-700 text-lg">Join us now to be a part of Zixx's family.</p>
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <Input placeholder="First Name *" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+                  <Input placeholder="Middle Name (optional)" value={middleName} onChange={(e) => setMiddleName(e.target.value)} />
                   <Input placeholder="Last Name *" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
                 </div>
               )}
@@ -133,7 +139,18 @@ const Auth = () => {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                   />
-                  <Input type="date" placeholder="Please enter your birthdate *" value={dob} onChange={(e) => setDob(e.target.value)} required />
+                  <Input
+                    type={dobInputType}
+                    placeholder="Please enter your birthdate *"
+                    value={dob}
+                    onFocus={() => setDobInputType('date')}
+                    onBlur={() => {
+                      if (!dob) setDobInputType('text');
+                    }}
+                    onChange={(e) => setDob(e.target.value)}
+                    inputMode="numeric"
+                    required
+                  />
                   <Input type="tel" placeholder="+91 Mobile Number *" value={phone} onChange={(e) => setPhone(e.target.value)} required />
                   <div className="flex items-center gap-4 mt-2">
                     <span className="font-medium">Gender</span>
