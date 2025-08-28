@@ -4,6 +4,7 @@ import App from './App';
 import './index.css';
 import { AuthProvider } from './hooks/AuthProvider';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { GlobalLoadingProvider } from './hooks/GlobalLoading';
 
 const router = createBrowserRouter([
   {
@@ -17,8 +18,10 @@ const router = createBrowserRouter([
 ]);
 
 createRoot(document.getElementById('root')!).render(
-  <RouterProvider
-    router={router}
-    future={{ v7_startTransition: true }}
-  />
+  <GlobalLoadingProvider>
+    <RouterProvider
+      router={router}
+      future={{ v7_startTransition: true }}
+    />
+  </GlobalLoadingProvider>
 );

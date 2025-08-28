@@ -172,10 +172,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let lastCheck = 0;
     const MIN_MS = 8000; // throttle checks
+
+    const isProbablyLoggedIn = () => {
+      try {
+        if (token) return true;
+        return localStorage.getItem('isLoggedIn') === '1';
+      } catch {
+        return !!token;
+      }
+    };
+
     const check = () => {
       const now = Date.now();
       if (now - lastCheck < MIN_MS) return;
       lastCheck = now;
+      if (!isProbablyLoggedIn()) return; // avoid 401 noise when logged out
       fetchUser().catch(() => {});
     };
 
@@ -191,7 +202,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try { window.removeEventListener('focus', onFocus); } catch {}
       try { document.removeEventListener('visibilitychange', onVisibility); } catch {}
     };
-  }, []);
+  }, [token]);
 
   // Login using cookie-based auth
   const login = async (

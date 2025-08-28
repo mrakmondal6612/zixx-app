@@ -40,6 +40,7 @@ import NotFound from "./pages/NotFound";
 import { ScrollToTop } from "./components/ScrollToTop";
 import Account from './pages/Account';
 import Category from './pages/Category';
+import GlobalLoadingOverlay from "@/components/GlobalLoadingOverlay";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <ScrollToTop />
+      <GlobalLoadingOverlay />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
