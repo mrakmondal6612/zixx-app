@@ -316,12 +316,12 @@ function Admin() {
                 value={editUser.profile_pic || ""}
                 onChange={handleChange}
               />
-              <TextField
+              {/* <TextField
                 label="Address"
                 name="address"
                 value={editUser.address || ""}
                 onChange={handleChange}
-              />
+              /> */}
               <TextField
                 label="Personal Address"
                 name="personal_address"

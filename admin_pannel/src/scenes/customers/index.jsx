@@ -320,12 +320,12 @@ function Customers() {
                 onChange={handleChange}
               />
               {/* this is Address format {"personal_address":"","shoping_address":"","billing_address":"","address_village":"Boinchigram","landmark":"Hospital","city":"","state":"West Bengal","country":"India","zip":"712135"} */}
-              <TextField
+              {/* <TextField
                 label="Address"
                 name="address"
                 value={editUser.address || ""}
                 onChange={handleChange}
-              />
+              /> */}
               <TextField
                 label="Personal Address"
                 name="personal_address"
