@@ -226,7 +226,7 @@ const Product = ({ product, onDelete, onUpdate }) => {
               variant="body2"
               sx={{ mt: 1, color: theme.palette.text.secondary, color: theme.palette.mode === "dark" ? "white" : "black" }}
             >
-              {product.theme}
+              Theme : {product.theme}
             </Typography>
           </>
         )}
