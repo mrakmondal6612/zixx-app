@@ -325,55 +325,55 @@ function Admin() {
               <TextField
                 label="Personal Address"
                 name="personal_address"
-                value={editUser.personal_address || ""}
+                value={editUser.address.personal_address || ""}
                 onChange={handleChange}
               />
               <TextField
                 label="Shoping Address"
                 name="shoping_address"
-                value={editUser.shoping_address || ""}
+                value={editUser.address.shoping_address || ""}
                 onChange={handleChange}
               />
               <TextField
                 label="Billing Address"
                 name="billing_address"
-                value={editUser.billing_address || ""}
+                value={editUser.address.billing_address || ""}
                 onChange={handleChange}
               />
               <TextField
                 label="Address Village"
                 name="address_village"
-                value={editUser.address_village || ""}
+                value={editUser.address.address_village || ""}
                 onChange={handleChange}
               />
               <TextField
                 label="Landmark"
                 name="landmark"
-                value={editUser.landmark || ""}
+                value={editUser.address.landmark || ""}
                 onChange={handleChange}
               />
               <TextField
                 label="City"
                 name="city"
-                value={editUser.city || ""}
+                value={editUser.address.city || ""}
                 onChange={handleChange}
               />
               <TextField
                 label="State"
                 name="state"
-                value={editUser.state || ""}
+                value={editUser.address.state || ""}
                 onChange={handleChange}
               />
               <TextField
                 label="Country"
                 name="country"
-                value={editUser.country || ""}
+                value={editUser.address.country || ""}
                 onChange={handleChange}
               />
               <TextField
                 label="Zip"
                 name="zip"
-                value={editUser.zip || ""}
+                value={editUser.address.zip || ""}
                 onChange={handleChange}
               />
               <TextField
