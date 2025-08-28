@@ -24,7 +24,7 @@ const Auth = () => {
   const [dobInputType, setDobInputType] = useState<'text' | 'date'>('text');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { user, login, setRole } = useAuthContext();
+  const { user, login, setRole, setUser } = useAuthContext();
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -44,6 +44,66 @@ const Auth = () => {
   };
 
   if (user) return <Navigate to="/" replace />;
+
+  // Handle token returned from OAuth redirect
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const token = params.get('token');
+    const provider = params.get('provider');
+    const ok = params.get('ok');
+    const next = params.get('next');
+    if (token && provider === 'google' && ok === '1') {
+      (async () => {
+        try {
+          try {
+            localStorage.setItem('token', token);
+            localStorage.setItem('isLoggedIn', '1');
+          } catch {}
+          const res = await fetch(apiUrl('/clients/user/me'), {
+            credentials: 'include',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const data = await res.json().catch(() => ({}));
+          if (data && data.user) {
+            setUser(data.user);
+            if (data.user.role) setRole(data.user.role);
+            toast({ title: 'Success!', description: 'Logged in with Google.' });
+          }
+        } catch (e: any) {
+          toast({ title: 'Login error', description: e?.message || 'Failed to complete Google login', variant: 'destructive' });
+        } finally {
+          const from = next || (location.state as any)?.from?.pathname || '/';
+          navigate(from, { replace: true });
+        }
+      })();
+    }
+  }, [location.search, navigate, setRole, setUser, toast]);
+
+  const handleGoogleSignIn = () => {
+    try {
+      // Get the current path to return to after login
+      const from = (location.state as any)?.from?.pathname || '/';
+      
+      // Create the return URL with the frontend URL
+      const frontendUrl = window.location.origin.replace(/\/$/, '');
+      const returnTo = `${frontendUrl}/auth?next=${encodeURIComponent(from)}`;
+      
+      // Build the OAuth URL with the correct returnTo parameter
+      const oauthUrl = apiUrl(`/clients/auth/google?returnTo=${encodeURIComponent(returnTo)}`);
+      
+      console.log('Initiating Google OAuth with URL:', oauthUrl);
+      
+      // Redirect to the OAuth URL
+      window.location.href = oauthUrl;
+    } catch (error) {
+      console.error('Error in Google OAuth:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to start Google sign-in. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +131,7 @@ const Auth = () => {
           gender,
           dob
         };
-  const res = await fetch(apiUrl('/clients/register'), {
+          const res = await fetch(apiUrl('/clients/register'), {
           credentials: 'include', 
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -187,16 +247,17 @@ const Auth = () => {
                 type="button"
                 variant="outline"
                 className="w-full flex items-center justify-center gap-2 bg-[#f5f6fa] hover:bg-gray-200 border border-gray-200 text-gray-700 font-medium rounded-md py-2"
+                onClick={handleGoogleSignIn}
               >
                 <FaGoogle className="w-5 h-5" /> Sign in with Google
               </Button>
-              <Button
+              {/* <Button
                 type="button"
                 variant="outline"
                 className="w-full flex items-center justify-center gap-2 bg-[#f5f6fa] hover:bg-gray-200 border border-gray-200 text-gray-700 font-medium rounded-md py-2"
               >
                 <FaFacebook className="w-5 h-5" /> Sign in with Facebook
-              </Button>
+              </Button> */}
               <div className="text-center text-sm mt-4">
                 {isLogin ? (
                   <>
