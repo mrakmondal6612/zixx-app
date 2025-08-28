@@ -84,7 +84,7 @@ const Men = () => {
             page="men"
             position="hero"
             fallback={{
-              imageUrl: '/placeholder.svg',
+              imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/7087fa7cadbd89e8fc148d4f01d42317d99eaccb?placeholderIfAbsent=true',
               heading: "Men's Collection",
               description: "Elevate your style with our versatile men's collection.",
               linkText: "Shop Now",

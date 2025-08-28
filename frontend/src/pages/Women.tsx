@@ -100,7 +100,7 @@ const Women = () => {
         page="women"
         position="featured"
         fallback={{
-          imageUrl: "/placeholder.svg",
+          imageUrl: "https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true",
           heading: "Featured Collection",
           description: "Explore our curated selection of the season's must-haves.",
           linkText: "Shop Collection",
@@ -172,6 +172,7 @@ const Women = () => {
 
 
         {/* Special Sections: Best Seller & New Arrival */}
+        222222
 
         {bestSellers.length > 0 && (
           <section className="mb-16">
@@ -182,7 +183,7 @@ const Women = () => {
                 page="women"
                 position="summer"
                 fallback={{
-                  imageUrl: '/placeholder.svg',
+                  imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true',
                   heading: "Summer Collection",
                   description: "Light fabrics and vibrant colors for the perfect summer look.",
                   linkText: "Shop Now",
