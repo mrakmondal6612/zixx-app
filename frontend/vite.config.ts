@@ -4,8 +4,8 @@ import path from 'path'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
-  const rawBackend = env.VITE_BACKEND_URL || ''
-  const proxyTarget = rawBackend.replace(/\/api\/?$/, '')
+  const rawBackend = env.VITE_BACKEND_URL
+  const proxyTarget = rawBackend.replace(/\/api\/?$/, '') 
   console.log("backendUrl(raw)", rawBackend);
   console.log("proxyTarget(sanitized)", proxyTarget);
   console.log("Port", env.VITE_PORT);

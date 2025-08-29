@@ -187,20 +187,21 @@ const TrackOrder = () => {
   const lang: Lang = 'en';
   const t = (k: keyof typeof dict['en']) => dict.en[k];
 
-  const handleTrack = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Core tracking logic extracted so we can call it directly from effects
+  const doTrack = async (rawInput: string, emailOverride?: string) => {
+    const input = (rawInput || '').trim();
     setError(null);
     setOrder(null);
-    const input = orderNumber.trim();
     if (!input) {
       setError('Please enter your order number.');
       return;
     }
     setLoading(true);
     try {
+      const emailUse = (emailOverride ?? email)?.trim();
       // If email is provided, use public endpoint (no auth)
-      if (email.trim()) {
-        const emailNorm = email.trim().toLowerCase();
+      if (emailUse) {
+        const emailNorm = emailUse.toLowerCase();
         const res = await fetch(apiUrl('/clients/order/track'), {
           credentials: 'include',
           method: 'POST',
@@ -257,17 +258,23 @@ const TrackOrder = () => {
     }
   };
 
-  // Prefill from query param ?code=
+  const handleTrack = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await doTrack(orderNumber);
+  };
+
+  // Prefill and auto-track from query params (?code=, ?id=, ?tracking=, optional ?email=)
   useEffect(() => {
-    const code = searchParams.get('code');
-    if (code && !orderNumber) {
-      setOrderNumber(code); 
-      setTimeout(() => {
-        if (!loading) {
-          handleTrack({ preventDefault: () => {} } as unknown as React.FormEvent);
-        }
-      }, 0);
+    const qpCode = searchParams.get('code') || searchParams.get('id') || searchParams.get('tracking');
+    const qpEmail = searchParams.get('email') || undefined;
+    if (qpCode) {
+      setOrderNumber(qpCode);
+      // trigger tracking immediately with the query param value to avoid state timing issues
+      if (!loading) {
+        doTrack(qpCode, qpEmail);
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   return (

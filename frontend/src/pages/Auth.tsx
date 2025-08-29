@@ -28,6 +28,9 @@ const Auth = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Use a ref to track if the OAuth effect has already run
+  const effectRun = React.useRef(false);
 
   const toggleMode = () => {
     setIsLogin((prev) => !prev);
@@ -43,95 +46,101 @@ const Auth = () => {
     setDobInputType('text');
   };
 
-  if (user) return <Navigate to="/" replace />;
-
   // Handle token returned from OAuth redirect
   React.useEffect(() => {
-    const processOAuth = async () => {
-      const params = new URLSearchParams(location.search);
-      const token = params.get('token');
-      const provider = params.get('provider');
-      const ok = params.get('ok');
-      const next = params.get('next');
+    const params = new URLSearchParams(location.search);
+    const token = params.get('token');
+    const provider = params.get('provider');
+    const ok = params.get('ok');
+    const next = params.get('next');
+    
+    // Only proceed if we have all required parameters
+    if (!token || provider !== 'google' || ok !== '1') return;
+    
+    if (!effectRun.current) {
+      effectRun.current = true;
       
-      // Only proceed if we have all required parameters
-      if (!token || provider !== 'google' || ok !== '1') return;
-      
-      try {
-        // Store the token in localStorage for persistence
+      const processOAuth = async () => {
         try {
-          localStorage.setItem('token', token);
-          localStorage.setItem('isLoggedIn', '1');
-        } catch (e) {
-          console.error('Failed to store auth data:', e);
-        }
-        
-        // Fetch user data with the token
-        const res = await fetch(apiUrl('/clients/user/me'), {
-          credentials: 'include',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}` 
-          },
-        });
-        
-        if (!res.ok) {
-          throw new Error('Failed to fetch user data');
-        }
-        
-        const data = await res.json().catch(() => ({}));
-        
-        if (data?.user) {
-          // Update auth state
-          setUser(data.user);
-          if (data.user.role) {
-            setRole(data.user.role);
+          // Store the token in localStorage for persistence
+          try {
+            localStorage.setItem('token', token);
+            localStorage.setItem('isLoggedIn', '1');
+          } catch (e) {
+            console.error('Failed to store auth data:', e);
           }
           
-          // Show success message
-          toast({ 
-            title: 'Success!', 
-            description: 'Successfully logged in with Google.',
-            duration: 3000,
+          // Fetch user data with the token
+          const res = await fetch(apiUrl('/clients/user/me'), {
+            credentials: 'include',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}` 
+            },
           });
           
-          // Clear URL parameters
-          const cleanUrl = window.location.pathname;
-          window.history.replaceState({}, document.title, cleanUrl);
+          if (!res.ok) {
+            throw new Error('Failed to fetch user data');
+          }
           
-          // Navigate to the intended destination or home
-          const redirectPath = next || (location.state as any)?.from?.pathname || '/';
-          navigate(redirectPath, { 
+          const data = await res.json().catch(() => ({}));
+          
+          if (data && data.user) {
+            // Update auth state
+            setUser(data.user);
+            if (data.user.role) {
+              setRole(data.user.role);
+            }
+            
+            // Show success message
+            toast({ 
+              title: 'Success!', 
+              description: 'Successfully logged in with Google.',
+              duration: 3000,
+            });
+            
+            // Navigate to the intended destination or home
+            const redirectPath = next || (location.state as any)?.from?.pathname || '/';
+            navigate(redirectPath, { 
+              replace: true,
+              state: { from: location.state?.from },
+            });
+          }
+        } catch (error: any) {
+          console.error('OAuth error:', error);
+          toast({ 
+            title: 'Login Error', 
+            description: error?.message || 'Failed to complete Google login', 
+            variant: 'destructive',
+            duration: 5000,
+          });
+          
+          // Redirect to login page on error
+          navigate('/auth', { 
             replace: true,
-            state: { from: location.state?.from },
+            state: { 
+              error: 'login_failed',
+              from: location.state?.from || { pathname: '/' },
+            },
           });
         }
-      } catch (error: any) {
-        console.error('OAuth error:', error);
-        toast({ 
-          title: 'Login Error', 
-          description: error?.message || 'Failed to complete Google login', 
-          variant: 'destructive',
-          duration: 5000,
-        });
-        
-        // Clear URL parameters
+      };
+      
+      processOAuth();
+    }
+    
+    // Cleanup function to prevent memory leaks
+    return () => {
+      // Clear the URL parameters after processing
+      if (window.location.search) {
         const cleanUrl = window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
-        
-        // Redirect to login page on error
-        navigate('/auth', { 
-          replace: true,
-          state: { 
-            error: 'login_failed',
-            from: location.state?.from || { pathname: '/' },
-          },
-        });
       }
     };
-    
-    processOAuth();
   }, [location.search, location.state, navigate, setRole, setUser, toast]);
+
+  // Early return after all hooks are called to prevent hooks inconsistency
+  if (user) return <Navigate to="/" replace />;
 
   const handleGoogleSignIn = () => {
     try {
