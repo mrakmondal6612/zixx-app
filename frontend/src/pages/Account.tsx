@@ -171,15 +171,15 @@ const Account = () => {
       form.append('gender', formData.gender);
       form.append('dob', formData.dob);
       // Append flat address fields (backend merges into address)
-      if (formData.personal_address) form.append('personal_address', formData.personal_address);
-      if (formData.shoping_address) form.append('shoping_address', formData.shoping_address);
-      if (formData.billing_address) form.append('billing_address', formData.billing_address);
-      if (formData.address_village) form.append('address_village', formData.address_village);
-      if (formData.landmark) form.append('landmark', formData.landmark);
-      if (formData.city) form.append('city', formData.city);
-      if (formData.state) form.append('state', formData.state);
-      if (formData.country) form.append('country', formData.country);
-      if (formData.zip) form.append('zip', formData.zip);
+      form.append('personal_address', formData.personal_address ?? '');
+      form.append('shoping_address', formData.shoping_address ?? '');
+      form.append('billing_address', formData.billing_address ?? '');
+      form.append('address_village', formData.address_village ?? '');
+      form.append('landmark', formData.landmark ?? '');
+      form.append('city', formData.city ?? '');
+      form.append('state', formData.state ?? '');
+      form.append('country', formData.country ?? '');
+      form.append('zip', formData.zip ?? '');
       if (profilePic && typeof profilePic !== 'string') {
         form.append('profile_pic', profilePic);
       }

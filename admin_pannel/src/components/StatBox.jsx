@@ -13,11 +13,21 @@ const StatBox = ({ title, value, increase, icon, description }) => {
       justifyContent="space-between"
       p="1.25rem 1rem"
       flex="1 1 100%"
+      minWidth={0}
       backgroundColor={theme.palette.background.alt}
       borderRadius="0.55rem"
     >
       <FlexBetween>
-        <Typography variant="h6" sx={{ color: theme.palette.secondary[100] }}>
+        <Typography
+          variant="h6"
+          sx={{
+            color: theme.palette.secondary[100],
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: '70%',
+          }}
+        >
           {title}
         </Typography>
         {icon}
@@ -26,7 +36,13 @@ const StatBox = ({ title, value, increase, icon, description }) => {
       <Typography
         variant="h3"
         fontWeight="600"
-        sx={{ color: theme.palette.secondary[200] }}
+        sx={{
+          color: theme.palette.secondary[200],
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          fontSize: { xs: '1.75rem', sm: '2rem', md: '2.25rem' },
+        }}
       >
         {value}
       </Typography>
@@ -34,11 +50,26 @@ const StatBox = ({ title, value, increase, icon, description }) => {
         <Typography
           variant="h5"
           fontStyle="italic"
-          sx={{ color: theme.palette.secondary.light }}
+          sx={{
+            color: theme.palette.secondary.light,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
         >
           {increase}
         </Typography>
-        <Typography>{description}</Typography>
+        <Typography
+          sx={{
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            color: theme.palette.secondary[100],
+            fontSize: { xs: '0.75rem', sm: '0.85rem' },
+          }}
+        >
+          {description}
+        </Typography>
       </FlexBetween>
     </Box>
   );

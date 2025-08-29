@@ -128,14 +128,18 @@ function UserCard({ user, onEdit, onDelete }) {
           <p>
             <strong>DOB:</strong> {user.dob || "N/A"}
           </p>
-          <p>
-            <strong>Address:</strong>{" "}
-            {`${address.address_village || "N/A"}, ${address.landmark || "N/A"}, ${
-              address.city || "N/A"
-            }, ${address.state || "N/A"}, ${address.zip || "N/A"}, ${
-              address.country || "N/A"
-            }`}
-          </p>
+          <p><strong>Address:</strong></p>
+          <ul style={{ marginTop: 4, marginBottom: 8, paddingLeft: 18 }}>
+            <li><strong>Personal:</strong> {address.personal_address || 'N/A'}</li>
+            <li><strong>Shoping:</strong> {address.shoping_address || 'N/A'}</li>
+            <li><strong>Billing:</strong> {address.billing_address || 'N/A'}</li>
+            <li><strong>Village:</strong> {address.address_village || 'N/A'}</li>
+            <li><strong>Landmark:</strong> {address.landmark || 'N/A'}</li>
+            <li><strong>City:</strong> {address.city || 'N/A'}</li>
+            <li><strong>State:</strong> {address.state || 'N/A'}</li>
+            <li><strong>Zip:</strong> {address.zip || 'N/A'}</li>
+            <li><strong>Country:</strong> {address.country || 'N/A'}</li>
+          </ul>
           <p>
             <strong>Account Status: </strong>
             <strong style={{ color: user.isActive ? "green" : "#901313" }}>
@@ -183,7 +187,18 @@ function Admin() {
   const closeToast = (_, reason) => { if (reason === 'clickaway') return; setToast((t) => ({ ...t, open: false })); };
 
   const handleEditClick = (user) => {
-    setEditUser(user);
+    // Normalize address to object for safer editing
+    let addr = {};
+    try {
+      if (typeof user.address === 'string') {
+        addr = JSON.parse(user.address || '{}') || {};
+      } else if (user && typeof user.address === 'object' && user.address !== null) {
+        addr = user.address;
+      }
+    } catch (e) {
+      addr = {};
+    }
+    setEditUser({ ...user, address: addr });
     setOpenEdit(true);
   };
 
@@ -193,6 +208,18 @@ function Admin() {
     try {
       const payload = { ...editUser };
       Object.keys(payload).forEach((k) => { if (payload[k] === 'N/A') payload[k] = ''; });
+      // Flatten address fields for backend merge
+      const addr = editUser.address || {};
+      payload.personal_address = addr.personal_address ?? undefined;
+      payload.shoping_address = addr.shoping_address ?? undefined;
+      payload.billing_address = addr.billing_address ?? undefined;
+      payload.address_village = addr.address_village ?? undefined;
+      payload.landmark = addr.landmark ?? undefined;
+      payload.city = addr.city ?? undefined;
+      payload.state = addr.state ?? undefined;
+      payload.country = addr.country ?? undefined;
+      payload.zip = addr.zip ?? undefined;
+      delete payload.address;
       await updateAdminUser({ id: editUser._id, body: payload }).unwrap();
       showToast('Admin updated successfully', 'success');
       setOpenEdit(false);
@@ -216,7 +243,19 @@ function Admin() {
   };
 
   const handleChange = (e) => {
-    setEditUser({ ...editUser, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    const addressFields = new Set([
+      'personal_address', 'shoping_address', 'billing_address',
+      'address_village', 'landmark', 'city', 'state', 'country', 'zip',
+    ]);
+    if (addressFields.has(name)) {
+      setEditUser((prev) => ({
+        ...prev,
+        address: { ...(prev?.address || {}), [name]: value },
+      }));
+    } else {
+      setEditUser((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   return (

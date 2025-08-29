@@ -30,39 +30,47 @@ const Dashboard = () => {
 
   const { data, isLoading } = useGetDashboardQuery();
   // console.log("Dashboard:", data);
-  // console.log("API Base URL:", getApiBase());
   
+
+  const ellipsisCell = (value) => (
+    <Box sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
+      {String(value ?? '')}
+    </Box>
+  );
 
   const columns = [
     {
       field: "_id",
       headerName: "ID",
       flex: 1,
+      renderCell: (params) => ellipsisCell(params.value),
     },
     {
       field: "userId",
       headerName: "User ID",
       flex: 1,
+      renderCell: (params) => ellipsisCell(params.value),
     },
 
     {
       field: "createdAt",
-      headerName: "CreatedAt",
+      headerName: "Created",
       flex: 1,
+      renderCell: (params) => ellipsisCell(params.value),
     },
 
     {
       field: "products",
-      headerName: "# of Products",
-      flex: 0.5,
+      headerName: "# Products",
+      flex: 0.6,
       sortable: false,
-      renderCell: (params) => params.value.length,
+      renderCell: (params) => ellipsisCell(params.value?.length ?? 0),
     },
     {
       field: "cost",
       headerName: "Cost",
-      flex: 1,
-      renderCell: (params) => `$${Number(params.value).toFixed(2)}`,
+      flex: 0.8,
+      renderCell: (params) => ellipsisCell(`$${Number(params.value).toFixed(2)}`),
     },
   ];
   return (
@@ -94,7 +102,8 @@ const Dashboard = () => {
         gridAutoRows="160px"
         gap="20px"
         sx={{
-          "& > div": { gridColumn: isNonMediumScreens ? undefined : "span 12" },
+          "& > div": { gridColumn: isNonMediumScreens ? undefined : "span 12", minWidth: 0 },
+          gridAutoRows: { xs: '120px', sm: '140px', md: '160px' },
         }}
       >
         {/* ROW 1 */}
@@ -208,15 +217,22 @@ const Dashboard = () => {
           sx={{
             "& .MuiDataGrid-root": {
               border: "none",
-              borderRadius: "5rem",
+              borderRadius: "0.55rem",
+              minWidth: 0,
             },
             "& .MuiDataGrid-cell": {
               borderBottom: "none",
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
             },
             "& .MuiDataGrid-columnHeaders": {
               backgroundColor: theme.palette.background.alt,
               color: theme.palette.secondary[100],
               borderBottom: "none",
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
             },
             "& .MuiDataGrid-virtualScroller": {
               backgroundColor: theme.palette.background.alt,
@@ -236,6 +252,8 @@ const Dashboard = () => {
             getRowId={(row) => row._id}
             rows={(data && data.transactions) || []}
             columns={columns}
+            disableRowSelectionOnClick
+            autoHeight
           />
         </Box>
 
