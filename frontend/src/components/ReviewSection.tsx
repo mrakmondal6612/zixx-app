@@ -41,15 +41,21 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
       try {
         const res = await fetch(apiUrl(`/clients/reviews/product/${productId}`));
         const json = await res.json();
-        setReviews(json.data.map((r: any) => ({
-          id: r._id,
-          name: `${r.userId.first_name} ${r.userId.last_name}`,
-          rating: r.rating,
-          comment: r.comment,
-          date: new Date(r.createdAt).toISOString().split('T')[0],
-          avatar: r.userId.profile_pic || '',
-          userId: r.userId._id,
-        })));
+        setReviews(json.data.map((r: any) => {
+          const userObj = r?.userId && typeof r.userId === 'object' ? r.userId : null;
+          const first = userObj?.first_name ?? '';
+          const last = userObj?.last_name ?? '';
+          const fullName = `${first} ${last}`.trim();
+          return {
+            id: r._id,
+            name: fullName || r?.name || 'Anonymous',
+            rating: r.rating,
+            comment: r.comment,
+            date: new Date(r.createdAt).toISOString().split('T')[0],
+            avatar: userObj?.profile_pic || '',
+            userId: userObj?._id || (typeof r?.userId === 'string' ? r.userId : undefined),
+          } as Review;
+        }));
       } catch (err) {
         console.error('Fetch reviews failed', err);
       }
@@ -189,15 +195,21 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
       const listRes = await fetch(apiUrl(`/clients/reviews/product/${productId}`));
       const listJson = await listRes.json();
       if (!listRes.ok) throw new Error(listJson.msg || 'Failed to refresh reviews');
-      setReviews(listJson.data.map((r: any) => ({
-        id: r._id,
-        name: `${r.userId.first_name} ${r.userId.last_name}`,
-        rating: r.rating,
-        comment: r.comment,
-        date: new Date(r.createdAt).toISOString().split('T')[0],
-        avatar: r.userId.profile_pic || '',
-        userId: r.userId._id,
-      })));
+      setReviews(listJson.data.map((r: any) => {
+        const userObj = r?.userId && typeof r.userId === 'object' ? r.userId : null;
+        const first = userObj?.first_name ?? '';
+        const last = userObj?.last_name ?? '';
+        const fullName = `${first} ${last}`.trim();
+        return {
+          id: r._id,
+          name: fullName || r?.name || 'Anonymous',
+          rating: r.rating,
+          comment: r.comment,
+          date: new Date(r.createdAt).toISOString().split('T')[0],
+          avatar: userObj?.profile_pic || '',
+          userId: userObj?._id || (typeof r?.userId === 'string' ? r.userId : undefined),
+        } as Review;
+      }));
       setShowForm(false);
       setEditing(false);
       setNewReview({ name: '', rating: 0, comment: '' });

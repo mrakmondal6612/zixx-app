@@ -29,6 +29,25 @@ const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  const isProfileComplete = (u: any): boolean => {
+    if (!u) return false;
+    const address = typeof u.address === 'string' ? (() => { try { return JSON.parse(u.address); } catch { return {}; } })() : (u.address || {});
+    const required = [
+      u.first_name,
+      u.last_name,
+      u.email,
+      u.phone,
+      u.gender,
+      u.dob,
+      address.city,
+      address.state,
+      address.country,
+      address.zip,
+      address.address_village,
+    ];
+    return required.every((v) => v !== undefined && v !== null && String(v).trim() !== '' && String(v).toLowerCase() !== 'n/a');
+  };
+  
   // Use a ref to track if the OAuth effect has already run
   const effectRun = React.useRef(false);
 
@@ -99,9 +118,11 @@ const Auth = () => {
               duration: 3000,
             });
             
-            // Navigate to the intended destination or home
+            // Decide post-login redirect based on completeness (ignore any prior skip)
             const redirectPath = next || (location.state as any)?.from?.pathname || '/';
-            navigate(redirectPath, { 
+            const needsProfile = !isProfileComplete(data.user);
+            const target = needsProfile ? '/account?first=1&completeProfile=1' : redirectPath;
+            navigate(target, { 
               replace: true,
               state: { from: location.state?.from },
             });
@@ -186,8 +207,19 @@ const Auth = () => {
         if (typeof login === 'function') {
           const from = (location.state as any)?.from?.pathname || '/';
           await login(email, password, from);
+          // fetch fresh user to ensure we have latest state
+          let u: any = null;
+          try {
+            const res = await fetch(apiUrl('/clients/user/me'), { credentials: 'include' });
+            const d = await res.json().catch(() => ({}));
+            u = d?.user || user;
+          } catch {
+            u = user;
+          }
+          const needsProfile = !isProfileComplete(u);
+          const target = needsProfile ? '/account?first=1&completeProfile=1' : from;
           toast({ title: 'Success!', description: 'Logged in successfully.' });
-          navigate(from, { replace: true });
+          navigate(target, { replace: true });
         } else {
           throw new Error('Login function not available');
         }

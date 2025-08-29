@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 import { Link, useNavigate } from 'react-router-dom';
@@ -27,11 +27,35 @@ type CartItem = {
 
 const Cart = () => {
   const navigate = useNavigate();
-  const { user } = useAuthContext();
+  const { user, setUser } = useAuthContext();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [promoCode, setPromoCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [showAddrModal, setShowAddrModal] = useState(false);
+  const [addrSaving, setAddrSaving] = useState(false);
+  const [modalAutoTriggered, setModalAutoTriggered] = useState(false);
+  const [addrForm, setAddrForm] = useState({
+    personal_address: '',
+    shoping_address: '',
+    billing_address: '',
+    address_village: '',
+    landmark: '',
+    city: '',
+    state: '',
+    country: '',
+    zip: '',
+  });
+
+  // Refs for auto-focus
+  const refPersonal = useRef<HTMLTextAreaElement | null>(null);
+  const refVillage = useRef<HTMLInputElement | null>(null);
+  const refCity = useRef<HTMLInputElement | null>(null);
+  const refState = useRef<HTMLInputElement | null>(null);
+  const refCountry = useRef<HTMLInputElement | null>(null);
+  const refZip = useRef<HTMLInputElement | null>(null);
+  const refLandmark = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -88,6 +112,118 @@ const Cart = () => {
     return true;
   };
 
+  const isProfileComplete = (u: any): boolean => {
+    if (!u) return false;
+    const address = typeof u.address === 'string' ? (() => { try { return JSON.parse(u.address); } catch { return {}; } })() : (u.address || {});
+    const required = [
+      u.first_name,
+      u.last_name,
+      u.email,
+      u.phone,
+      u.gender,
+      u.dob,
+      address.city,
+      address.state,
+      address.country,
+      address.zip,
+      address.address_village,
+    ];
+    return required.every((v) => v !== undefined && v !== null && String(v).trim() !== '' && String(v).toLowerCase() !== 'n/a');
+  };
+
+  const profileComplete = isProfileComplete(user);
+  const addressObj = (() => {
+    if (!user) return {} as any;
+    let a: any = user.address || {};
+    if (typeof a === 'string') {
+      try { a = JSON.parse(a); } catch { a = {}; }
+    }
+    return a || {};
+  })();
+
+  // Auto-open address modal if profile incomplete (only once per visit)
+  useEffect(() => {
+    if (!user) return;
+    if (profileComplete) return;
+    if (modalAutoTriggered) return;
+    setShowAddrModal(true);
+    setModalAutoTriggered(true);
+  }, [user, profileComplete, modalAutoTriggered]);
+
+  // Prefill address form when user or address changes
+  useEffect(() => {
+    setAddrForm({
+      personal_address: addressObj.personal_address || '',
+      shoping_address: addressObj.shoping_address || '',
+      billing_address: addressObj.billing_address || '',
+      address_village: addressObj.address_village || '',
+      landmark: addressObj.landmark || '',
+      city: addressObj.city || '',
+      state: addressObj.state || '',
+      country: addressObj.country || '',
+      zip: addressObj.zip || '',
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Auto-focus the first missing field when modal opens
+  useEffect(() => {
+    if (!showAddrModal) return;
+    // Determine order of importance for completion
+    const order: Array<{ key: keyof typeof addrForm; ref: React.RefObject<any> }> = [
+      { key: 'personal_address', ref: refPersonal },
+      { key: 'address_village', ref: refVillage },
+      { key: 'city', ref: refCity },
+      { key: 'state', ref: refState },
+      { key: 'zip', ref: refZip },
+      { key: 'country', ref: refCountry },
+      { key: 'landmark', ref: refLandmark },
+    ];
+    const firstMissing = order.find(({ key }) => !String((addrForm as any)[key] || '').trim());
+    const targetRef = firstMissing?.ref || refPersonal;
+    // Delay to ensure modal inputs are mounted
+    setTimeout(() => targetRef.current?.focus(), 0);
+  }, [showAddrModal, addrForm]);
+
+  const onAddrChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setAddrForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const saveAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ensureLoggedIn()) return;
+    setAddrSaving(true);
+    try {
+      const form = new FormData();
+      if (addrForm.personal_address) form.append('personal_address', addrForm.personal_address);
+      if (addrForm.shoping_address) form.append('shoping_address', addrForm.shoping_address);
+      if (addrForm.billing_address) form.append('billing_address', addrForm.billing_address);
+      if (addrForm.address_village) form.append('address_village', addrForm.address_village);
+      if (addrForm.landmark) form.append('landmark', addrForm.landmark);
+      if (addrForm.city) form.append('city', addrForm.city);
+      if (addrForm.state) form.append('state', addrForm.state);
+      if (addrForm.country) form.append('country', addrForm.country);
+      if (addrForm.zip) form.append('zip', addrForm.zip);
+
+      const res = await fetch(apiUrl('/clients/user/me'), { method: 'PATCH', body: form, credentials: 'include' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.user) {
+        toast.error(data?.msg || 'Failed to update address');
+        setAddrSaving(false);
+        return;
+      }
+      setUser(data.user);
+      toast.success('Address updated');
+      setShowAddrModal(false);
+    } catch (err) {
+      toast.error('Address update failed');
+    }
+    setAddrSaving(false);
+  };
+
   const removeItem = async (id: string) => {
     if (!ensureLoggedIn()) return;
     setLoading(true);
@@ -140,6 +276,12 @@ const Cart = () => {
     if (!ensureLoggedIn()) return;
     if (cartItems.length === 0) {
       toast.error('Your cart is empty');
+      return;
+    }
+    // Enforce profile completion before checkout
+    if (!isProfileComplete(user)) {
+      setShowAddrModal(true);
+      toast.info('Add your shipping address to continue.');
       return;
     }
     // Razorpay flow
@@ -291,6 +433,18 @@ const Cart = () => {
       
       <main className="flex-grow page-container pt-4 sm:pt-6 pb-8 sm:pb-16">
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6">Shopping Cart</h1>
+        {user && !profileComplete && !bannerDismissed && (
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-md border border-yellow-300 bg-yellow-50 text-yellow-800 flex items-start justify-between gap-3">
+            <div>
+              <p className="font-semibold">Complete your profile to checkout</p>
+              <p className="text-xs sm:text-sm">Add your personal and address details to proceed with the payment.</p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Link to="/account?completeProfile=1" className="px-3 py-2 rounded-md bg-[#D92030] text-white hover:bg-[#BC1C2A] text-xs sm:text-sm">Update Now</Link>
+              <button onClick={() => setBannerDismissed(true)} className="px-3 py-2 rounded-md border border-yellow-300 text-yellow-800 hover:bg-yellow-100 text-xs sm:text-sm">Dismiss</button>
+            </div>
+          </div>
+        )}
         
         <div className="responsive-flex lg:gap-8">
           {/* Cart Items */}
@@ -381,6 +535,27 @@ const Cart = () => {
             <div className="w-full lg:w-[300px] xl:w-[350px] flex-shrink-0">
               <div className="bg-gradient-to-br from-pink-100 via-purple-100 to-indigo-100 rounded-3xl shadow-xl p-6 sticky top-28 border-2 border-white/60">
                 <h2 className="font-black text-xl mb-4 sm:mb-6 text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 drop-shadow">Order Summary</h2>
+                {/* Shipping Address Summary */}
+                {user && profileComplete ? (
+                  <div className="mb-4 sm:mb-6 bg-white/60 rounded-xl p-4 border border-white/80">
+                    <div className="font-semibold mb-1">Shipping Address</div>
+                    <div className="text-sm text-gray-700 space-y-0.5">
+                      <div>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</div>
+                      {user.phone && <div>+{String(user.phone)}</div>}
+                      {addressObj.personal_address && <div>{addressObj.personal_address}</div>}
+                      <div>{[addressObj.address_village, addressObj.landmark].filter(Boolean).join(', ')}</div>
+                      <div>{[addressObj.city, addressObj.state, addressObj.zip].filter(Boolean).join(', ')}</div>
+                      <div>{addressObj.country}</div>
+                    </div>
+                    <div className="mt-2">
+                      <button onClick={() => setShowAddrModal(true)} className="text-xs text-[#D92030] hover:underline">Edit address</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-4 sm:mb-6 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl p-3 text-sm">
+                    Add your shipping address in <button onClick={() => setShowAddrModal(true)} className="underline font-medium">Cart</button> or update in <Link to="/account" className="underline font-medium">Account</Link> to place your order.
+                  </div>
+                )}
                 <div className="space-y-3 mb-4 sm:mb-6">
                   <div className="flex justify-between text-base font-semibold">
                     <span className="text-pink-500">Subtotal</span>
@@ -428,9 +603,14 @@ const Cart = () => {
                     <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-white animate-wiggle">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1.35 2.7A2 2 0 007.5 19h9a2 2 0 001.85-1.3L17 13M7 13V6h13" />
                     </svg>
-                    <span className="bg-white/20 px-3 py-1 rounded-xl text-white font-black text-lg drop-shadow-sm">{paying ? 'Processing...' : 'Buy Products'}</span>
+                    <span className="bg-white/20 px-3 py-1 rounded-xl text-white font-black text-lg drop-shadow-sm">{paying ? 'Processing...' : (profileComplete ? 'Buy Products' : 'Complete Profile to Checkout')}</span>
                   </span>
                 </Button>
+                {!profileComplete && (
+                  <div className="text-xs text-yellow-900 bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-4">
+                    To place your order, please complete your profile details first.
+                  </div>
+                )}
                 
                 {/* Categories Section with Separate Images */}
                 <div className="border-t-2 pt-4 sm:pt-6">
@@ -597,6 +777,53 @@ const Cart = () => {
           </div>
         </section>
       </main>
+      {/* Address Edit Modal */}
+      {showAddrModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold">Edit Shipping Address</h3>
+              <button onClick={() => setShowAddrModal(false)} className="text-gray-500 hover:text-gray-800">✕</button>
+            </div>
+            <form onSubmit={saveAddress} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Personal Address</label>
+                <textarea ref={refPersonal} name="personal_address" rows={2} className="w-full p-2 border border-gray-300 rounded-md" value={addrForm.personal_address} onChange={onAddrChange} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Village / Locality</label>
+                  <input ref={refVillage} name="address_village" className="w-full p-2 border border-gray-300 rounded-md" value={addrForm.address_village} onChange={onAddrChange} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Landmark</label>
+                  <input ref={refLandmark} name="landmark" className="w-full p-2 border border-gray-300 rounded-md" value={addrForm.landmark} onChange={onAddrChange} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <input ref={refCity} name="city" className="w-full p-2 border border-gray-300 rounded-md" value={addrForm.city} onChange={onAddrChange} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                  <input ref={refState} name="state" className="w-full p-2 border border-gray-300 rounded-md" value={addrForm.state} onChange={onAddrChange} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                  <input ref={refCountry} name="country" className="w-full p-2 border border-gray-300 rounded-md" value={addrForm.country} onChange={onAddrChange} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ZIP</label>
+                  <input ref={refZip} name="zip" className="w-full p-2 border border-gray-300 rounded-md" value={addrForm.zip} onChange={onAddrChange} />
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setShowAddrModal(false)} className="px-4 py-2 rounded-md border">Cancel</button>
+                <Button type="submit" className="bg-[#D92030] hover:bg-[#BC1C2A]" disabled={addrSaving}>{addrSaving ? 'Saving...' : 'Save Address'}</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       
       <Footer />
       <ScrollToTop />

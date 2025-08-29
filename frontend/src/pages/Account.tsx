@@ -12,6 +12,26 @@ import { apiUrl } from '@/lib/api';
 const Account = () => {
 
   const { user, token, setUser } = useAuthContext();
+  const [showCompleteBanner, setShowCompleteBanner] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState<boolean>(false);
+  const isProfileComplete = (u: any): boolean => {
+    if (!u) return false;
+    const address = typeof u.address === 'string' ? (() => { try { return JSON.parse(u.address); } catch { return {}; } })() : (u.address || {});
+    const required = [
+      u.first_name,
+      u.last_name,
+      u.email,
+      u.phone,
+      u.gender,
+      u.dob,
+      address.city,
+      address.state,
+      address.country,
+      address.zip,
+      address.address_village,
+    ];
+    return required.every((v) => v !== undefined && v !== null && String(v).trim() !== '' && String(v).toLowerCase() !== 'n/a');
+  };
   type Address = {
     personal_address?: string;
     shoping_address?: string;
@@ -26,6 +46,7 @@ const Account = () => {
 
   const [formData, setFormData] = useState({
     first_name: "N/A",
+    middle_name: "N/A",
     last_name: "N/A",
     email: "N/A",
     phone: "N/A",
@@ -61,6 +82,7 @@ const Account = () => {
       }
       setFormData({
         first_name: u.first_name || "N/A",
+        middle_name: u.middle_name || "N/A",
         last_name: u.last_name || "N/A",
         email: u.email || "N/A",
         phone: u.phone?.toString() || "N/A",
@@ -78,10 +100,26 @@ const Account = () => {
       });
       setProfilePic(u.profile_pic || "");
       setPreviewPic(u.profile_pic || "");
+      // Always show banner if profile incomplete
+      if (!isProfileComplete(u) && !bannerDismissed) {
+        setShowCompleteBanner(true);
+      }
+      // Clean URL params now that we've computed banner visibility
+      try {
+        const url = new URL(window.location.href);
+        const hadFirst = url.searchParams.has('first');
+        const hadComplete = url.searchParams.has('completeProfile');
+        if (hadFirst || hadComplete) {
+          url.searchParams.delete('first');
+          url.searchParams.delete('completeProfile');
+          window.history.replaceState({}, document.title, url.toString());
+        }
+      } catch {}
     }
-  }, [user]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  }, [user, bannerDismissed]);
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -126,12 +164,16 @@ const Account = () => {
       const form = new FormData();
       // Append non-address fields
       form.append('first_name', formData.first_name);
+      form.append('middle_name', formData.middle_name);
       form.append('last_name', formData.last_name);
       form.append('email', formData.email);
       form.append('phone', formData.phone);
       form.append('gender', formData.gender);
       form.append('dob', formData.dob);
       // Append flat address fields (backend merges into address)
+      if (formData.personal_address) form.append('personal_address', formData.personal_address);
+      if (formData.shoping_address) form.append('shoping_address', formData.shoping_address);
+      if (formData.billing_address) form.append('billing_address', formData.billing_address);
       if (formData.address_village) form.append('address_village', formData.address_village);
       if (formData.landmark) form.append('landmark', formData.landmark);
       if (formData.city) form.append('city', formData.city);
@@ -156,6 +198,7 @@ const Account = () => {
         setUser(data.user);
         setFormData({
           first_name: data.user.first_name || "N/A",
+          middle_name: data.user.middle_name || "N/A",
           last_name: data.user.last_name || "N/A",
           email: data.user.email || "N/A",
           phone: data.user.phone?.toString() || "N/A",
@@ -171,6 +214,15 @@ const Account = () => {
           country: data.user.address?.country ?? "N/A",
           zip: data.user.address?.zip ?? "N/A",
         });
+        try { localStorage.removeItem('profileSetupSkipped'); } catch {}
+        // Hide completion prompt if present
+        setShowCompleteBanner(false);
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('first');
+          url.searchParams.delete('completeProfile');
+          window.history.replaceState({}, document.title, url.toString());
+        } catch {}
         alert('Profile updated!');
       } else {
         alert(data.msg || 'Update failed');
@@ -187,6 +239,23 @@ const Account = () => {
       <Header />
 
       <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-8 py-10">
+        {showCompleteBanner && (
+          <div className="mb-6 p-4 rounded-md border border-yellow-300 bg-yellow-50 text-yellow-800 flex items-center justify-between">
+            <div>
+              <p className="font-semibold">Complete your profile</p>
+              <p className="text-sm">Please fill in your personal details and address to continue shopping and checkout smoothly.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <a href="#profile-form" className="px-3 py-2 rounded-md bg-[#D92030] text-white hover:bg-[#BC1C2A]">Update Now</a>
+              <button
+                onClick={() => { setShowCompleteBanner(false); setBannerDismissed(true); }}
+                className="px-3 py-2 rounded-md border border-yellow-300 text-yellow-800 hover:bg-yellow-100"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
         <h1 className="text-2xl md:text-3xl font-bold mb-8">My Account</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-8">
@@ -237,7 +306,7 @@ const Account = () => {
                 <CardTitle>Personal Information</CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSave} encType="multipart/form-data">
+                <form id="profile-form" onSubmit={handleSave} encType="multipart/form-data">
                   <div className="flex flex-col md:flex-row gap-8 items-center mb-6">
                     <div className="relative w-28 h-28">
                       <img
@@ -273,7 +342,42 @@ const Account = () => {
                       />
                     </div>
                   </div>
+                  {/* Address Details */}
+                  <h3 className="text-lg font-semibold mb-2">Address Details</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Personal Address</label>
+                      <textarea
+                        name="personal_address"
+                        rows={2}
+                        placeholder="House, Street, Area"
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                        value={formData.personal_address}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Shopping Address</label>
+                      <textarea
+                        name="shoping_address"
+                        rows={2}
+                        placeholder="House, Street, Area"
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                        value={formData.shoping_address}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Billing Address</label>
+                      <textarea
+                        name="billing_address"
+                        rows={2}
+                        placeholder="House, Street, Area"
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                        value={formData.billing_address}
+                        onChange={handleInputChange}
+                      />
+                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
                       <input
@@ -282,6 +386,7 @@ const Account = () => {
                         className="w-full p-2 border border-gray-300 rounded-md"
                         value={formData.city}
                         onChange={handleInputChange}
+                        placeholder="e.g., Kolkata"
                       />
                     </div>
                     <div>
@@ -292,6 +397,7 @@ const Account = () => {
                         className="w-full p-2 border border-gray-300 rounded-md"
                         value={formData.state}
                         onChange={handleInputChange}
+                        placeholder="e.g., West Bengal"
                       />
                     </div>
                     <div>
@@ -302,6 +408,7 @@ const Account = () => {
                         className="w-full p-2 border border-gray-300 rounded-md"
                         value={formData.country}
                         onChange={handleInputChange}
+                        placeholder="e.g., India"
                       />
                     </div>
                     <div>
@@ -312,6 +419,7 @@ const Account = () => {
                         className="w-full p-2 border border-gray-300 rounded-md"
                         value={formData.zip}
                         onChange={handleInputChange}
+                        placeholder="e.g., 700001"
                       />
                     </div>
                     <div>
@@ -322,6 +430,7 @@ const Account = () => {
                         className="w-full p-2 border border-gray-300 rounded-md"
                         value={formData.address_village}
                         onChange={handleInputChange}
+                        placeholder="Village / Locality"
                       />
                     </div>
                     <div>
@@ -332,9 +441,12 @@ const Account = () => {
                         className="w-full p-2 border border-gray-300 rounded-md"
                         value={formData.landmark}
                         onChange={handleInputChange}
+                        placeholder="Near ..."
                       />
                     </div>
                   </div>
+                  {/* Personal Information */}
+                  <h3 className="text-lg font-semibold mt-8 mb-2">Personal Information</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
@@ -345,6 +457,16 @@ const Account = () => {
                         value={formData.first_name}
                         onChange={handleInputChange}
                         required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Middle Name</label>
+                      <input
+                        type="text"
+                        name="middle_name"
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                        value={formData.middle_name}
+                        onChange={handleInputChange}
                       />
                     </div>
                     <div>
@@ -383,14 +505,18 @@ const Account = () => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                      <input
-                        type="text"
+                      <select
                         name="gender"
-                        className="w-full p-2 border border-gray-300 rounded-md"
+                        className="w-full p-2 border border-gray-300 rounded-md bg-white"
                         value={formData.gender}
                         onChange={handleInputChange}
                         required
-                      />
+                      >
+                        <option value="">Select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>

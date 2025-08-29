@@ -1,5 +1,5 @@
 // components/TopBar.jsx
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ChevronDown, User, LogOut } from 'lucide-react';
@@ -24,6 +24,29 @@ export const TopBar = () => {
   const isMobile = useIsMobile();
   const [selectedCountry, setSelectedCountry] = useState('India');
   const { user, logout, loading } = useAuthContext();
+
+  const isProfileComplete = useMemo(() => {
+    if (!user) return true; // hide banner for logged-out users
+    const u: any = user as any;
+    const address = typeof u.address === 'string' ? (() => { try { return JSON.parse(u.address); } catch { return {}; } })() : (u.address || {});
+    const required = [
+      u.first_name,
+      u.last_name,
+      u.email,
+      u.phone,
+      u.gender,
+      u.dob,
+      address.city,
+      address.state,
+      address.country,
+      address.zip,
+      address.address_village,
+    ];
+    return required.every((v) => v !== undefined && v !== null && String(v).trim() !== '' && String(v).toLowerCase() !== 'n/a');
+  }, [user]);
+
+  // Allow dismissing the banner until next refresh (no persistence)
+  const [bannerDismissed, setBannerDismissed] = useState<boolean>(false);
 
   const countries = [
     'India', 'United States', 'United Kingdom', 'Canada', 'Australia', 
@@ -138,6 +161,29 @@ export const TopBar = () => {
           )}
         </div>
       </div>
+      {/* Global profile completion banner (visible for logged-in users until complete) */}
+      {!loading && user && !isProfileComplete && !bannerDismissed && (
+        <div className="w-full bg-yellow-50 text-yellow-800 border border-yellow-200 rounded-sm mt-1 mb-2 px-3 py-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-xs md:text-sm">
+              <strong>Complete your profile</strong> to shop and checkout smoothly (personal details and address required).
+            </div>
+            <Link
+              to="/account#profile-form"
+              className="text-xs md:text-sm font-semibold text-yellow-900 underline hover:no-underline whitespace-nowrap"
+            >
+              Update now
+            </Link>
+            <button
+              onClick={() => setBannerDismissed(true)}
+              className="ml-2 text-xs md:text-sm text-yellow-900 hover:underline"
+              aria-label="Dismiss"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
