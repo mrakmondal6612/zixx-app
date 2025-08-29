@@ -183,7 +183,7 @@ const Auth = () => {
         console.warn('Failed to clear auth data:', e);
       }
       
-      console.log('Initiating Google OAuth with URL:', oauthUrl);
+      // console.log('Initiating Google OAuth with URL:', oauthUrl);
       
       // Redirect to the OAuth URL
       window.location.href = oauthUrl;

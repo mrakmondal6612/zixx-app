@@ -33,7 +33,7 @@ const Men = () => {
     const fetchProducts = async () => {
       try {
         const res = await fetch(apiUrl('/clients/products/men'), { credentials: 'include' });
-        console.log(res);
+        // console.log(res);
         const result = await res.json();
         if (!result.ok) throw new Error("API returned not ok");
 
@@ -60,9 +60,9 @@ const Men = () => {
   const allProducts = Object.values(groupedProducts).flat();
   const bestSellers = allProducts.filter(p => p.theme?.toLowerCase().includes('best')).slice(0, 8);
   const newArrivals = allProducts.filter(p => p.theme?.toLowerCase().includes('new')).slice(0, 8);
-  console.log("allProducts", allProducts);
-  console.log("bestSellers", bestSellers);
-  console.log("newArrivals", newArrivals);
+  // console.log("allProducts", allProducts);
+  // console.log("bestSellers", bestSellers);
+  // console.log("newArrivals", newArrivals);
 
   // Build proper category -> subcategories mapping from products
   const categoriesMap: Record<string, { image: string; subcategories: Set<string> }> = {};

@@ -41,7 +41,7 @@ const Women = () => {
       try {
         const res = await fetch(apiUrl('/clients/products/women'), { credentials: 'include' });
         const result = await res.json();
-        console.log("Fetched products:", result.data);
+        // console.log("Fetched products:", result.data);
         if (!result.ok) throw new Error("API returned not ok");
 
         const grouped: { [category: string]: { [subcategory: string]: Product[] } } = {};
@@ -78,7 +78,7 @@ const Women = () => {
         setCategories(catList);
         setLoading(false);
       } catch (err: any) {
-        console.log("err", err);
+        // console.log("err", err);
         console.error("Error fetching products:", err);
         setError("Failed to load products");
         setLoading(false);

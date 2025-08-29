@@ -154,7 +154,7 @@ const Product = () => {
     fetchProduct();
   }, [id, location.search]);
 
-  console.log('Current user:', user);
+  // console.log('Current user:', user);
   const ensureLoggedIn = () => {
     if (!user) {
       toast.error('You must be logged in.');
@@ -221,7 +221,7 @@ const Product = () => {
         { withCredentials: true, headers: { ...getAuthHeaders() } }
       );
 
-      console.log("Add to Wishlist Responce : ", res);
+      // console.log("Add to Wishlist Responce : ", res);
 
       if (res.data?.ok || res.data?.success) {
         toast.success(`Added ${product.title} to wishlist!`);
@@ -232,7 +232,7 @@ const Product = () => {
           apiUrl('/clients/user/wishlist'),
           { withCredentials: true, headers: { ...getAuthHeaders() } }
         );
-        console.log('Updated wishlist from DB:', check.data);
+        // console.log('Updated wishlist from DB:', check.data);
       } else toast.error(res.data?.message || 'Failed to add to wishlist');
     } catch (err: any) {
       console.error('Wishlist error:', err?.response || err);
