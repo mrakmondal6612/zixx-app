@@ -22,11 +22,18 @@ import {
   InputBase,
   Menu,
   MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  List,
+  ListItemButton,
+  ListItemText,
   Toolbar,
   Typography,
   useTheme,
   useMediaQuery,
 } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 
 // Utility to clear all cookies for this domain
 function clearAllCookies() {
@@ -45,12 +52,71 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
   const dispatch = useDispatch();
   const theme = useTheme();
   const isSmall = useMediaQuery(theme.breakpoints.down('sm'));
+  const navigate = useNavigate();
 
   const [anchorEl, setAnchorEl] = useState(null);
   const isOpen = Boolean(anchorEl);
   const handleClick = (event) => setAnchorEl(event.currentTarget);
 
   const handleClose = () => setAnchorEl(null);
+
+  // Settings menu
+  const [settingsAnchor, setSettingsAnchor] = useState(null);
+  const settingsOpen = Boolean(settingsAnchor);
+  const openSettings = (e) => setSettingsAnchor(e.currentTarget);
+  const closeSettings = () => setSettingsAnchor(null);
+
+  // Search dialog
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const routes = [
+    { label: 'Dashboard', to: '/dashboard' },
+    { label: 'Products', to: '/products' },
+    { label: 'Customers', to: '/customers' },
+    { label: 'Orders', to: '/orders' },
+    { label: 'Transactions', to: '/transactions' },
+    { label: 'Geography', to: '/geography' },
+    { label: 'Overview', to: '/overview' },
+    { label: 'Daily', to: '/daily' },
+    { label: 'Monthly', to: '/monthly' },
+    { label: 'Breakdown', to: '/breakdown' },
+    { label: 'Admin', to: '/admin' },
+    { label: 'Performance', to: '/performance' },
+    { label: 'Banners', to: '/banners' },
+  ];
+  const filteredRoutes = routes.filter(r => r.label.toLowerCase().includes(searchQuery.toLowerCase()));
+  const executeNav = (to) => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    try { navigate(to); } catch (e) {}
+    if (!isSmall) return;
+    // close sidebar on mobile when navigating
+    try { setIsSidebarOpen(false); } catch {}
+  };
+
+  // Resolve avatar/photo URL for user/admin with robust fallbacks
+  const resolveAvatarSrc = () => {
+    try {
+      const candidates = [
+        user && (user.photo || user.avatar || user.image || user.imageUrl || user.profileImage || user.picture || user.profilePic || user.profile_photo || user.photoURL),
+        // Role-specific fields that might exist
+        user && user.adminPhoto,
+        user && user.userPhoto,
+      ].filter(Boolean);
+
+      const apiBase = getApiBase();
+      const origin = apiBase.replace(/\/?api\/?$/i, '').replace(/\/$/, '');
+
+      for (const c of candidates) {
+        const raw = String(c).trim();
+        if (!raw) continue;
+        if (/^https?:\/\//i.test(raw)) return raw; // absolute URL
+        if (raw.startsWith('/')) return origin + raw; // absolute path on API origin
+        return `${origin}/${raw}`; // relative path -> join
+      }
+    } catch (e) {}
+    return profileImage; // fallback bundled avatar
+  };
 
   return (
     <AppBar
@@ -75,7 +141,8 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
       <Toolbar sx={{
         justifyContent: "space-between",
         minHeight: { xs: 56, sm: 64 },
-        pt: 'env(safe-area-inset-top)'
+        pt: 'env(safe-area-inset-top)',
+        position: 'relative'
       }}>
         {/*  Left side  */}
         <FlexBetween>
@@ -85,36 +152,38 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
           >
             {isSidebarOpen ? <CloseIcon /> : <MenuIcon />}
           </IconButton>
-
-          {!isSmall && (
-            <FlexBetween
-              backgroundColor={theme.palette.background.alt}
-              borderRadius="9px"
-              gap="1rem"
-              p="0.1rem 1rem"
-            >
-              <InputBase placeholder="Search ... " />
-              <IconButton>
-                <Search />
-              </IconButton>
-            </FlexBetween>
-          )}
         </FlexBetween>
         {/*  Right side */}
 
-        <FlexBetween gap="1.5rem">
-          <IconButton onClick={() => dispatch(setMode())}>
+        <FlexBetween gap={{ xs: "1rem", sm: "1.5rem" }} sx={{ position: 'relative', zIndex: (t) => t.zIndex.modal + 2 }}>
+          {isSmall && (
+            <IconButton aria-label="Search" onClick={() => setSearchOpen(true)} sx={{ zIndex: (t) => t.zIndex.modal + 3, mr: { xs: 0.25, sm: 0 } }}>
+              <Search />
+            </IconButton>
+          )}
+          <IconButton
+            onClick={(e) => {
+              try { e.stopPropagation(); } catch {}
+              dispatch(setMode());
+            }}
+            onTouchEnd={(e) => {
+              try { e.preventDefault(); e.stopPropagation(); } catch {}
+              dispatch(setMode());
+            }}
+            sx={{ zIndex: (t) => t.zIndex.modal + 3, ml: { xs: 0.25, sm: 0 } }}
+            aria-label="Toggle theme"
+          >
             {theme.palette.mode === "dark" ? (
               <DarkModeOutlined sx={{ fontSize: "25px" }} />
             ) : (
               <LightModeOutlined sx={{ fontSize: "25px" }} />
             )}
           </IconButton>
-          <IconButton>
+          <IconButton aria-label="Settings" onClick={openSettings} sx={{ zIndex: (t) => t.zIndex.modal + 3 }}>
             <SettingsOutlined sx={{ fontSize: "25px" }} />
           </IconButton>
 
-          <FlexBetween>
+          <FlexBetween sx={{ position: 'relative', zIndex: 1 }}>
             <Button
               onClick={handleClick}
               sx={{
@@ -123,16 +192,18 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                 alignItems: "center",
                 textTransform: "none",
                 gap: "1rem",
+                minWidth: 'auto',
               }}
             >
               <Box
                 component="img"
                 alt="profile"
-                src={profileImage}
+                src={resolveAvatarSrc()}
                 height="32px"
                 width="32px"
                 borderRadius="50%"
                 sx={{ objectFit: "cover" }}
+                onError={(e) => { try { e.currentTarget.src = profileImage; } catch (_) {} }}
               />
               <Box textAlign="left">
                 <Typography
@@ -231,7 +302,93 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
             </Menu>
           </FlexBetween>
         </FlexBetween>
+
+        {/* Centered search (desktop only) */}
+        {!isSmall && (
+          <Box sx={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', width: { md: '42%', lg: '38%', xl: '34%' }, maxWidth: 680 }}>
+            <FlexBetween
+              backgroundColor={theme.palette.background.alt}
+              borderRadius="9px"
+              gap="1rem"
+              p="0.1rem 1rem"
+            >
+              <InputBase
+                placeholder="Search ... "
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const first = filteredRoutes[0];
+                    if (first) executeNav(first.to);
+                  }
+                }}
+                fullWidth
+              />
+              <IconButton onClick={() => setSearchOpen(true)}>
+                <Search />
+              </IconButton>
+            </FlexBetween>
+          </Box>
+        )}
       </Toolbar>
+
+      {/* Search Dialog */}
+      <Dialog open={searchOpen} onClose={() => setSearchOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Search</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1, backgroundColor: theme.palette.background.alt, borderRadius: 1, px: 1 }}>
+            <Search fontSize="small" />
+            <InputBase
+              autoFocus
+              fullWidth
+              placeholder="Type to search pages..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const first = filteredRoutes[0];
+                  if (first) executeNav(first.to);
+                }
+              }}
+            />
+          </Box>
+          <List dense>
+            {filteredRoutes.map((r) => (
+              <ListItemButton key={r.to} onClick={() => executeNav(r.to)}>
+                <ListItemText primary={r.label} secondary={r.to} />
+              </ListItemButton>
+            ))}
+            {filteredRoutes.length === 0 && (
+              <Box sx={{ p: 2, color: theme.palette.text.secondary }}>No matches</Box>
+            )}
+          </List>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settings Menu */}
+      <Menu
+        anchorEl={settingsAnchor}
+        open={settingsOpen}
+        onClose={closeSettings}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MenuItem onClick={() => { dispatch(setMode()); closeSettings(); }}>
+          Toggle Theme
+        </MenuItem>
+        <MenuItem onClick={() => { setIsSidebarOpen((v) => !v); closeSettings(); }}>
+          {isSidebarOpen ? 'Close Sidebar' : 'Open Sidebar'}
+        </MenuItem>
+        <MenuItem onClick={() => {
+          closeSettings();
+          const ok = window.confirm('Clear local storage and caches? You may be logged out.');
+          if (!ok) return;
+          try { localStorage.clear(); sessionStorage.clear(); } catch {}
+          try { window.location.reload(); } catch {}
+        }}>
+          Clear Local Caches
+        </MenuItem>
+      </Menu>
     </AppBar>
   );
 };

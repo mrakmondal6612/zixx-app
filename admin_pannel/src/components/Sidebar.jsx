@@ -35,6 +35,7 @@ import {
 } from "@mui/icons-material";
 import FlexBetween from "./FlexBetween";
 import profileImage from "@assets/profile.jpg";
+import { getApiBase } from "@utils/apiBase";
 
 const navItems = [
   { text: "Dashboard", icon: <HomeOutlined /> },
@@ -67,6 +68,29 @@ const Sidebar = ({
   const navigate = useNavigate();
   const theme = useTheme();
   const [lastSync, setLastSync] = useState(null);
+
+  // Resolve avatar/photo URL for user/admin with robust fallbacks
+  const resolveAvatarSrc = () => {
+    try {
+      const candidates = [
+        user && (user.photo || user.avatar || user.image || user.imageUrl || user.profileImage || user.picture || user.profilePic || user.profile_photo || user.photoURL),
+        user && user.adminPhoto,
+        user && user.userPhoto,
+      ].filter(Boolean);
+
+      const apiBase = getApiBase();
+      const origin = apiBase.replace(/\/?api\/?$/i, '').replace(/\/$/, '');
+
+      for (const c of candidates) {
+        const raw = String(c).trim();
+        if (!raw) continue;
+        if (/^https?:\/\//i.test(raw)) return raw;
+        if (raw.startsWith('/')) return origin + raw;
+        return `${origin}/${raw}`;
+      }
+    } catch (e) {}
+    return profileImage;
+  };
 
   useEffect(() => {
     const url = import.meta.env.VITE_ADMIN_SYNC_STATUS_URL;
@@ -108,7 +132,13 @@ const Sidebar = ({
             },
           }}
         >
-          <Box width="100%" display="flex" flexDirection="column" height="100%">
+          <Box
+            width="100%"
+            display="flex"
+            flexDirection="column"
+            height="100%"
+            sx={{ pt: { xs: 'calc(56px + env(safe-area-inset-top))', sm: '64px' } }}
+          >
             {/* HEADER WITH ZIXX */}
             <Box m="1.5rem 2rem 2rem 3rem">
               <FlexBetween>
@@ -218,11 +248,12 @@ const Sidebar = ({
                 <Box
                   component="img"
                   alt="profile"
-                  src={profileImage}
+                  src={resolveAvatarSrc()}
                   height="48px"
                   width="48px"
                   borderRadius="50%"
                   sx={{ objectFit: "cover", mb: 0.5 }}
+                  onError={(e) => { try { e.currentTarget.src = profileImage; } catch (_) {} }}
                 />
                 <Typography
                   fontWeight="bold"

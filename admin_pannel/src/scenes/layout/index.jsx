@@ -15,7 +15,7 @@ const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(isNonMobile);
 
   const userId = useSelector((state) => (state && state.global && state.global.userId) || null);
-  const data = {};
+  const user = useSelector((state) => (state && (state.global && state.global.user)) || (state && state.user) || (state && state.auth && state.auth.user) || {});
 
   // keep sidebar state in sync with breakpoint changes
   // open on desktop, closed on mobile by default
@@ -30,7 +30,7 @@ const Layout = () => {
       sx={{ minHeight: "100vh", overflow: "visible" }}
     >
       <Sidebar
-        user={data || {}}
+        user={user || {}}
         isNonMobile={isNonMobile}
         drawerWidth="250px"
         isSidebarOpen={isSidebarOpen}
@@ -38,7 +38,7 @@ const Layout = () => {
       />
       <Box flexGrow={1} sx={{ minHeight: "100vh", overflow: "visible" }}>
         <Navbar
-          user={data || {}}
+          user={user || {}}
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}
         />
