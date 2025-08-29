@@ -1,7 +1,16 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+// Read persisted mode early (safe in browser env)
+let persistedMode = 'dark';
+try {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('admin_theme_mode');
+    if (saved === 'light' || saved === 'dark') persistedMode = saved;
+  }
+} catch (e) {}
+
 const initialState = {
-  mode: "dark",
+  mode: persistedMode,
   userId: "63701cc1f03239b7f700000e",
 };
 

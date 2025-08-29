@@ -62,7 +62,12 @@ export const DynamicBanner: React.FC<DynamicBannerProps> = ({ page, position, fa
     fetchBanner();
   }, [page, position]);
 
-  const img = banner?.imageUrl || fallback.imageUrl;
+  // Normalize image URL (trim spaces, handle protocol-relative URLs)
+  const rawImg = (banner?.imageUrl || fallback.imageUrl) as string;
+  let img = typeof rawImg === 'string' ? rawImg.trim() : rawImg;
+  if (typeof img === 'string' && img.startsWith('//')) {
+    img = 'https:' + img;
+  }
   const heading = banner?.heading || fallback.heading;
   const desc = banner?.description || fallback.description;
   const linkText = banner?.linkText || fallback.linkText;
@@ -113,6 +118,9 @@ export const DynamicBanner: React.FC<DynamicBannerProps> = ({ page, position, fa
           cta={style?.cta}
           radius={style?.radius}
           hover={style?.hover}
+          // Ensure visibility for transparent PNGs and avoid aggressive cropping
+          containerClassName={'bg-black'}
+          imageClassName={'object-contain'}
         />
       </div>
     </>

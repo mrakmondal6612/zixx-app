@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from "react";
-import { Box, Typography, useTheme } from "@mui/material";
+import { Box, Typography, useTheme, Button, CircularProgress } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import Header from "@components/Header";
-import { useGetAdminTransactionsQuery } from '@state/api';
+import { useGetAdminTransactionsQuery, useBackfillAdminTransactionsMutation } from '@state/api';
 import DataGridCustomToolbar from "@components/DataGridCustomToolbar";
 
 const Transactions = () => {
@@ -15,10 +15,13 @@ const Transactions = () => {
 
   const [searchInput, setSearchInput] = useState("");
 
-  const { data, isLoading, error } = useGetAdminTransactionsQuery(
+  const { data, isLoading, error, refetch } = useGetAdminTransactionsQuery(
     { page, pageSize, sort: JSON.stringify(sort || {}), search },
     { refetchOnMountOrArgChange: true }
   );
+
+  const [backfill, { isLoading: isBackfilling }] = useBackfillAdminTransactionsMutation();
+  const [statusMsg, setStatusMsg] = useState("");
 
   // Use only API data; no dummy fallback
   const rows = useMemo(() => {
@@ -65,6 +68,29 @@ const Transactions = () => {
   return (
     <Box m="1.5rem 2.5rem">
       <Header title="TRANSACTIONS" subtitle="Entire list of Transactions" />
+      <Box display="flex" alignItems="center" gap={2} mb={2}>
+        <Button
+          variant="contained"
+          color="primary"
+          disabled={isBackfilling}
+          onClick={async () => {
+            setStatusMsg("");
+            try {
+              const res = await backfill().unwrap();
+              setStatusMsg(`Backfill complete: created ${res.created ?? 0}, skipped ${res.skipped ?? 0}`);
+              await refetch();
+            } catch (e) {
+              setStatusMsg("Backfill failed. Check server logs.");
+            }
+          }}
+          startIcon={isBackfilling ? <CircularProgress size={16} color="inherit" /> : null}
+        >
+          {isBackfilling ? 'Backfilling…' : 'Backfill from Orders'}
+        </Button>
+        {statusMsg && (
+          <Typography variant="body2" color="text.secondary">{statusMsg}</Typography>
+        )}
+      </Box>
       <Box
         height="80vh"
         sx={{

@@ -48,6 +48,11 @@ function App() {
     } catch {}
   }, []);
 
+  // Persist theme mode on change
+  useEffect(() => {
+    try { localStorage.setItem('admin_theme_mode', mode === 'light' ? 'light' : 'dark'); } catch {}
+  }, [mode]);
+
   return (
     <div className="app">
       <BrowserRouter>

@@ -40,6 +40,7 @@ const navItems = [
   { text: "Dashboard", icon: <HomeOutlined /> },
   { text: "Client Facing", icon: null },
   { text: "Products", icon: <ShoppingCartOutlined /> },
+  { text: "Banners", icon: <ReceiptLongOutlined /> },
   { text: "Customers", icon: <Groups2Outlined /> },
   { text: "Orders", icon: <LocalShippingOutlined /> },
   { text: "Transactions", icon: <ReceiptLongOutlined /> },
@@ -52,7 +53,6 @@ const navItems = [
   { text: "Management", icon: null },
   { text: "Admin", icon: <AdminPanelSettingsOutlined /> },
   { text: "Performance", icon: <TrendingUpOutlined /> },
-  { text: "Banners", icon: <ReceiptLongOutlined /> },
 ];
 
 const Sidebar = ({
@@ -94,16 +94,17 @@ const Sidebar = ({
         <Drawer
           open={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
-          variant="persistent"
+          variant={isNonMobile ? "persistent" : "temporary"}
           anchor="left"
+          ModalProps={{ keepMounted: true }}
           sx={{
-            width: drawerWidth,
+            width: isNonMobile ? drawerWidth : "80vw",
             "& .MuiDrawer-paper": {
               color: theme.palette.secondary[200],
               backgroundColor: theme.palette.background.alt,
               boxSizing: "border-box",
               borderWidth: isNonMobile ? 0 : "2px",
-              width: drawerWidth,
+              width: isNonMobile ? drawerWidth : "80vw",
             },
           }}
         >
@@ -162,6 +163,7 @@ const Sidebar = ({
                         onClick={() => {
                           navigate(`/${lcText}`);
                           setActive(lcText);
+                          if (!isNonMobile) setIsSidebarOpen(false);
                         }}
                         sx={{
                           backgroundColor:

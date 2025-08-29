@@ -1,6 +1,6 @@
 import React from "react";
-import { Box, useTheme } from "@mui/material";
-import { useGetGeographyQuery, useGetClientsUsersQuery } from "@state/api";
+import { Box, useTheme, Typography, CircularProgress } from "@mui/material";
+import { useGetGeographyQuery } from "@state/api";
 import Header from "@components/Header";
 import { ResponsiveChoropleth } from "@nivo/geo";
 import { geoData } from "@state/geoData";
@@ -8,9 +8,6 @@ import { geoData } from "@state/geoData";
 const Geography = () => {
   const theme = useTheme();
   const { data: apiData, isLoading, isError } = useGetGeographyQuery();
-
-  // fetch clients' user records so we can plot individual user locations
-  const { data: usersData } = useGetClientsUsersQuery();
 
   const [markers, setMarkers] = React.useState([]);
   const [geoProgress, setGeoProgress] = React.useState({ done: 0, total: 0 });
@@ -44,29 +41,26 @@ const Geography = () => {
   React.useEffect(() => {
     let mounted = true;
     (async () => {
-      if (!usersData || !Array.isArray(usersData)) return;
+      if (!apiData || !Array.isArray(apiData)) return;
       const results = [];
-      const batch = usersData.slice(0, 200);
+      const batch = apiData; // already aggregated with count
       setGeoProgress({ done: 0, total: batch.length });
       for (let i = 0; i < batch.length; i++) {
-        const u = batch[i];
+        const loc = batch[i];
         try {
-          const addr = u && u.address ? u.address : null;
           const parts = [];
-          if (addr) {
-            if (addr.address_village) parts.push(addr.address_village);
-            if (addr.landmark) parts.push(addr.landmark);
-            if (addr.city) parts.push(addr.city);
-            if (addr.state) parts.push(addr.state);
-            if (addr.country) parts.push(addr.country);
-          }
-          const q = parts.filter(Boolean).join(", ") || u.email || u._id;
+          if (loc.city) parts.push(loc.city);
+          if (loc.state) parts.push(loc.state);
+          if (loc.zip) parts.push(loc.zip);
+          if (loc.country) parts.push(loc.country); // ISO3; Nominatim generally accepts
+          const q = parts.filter(Boolean).join(", ");
           const geo = await geocodeAddress(q);
           if (geo) {
             results.push({
-              id: u._id || u.email || q,
+              id: `${loc.country}|${loc.state||''}|${loc.city||''}|${loc.zip||''}`,
               coords: [geo.lon, geo.lat], // [lon, lat]
-              label: parts.filter(Boolean).join(", ") || u.email || q,
+              label: q,
+              count: Number(loc.count) || 0,
             });
           }
         } catch (e) {
@@ -74,13 +68,13 @@ const Geography = () => {
         }
         // throttling to be gentle with geocoder (300ms between requests)
         try { await new Promise((r) => setTimeout(r, 300)); } catch (e) {}
-        setGeoProgress((p) => ({ ...p, done: p.done + 1 }));
+        setGeoProgress((p) => ({ ...p, done: Math.min(p.total, p.done + 1) }));
       }
       if (mounted) setMarkers(results);
       setGeoProgress((p) => ({ ...p, done: p.total }));
     })();
     return () => { mounted = false; };
-  }, [usersData]);
+  }, [apiData]);
 
   // normalize and validate API response to an array of { id: string, value: number }
   const chartData = React.useMemo(() => {
@@ -89,11 +83,20 @@ const Geography = () => {
       console.warn('Geography: unexpected API response, expected array but got', apiData);
       return null;
     }
+    // If items are in new shape, aggregate per country
+    const hasCountryShape = apiData.some((d) => d && d.country != null && d.count != null);
+    if (hasCountryShape) {
+      const agg = apiData.reduce((acc, d) => {
+        if (!d || d.country == null) return acc;
+        const key = String(d.country);
+        acc[key] = (acc[key] || 0) + (Number(d.count) || 0);
+        return acc;
+      }, {});
+      return Object.entries(agg).map(([id, value]) => ({ id, value }));
+    }
+    // fallback legacy mapping
     return apiData
-      .map((d) => {
-        if (!d) return null;
-        return { id: String(d.id), value: Number(d.value) || 0 };
-      })
+      .map((d) => (d && d.id != null && d.value != null ? { id: String(d.id), value: Number(d.value) || 0 } : null))
       .filter(Boolean);
   }, [apiData]);
 
@@ -132,15 +135,46 @@ const Geography = () => {
       <Header title="Geography" subtitle="Find where your users are located." />
 
       <Box
-        mt="40px"
-        height="75vh"
-        border={`1px solid ${theme.palette.secondary[200]}`}
-        borderRadius="4px"
+        mt="24px"
+        sx={{
+          position: 'relative',
+          backgroundColor: theme.palette.background.alt,
+          borderRadius: '12px',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+          overflow: 'hidden',
+        }}
       >
+        {/* Top meta bar with progress */}
+        {(geoProgress?.total > 0) && (
+          <Box sx={{
+            px: 2,
+            py: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+          }}>
+            <Typography variant="subtitle2" sx={{ color: theme.palette.text.secondary }}>
+              Geocoding users: {geoProgress.done}/{geoProgress.total}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {(geoProgress.done < geoProgress.total) && <CircularProgress size={16} />}
+            </Box>
+          </Box>
+        )}
+
+        <Box sx={{ height: '70vh' }}>
         {isLoading ? (
-          <> Loading ...</>
+          <Box sx={{ height: '100%', display: 'grid', placeItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <CircularProgress size={20} />
+              <Typography sx={{ color: theme.palette.text.secondary }}>Loading geography...</Typography>
+            </Box>
+          </Box>
         ) : isError ? (
-          <> Error loading geography data</>
+          <Box sx={{ height: '100%', display: 'grid', placeItems: 'center', p: 3 }}>
+            <Typography color="error">Error loading geography data</Typography>
+          </Box>
         ) : chartData && chartData.length > 0 && filteredFeatures && filteredFeatures.length > 0 ? (
           <ResponsiveChoropleth
             data={chartData}
@@ -148,32 +182,34 @@ const Geography = () => {
               axis: {
                 domain: {
                   line: {
-                    stroke: theme.palette.secondary[200],
+                    stroke: theme.palette.divider,
                   },
                 },
                 legend: {
                   text: {
-                    fill: theme.palette.secondary[200],
+                    fill: theme.palette.text.secondary,
                   },
                 },
                 ticks: {
                   line: {
-                    stroke: theme.palette.secondary[200],
+                    stroke: theme.palette.divider,
                     strokeWidth: 1,
                   },
                   text: {
-                    fill: theme.palette.secondary[200],
+                    fill: theme.palette.text.secondary,
                   },
                 },
               },
               legends: {
                 text: {
-                  fill: theme.palette.secondary[200],
+                  fill: theme.palette.text.secondary,
                 },
               },
               tooltip: {
                 container: {
-                  color: theme.palette.primary.main,
+                  color: theme.palette.text.primary,
+                  background: theme.palette.background.alt,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
                 },
               },
             }}
@@ -208,7 +244,7 @@ const Geography = () => {
                     let pt;
                     try { pt = projection(m.coords); } catch (e) { continue; }
                     if (!pt || !isFinite(pt[0]) || !isFinite(pt[1])) continue;
-                    const cluster = { x: pt[0], y: pt[1], items: [m], id: m.id };
+                    const cluster = { x: pt[0], y: pt[1], total: m.count || 1, labels: [m.label], id: m.id };
                     used[i] = true;
                     for (let j = i + 1; j < markers.length; j++) {
                       if (used[j]) continue;
@@ -221,10 +257,13 @@ const Geography = () => {
                       const dy = pt2[1] - pt[1];
                       if (Math.hypot(dx, dy) <= pxThreshold) {
                         used[j] = true;
-                        cluster.items.push(m2);
-                        // recompute cluster centroid
-                        cluster.x = (cluster.x * (cluster.items.length - 1) + pt2[0]) / cluster.items.length;
-                        cluster.y = (cluster.y * (cluster.items.length - 1) + pt2[1]) / cluster.items.length;
+                        cluster.labels.push(m2.label);
+                        cluster.total += (m2.count || 1);
+                        // recompute cluster centroid (weighted by count)
+                        const w1 = cluster.total;
+                        const w2 = (m2.count || 1);
+                        cluster.x = (cluster.x * (w1 - w2) + pt2[0] * w2) / w1;
+                        cluster.y = (cluster.y * (w1 - w2) + pt2[1] * w2) / w1;
                       }
                     }
                     clusters.push(cluster);
@@ -233,23 +272,14 @@ const Geography = () => {
                   return (
                     <g>
                       {clusters.map((c, idx) => {
-                        if (!c || !c.items || c.items.length === 0) return null;
-                        const isCluster = c.items.length > 1;
+                        if (!c || !c.total) return null;
                         const key = `cluster-${idx}-${c.id}`;
+                        const r = 4 + Math.min(14, Math.sqrt(c.total) * 2);
                         return (
                           <g key={key} transform={`translate(${c.x}, ${c.y})`}>
-                            {isCluster ? (
-                              <>
-                                <circle r={8 + Math.min(12, c.items.length)} fill="#ff7043" stroke="#fff" strokeWidth={1.2} />
-                                <text x={0} y={4} textAnchor="middle" fontSize={10} fill="#fff">{c.items.length}</text>
-                                <title>{c.items.map((it) => it.label).slice(0,5).join('; ')}</title>
-                              </>
-                            ) : (
-                              <>
-                                <circle r={5} fill="#ff5722" stroke="#fff" strokeWidth={1} />
-                                <title>{c.items[0].label}</title>
-                              </>
-                            )}
+                            <circle r={r} fill="#ff7043" stroke="#fff" strokeWidth={1.2} />
+                            <text x={0} y={4} textAnchor="middle" fontSize={10} fill="#fff">{c.total}</text>
+                            <title>{c.labels.slice(0,5).join('; ')}</title>
                           </g>
                         );
                       })}
@@ -273,14 +303,14 @@ const Geography = () => {
                 itemWidth: 94,
                 itemHeight: 18,
                 itemDirection: "left-to-right",
-                itemTextColor: theme.palette.secondary[200],
+                itemTextColor: theme.palette.text.secondary,
                 itemOpacity: 0.85,
                 symbolSize: 18,
                 effects: [
                   {
                     on: "hover",
                     style: {
-                      itemTextColor: theme.palette.background.alt,
+                      itemTextColor: theme.palette.text.primary,
                       itemOpacity: 1,
                     },
                   },
@@ -289,8 +319,11 @@ const Geography = () => {
             ]}
           />
         ) : (
-          <> Loading ...</>
+          <Box sx={{ height: '100%', display: 'grid', placeItems: 'center' }}>
+            <Typography sx={{ color: theme.palette.text.secondary }}>No geography data available</Typography>
+          </Box>
         )}
+        </Box>
       </Box>
     </Box>
   );

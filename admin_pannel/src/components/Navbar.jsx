@@ -3,6 +3,7 @@ import {
   LightModeOutlined,
   DarkModeOutlined,
   Menu as MenuIcon,
+  Close as CloseIcon,
   Search,
   SettingsOutlined,
   ArrowDropDownOutlined,
@@ -24,6 +25,7 @@ import {
   Toolbar,
   Typography,
   useTheme,
+  useMediaQuery,
 } from "@mui/material";
 
 // Utility to clear all cookies for this domain
@@ -42,6 +44,7 @@ function clearAllCookies() {
 const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
   const dispatch = useDispatch();
   const theme = useTheme();
+  const isSmall = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [anchorEl, setAnchorEl] = useState(null);
   const isOpen = Boolean(anchorEl);
@@ -52,29 +55,50 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
   return (
     <AppBar
       sx={{
-        position: "static",
-        background: "none",
-        boxShadow: "none",
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        width: '100%',
+        zIndex: (theme) => theme.zIndex.modal + 1,
+        // Translucent blurred background
+        backgroundColor: (theme) =>
+          theme.palette.mode === 'dark' ? 'rgba(20, 24, 35, 0.45)' : 'rgba(255, 255, 255, 0.6)',
+        backdropFilter: 'saturate(180%) blur(10px)',
+        WebkitBackdropFilter: 'saturate(180%) blur(10px)',
+        borderBottom: (theme) =>
+          `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+        boxShadow: 'none',
+        transform: 'translateZ(0)', // promote to its own layer to reduce jank
       }}
     >
-      <Toolbar sx={{ justifyContent: "space-between" }}>
+      <Toolbar sx={{
+        justifyContent: "space-between",
+        minHeight: { xs: 56, sm: 64 },
+        pt: 'env(safe-area-inset-top)'
+      }}>
         {/*  Left side  */}
         <FlexBetween>
-          <IconButton onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-            <MenuIcon />
+          <IconButton
+            aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          >
+            {isSidebarOpen ? <CloseIcon /> : <MenuIcon />}
           </IconButton>
 
-          <FlexBetween
-            backgroundColor={theme.palette.background.alt}
-            borderRadius="9px"
-            gap="3rem"
-            p="0.1rem 1.5rem"
-          >
-            <InputBase placeholder="Search ... " />
-            <IconButton>
-              <Search />
-            </IconButton>
-          </FlexBetween>
+          {!isSmall && (
+            <FlexBetween
+              backgroundColor={theme.palette.background.alt}
+              borderRadius="9px"
+              gap="1rem"
+              p="0.1rem 1rem"
+            >
+              <InputBase placeholder="Search ... " />
+              <IconButton>
+                <Search />
+              </IconButton>
+            </FlexBetween>
+          )}
         </FlexBetween>
         {/*  Right side */}
 

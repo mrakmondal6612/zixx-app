@@ -23,11 +23,17 @@ function UserCard({ user, onEdit, onDelete }) {
   useEffect(() => {
     let addr = {};
     try {
-      addr = JSON.parse(user.address || "{}");
+      if (user && typeof user.address === 'object' && user.address !== null) {
+        addr = user.address;
+      } else if (typeof user?.address === 'string') {
+        addr = JSON.parse(user.address || '{}') || {};
+      } else {
+        addr = {};
+      }
     } catch {
       addr = {};
     }
-    setAddress(addr); // <-- update state whenever user changes
+    setAddress(addr); // update state whenever user changes
   }, [user]); 
 
   return (

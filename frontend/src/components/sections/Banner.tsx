@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 type BannerAlignment =
@@ -63,6 +63,10 @@ export const Banner: React.FC<BannerProps> = ({
   ctaClassName,
 }) => {
   const [src, setSrc] = useState(imageUrl);
+  // Sync internal image src whenever prop changes (fixes stale image after updates)
+  useEffect(() => {
+    setSrc(imageUrl);
+  }, [imageUrl]);
   const alignmentClasses: Record<BannerAlignment, string> = {
     left: 'items-start text-left justify-center',
     center: 'items-center text-center justify-center',

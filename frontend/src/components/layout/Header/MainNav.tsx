@@ -28,18 +28,20 @@ export const MainNav = () => {
   const [shopOpen, setShopOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const { user, token } = useAuth();
-  // Admin panel base URL: prefer env var, fallback to deployed admin domain
+  // Admin panel base URL: prefer env var with safe fallbacks
   const adminUrl = (() => {
-    let u = (import.meta as any).env?.VITE_ADMIN_CLIENT_URL || 'https://zixx-admin.vercel.app';
+    const raw = (import.meta as any).env?.VITE_ADMIN_CLIENT_URL;
     try {
-      const parsed = new URL(u);
+      const parsed = new URL(raw);
       return parsed.origin;
     } catch {
-      return u;
+      return raw;
     }
   })();
-  // Handoff token via query so admin can bootstrap localStorage
-  const adminHref = token ? `${adminUrl}/?t=${encodeURIComponent(token)}` : adminUrl;
+  // Handoff token via query so admin can bootstrap localStorage (use `token` key)
+  const adminHref = adminUrl
+    ? (token ? `${adminUrl}/?token=${encodeURIComponent(token)}` : adminUrl)
+    : '/admin';
   
   // Lock body scroll when drawer is open on mobile
   useEffect(() => {

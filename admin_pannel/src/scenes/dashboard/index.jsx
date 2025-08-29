@@ -81,11 +81,25 @@ const Dashboard = () => {
         <Box>
           <Button
             sx={{
-              backgroundColor: theme.palette.secondary.light,
-              color: theme.palette.background.alt,
+              background: theme.palette.mode === 'dark'
+                ? 'linear-gradient(135deg, rgba(255,209,102,0.35), rgba(255,209,102,0.15))'
+                : 'linear-gradient(135deg, rgba(255,209,102,0.9), rgba(255,209,102,0.65))',
+              color: theme.palette.mode === 'dark' ? theme.palette.secondary[50] : theme.palette.grey[1000],
               fontSize: "14px",
-              fontWeight: "bold",
+              fontWeight: 700,
               padding: "10px 20px",
+              borderRadius: "10px",
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+              boxShadow: '0 6px 16px rgba(0,0,0,0.15)',
+              transition: 'transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease',
+              '&:hover': {
+                transform: 'translateY(-1px)',
+                boxShadow: '0 10px 22px rgba(0,0,0,0.2)',
+                opacity: 0.95,
+                background: theme.palette.mode === 'dark'
+                  ? 'linear-gradient(135deg, rgba(255,209,102,0.45), rgba(255,209,102,0.2))'
+                  : 'linear-gradient(135deg, rgba(255,209,102,1), rgba(255,209,102,0.75))',
+              }
             }}
           >
             <DownloadOutlined sx={{ mr: "10px" }} />
@@ -108,13 +122,14 @@ const Dashboard = () => {
       >
         {/* ROW 1 */}
         <StatBox
+          sx={{}}
           title="Total Customers"
           value={data?.totalCustomers ?? 0}
           increase="+14%"
           description="Since last month"
           icon={
             <Email
-              sx={{ color: theme.palette.secondary[300], fontSize: "26px" }}
+              sx={{ color: theme.palette.secondary[300], fontSize: "20px" }}
             />
           }
         />
@@ -126,16 +141,17 @@ const Dashboard = () => {
           description="Since last month"
           icon={
             <PointOfSale
-              sx={{ color: theme.palette.secondary[300], fontSize: "26px" }}
+              sx={{ color: theme.palette.secondary[300], fontSize: "20px" }}
             />
           }
         />
-                <Box
+        <Box
           gridColumn="span 8"
           gridRow="span 3"
           backgroundColor={theme.palette.background.alt}
           p="1.5rem"
-          borderRadius="0.55rem"
+          borderRadius="12px"
+          boxShadow="0 4px 14px rgba(0,0,0,0.15)"
         >
           <Typography variant="h6" sx={{ color: theme.palette.secondary[100] }}>
             Sales By Category
@@ -159,7 +175,7 @@ const Dashboard = () => {
           description="Since last month"
           icon={
             <PersonAdd
-              sx={{ color: theme.palette.secondary[300], fontSize: "26px" }}
+              sx={{ color: theme.palette.secondary[300], fontSize: "20px" }}
             />
           }
         />
@@ -171,7 +187,7 @@ const Dashboard = () => {
           description="Since last month"
           icon={
             <Traffic
-              sx={{ color: theme.palette.secondary[300], fontSize: "26px" }}
+              sx={{ color: theme.palette.secondary[300], fontSize: "20px" }}
             />
           }
         />
@@ -183,7 +199,7 @@ const Dashboard = () => {
             description="Since last year"
             icon={
               <PointOfSale
-                sx={{ color: theme.palette.secondary[300], fontSize: "26px" }}
+                sx={{ color: theme.palette.secondary[300], fontSize: "20px" }}
               />
             }
           />
@@ -195,7 +211,7 @@ const Dashboard = () => {
           description="Since last year"
           icon={
             <PointOfSale
-              sx={{ color: theme.palette.secondary[300], fontSize: "26px" }}
+              sx={{ color: theme.palette.secondary[300], fontSize: "20px" }}
             />
           }
         />
@@ -207,7 +223,8 @@ const Dashboard = () => {
           gridRow="span 3"
           backgroundColor={theme.palette.background.alt}
           p="0.01rem"
-          borderRadius="0.55rem"
+          borderRadius="12px"
+          boxShadow="0 4px 14px rgba(0,0,0,0.15)"
         >
           <OverviewChart view="sales" isDashboard={true} />
         </Box>
@@ -217,14 +234,16 @@ const Dashboard = () => {
           sx={{
             "& .MuiDataGrid-root": {
               border: "none",
-              borderRadius: "0.55rem",
+              borderRadius: "12px",
               minWidth: 0,
+              boxShadow: '0 4px 14px rgba(0,0,0,0.15)'
             },
             "& .MuiDataGrid-cell": {
               borderBottom: "none",
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
+              color: theme.palette.text.primary,
             },
             "& .MuiDataGrid-columnHeaders": {
               backgroundColor: theme.palette.background.alt,
@@ -233,6 +252,8 @@ const Dashboard = () => {
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
+              borderTopLeftRadius: '12px',
+              borderTopRightRadius: '12px',
             },
             "& .MuiDataGrid-virtualScroller": {
               backgroundColor: theme.palette.background.alt,
@@ -241,9 +262,14 @@ const Dashboard = () => {
               backgroundColor: theme.palette.background.alt,
               color: theme.palette.secondary[100],
               borderTop: "none",
+              borderBottomLeftRadius: '12px',
+              borderBottomRightRadius: '12px',
             },
             "& .MuiDataGrid-toolbarContainer .MuiButton-text": {
               color: `${theme.palette.secondary[200]} !important`,
+            },
+            "& .MuiDataGrid-row:hover": {
+              backgroundColor: theme.palette.action.hover,
             },
           }}
         >

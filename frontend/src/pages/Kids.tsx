@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import ProductCard from '@/components/ProductCard';
 import { Link } from 'react-router-dom';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
-import { Banner } from '@/components/sections/Banner';
+import { DynamicBanner } from '@/components/sections/DynamicBanner';
 import { apiUrl } from '@lib/api';
 
 interface Product {
@@ -75,13 +75,18 @@ const Kids = () => {
       <Header />
 
       <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-8 py-8">
-        {/* Hero Banner */}
-        <Banner
-          imageUrl="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true"
-          heading="Playful Picks"
-          description="Fun and vibrant styles for your little ones."
-          linkText="Shop Now"
-          linkUrl="/new-arrivals"
+        {/* Hero Banner (dynamic) */}
+        <DynamicBanner
+          page="kids"
+          position="featured"
+          fallback={{
+            imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true',
+            heading: 'Playful Picks',
+            description: 'Fun and vibrant styles for your little ones.',
+            linkText: 'Shop Now',
+            linkUrl: '/new-arrivals',
+          }}
+          style={{ variant: 'pro', overlay: 'dark', cta: 'brand', radius: '2xl', hover: 'zoom' }}
         />
 
         {loading && <p>Loading...</p>}
@@ -147,53 +152,73 @@ const Kids = () => {
         )}
 
         {/* Special Sections */}
-        {bestSellers.length > 0 && (
         <section className="mb-16">
-           {/* Banner */}
+          {/* Best Sellers Banner always visible */}
           <section className="mb-16">
-            <Banner
-              imageUrl="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true"
-              heading="Kids Summer Collection"
-              description="Light fabrics and vibrant colors for the perfect summer look."
-              linkText="Shop Now"
-              linkUrl="/categories"
+            <DynamicBanner
+              page="kids"
+              position="best"
+              fallback={{
+                imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true',
+                heading: 'Kids Summer Collection',
+                description: 'Light fabrics and vibrant colors for the perfect summer look.',
+                linkText: 'Shop Now',
+                linkUrl: '/categories',
+              }}
+              style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
             />
           </section>
-          <h2 className="text-2xl font-bold mb-6">Best Sellers</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-            {bestSellers.map(p => (
-              <ProductCard
-                key={p._id}
-                id={p._id}
-                title={p.title}
-                image={p.image?.[0]}
-                price={p.price}
-                discount={p.discount}
-                badge={'Best Seller'}
-              />
-            ))}
-          </div>
+          {bestSellers.length > 0 && (
+            <>
+              <h2 className="text-2xl font-bold mb-6">Best Sellers</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                {bestSellers.map(p => (
+                  <ProductCard
+                    key={p._id}
+                    id={p._id}
+                    title={p.title}
+                    image={p.image?.[0]}
+                    price={p.price}
+                    discount={p.discount}
+                    badge={'Best Seller'}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </section>
-      )}
 
-      {newArrivals.length > 0 && (
         <section className="mb-16">
-          <h2 className="text-2xl font-bold mb-6">New Arrivals</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-            {newArrivals.map(p => (
-              <ProductCard
-                key={p._id}
-                id={p._id}
-                title={p.title}
-                image={p.image?.[0]}
-                price={p.price}
-                discount={p.discount}
-                badge={'New Arrival'}
-              />
-            ))}
-          </div>
+          <DynamicBanner
+            page="kids"
+            position="new"
+            fallback={{
+              imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true',
+              heading: 'New Arrivals',
+              description: 'Fresh styles for kids just in.',
+              linkText: 'Shop New',
+              linkUrl: '/new-arrivals',
+            }}
+            style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
+          />
+          {newArrivals.length > 0 && (
+            <>
+              <h2 className="text-2xl font-bold mb-6">New Arrivals</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                {newArrivals.map(p => (
+                  <ProductCard
+                    key={p._id}
+                    id={p._id}
+                    title={p.title}
+                    image={p.image?.[0]}
+                    price={p.price}
+                    discount={p.discount}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </section>
-      )}
       </main>
 
       <Footer />

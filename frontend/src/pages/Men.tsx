@@ -88,7 +88,7 @@ const Men = () => {
 
           <DynamicBanner
             page="men"
-            position="hero"
+            position="featured"
             fallback={{
               imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/7087fa7cadbd89e8fc148d4f01d42317d99eaccb?placeholderIfAbsent=true',
               heading: "Men's Collection",

@@ -21,16 +21,20 @@ import {
 function UserCard({ user, onEdit, onDelete }) {
   const [showAll, setShowAll] = useState(false);
   const [address, setAddress] = useState({});
-
+  console.log("address:", address);
   useEffect(() => {
     let addr = {};
     try {
-      addr = JSON.parse(user.address || "{}");
+      if (user && typeof user.address === 'object' && user.address !== null) {
+        addr = user.address;
+      } else if (typeof user?.address === 'string') {
+        addr = JSON.parse(user.address || '{}') || {};
+      }
     } catch {
       addr = {};
     }
-    setAddress(addr); 
-  }, [user]); 
+    setAddress(addr);
+  }, [user]);
 
   return (
     <Box

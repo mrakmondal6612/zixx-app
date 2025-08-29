@@ -3,7 +3,11 @@ import { Box, Typography, useTheme } from "@mui/material";
 import { useGetSalesQuery } from "@state/api";
 import { ResponsivePie } from "@nivo/pie";
 
-const BreakdownChart = ({ isDashboard = false }) => {
+const BreakdownChart = ({
+  isDashboard = false,
+  currencySymbol = "$",
+  disableArcLinkLabels = false,
+}) => {
   const { data, isLoading, isError } = useGetSalesQuery();
   const theme = useTheme();
 
@@ -24,6 +28,19 @@ const BreakdownChart = ({ isDashboard = false }) => {
     value: sales,
     color: colors[i % colors.length],
   }));
+
+  const formattedCenter = (() => {
+    const val = data.yearlySalesTotal;
+    if (typeof val === "number") {
+      const locale = currencySymbol === "₹" ? "en-IN" : undefined;
+      try {
+        return val.toLocaleString(locale);
+      } catch {
+        return val.toLocaleString();
+      }
+    }
+    return val;
+  })();
 
   if (!formattedData || formattedData.length === 0) {
     return (
@@ -95,7 +112,7 @@ const BreakdownChart = ({ isDashboard = false }) => {
           from: "color",
           modifiers: [["darker", 0.2]],
         }}
-        enableArcLinkLabels={!isDashboard}
+        enableArcLinkLabels={!isDashboard && !disableArcLinkLabels}
         arcLinkLabelsTextColor={theme.palette.secondary[200]}
         arcLinkLabelsThickness={2}
         arcLinkLabelsColor={{ from: "color" }}
@@ -144,7 +161,8 @@ const BreakdownChart = ({ isDashboard = false }) => {
         }}
       >
         <Typography variant="h6">
-          {!isDashboard && "Total: "} ${data.yearlySalesTotal}
+          {!isDashboard && "Total: "} {currencySymbol}
+          {formattedCenter}
         </Typography>
       </Box>
     </Box>
