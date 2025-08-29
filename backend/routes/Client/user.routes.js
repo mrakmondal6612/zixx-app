@@ -23,6 +23,21 @@ const jwt = require("jsonwebtoken");
 const UserRouter = express.Router();
 const isDebug = process.env.DEBUG_LOGS === 'true';
 
+// Helper: resolve a safe frontend base URL with a sensible fallback, and strip trailing slash
+const getFrontendBase = () => {
+  try {
+    const base = (
+      (process.env.NODE_ENV === 'production' ? process.env.FRONTEND_URL : process.env.FRONTEND_DEV_URL) ||
+      process.env.FRONTEND_URL ||
+      process.env.FRONTEND_DEV_URL ||
+      'https://zixx.vercel.app'
+    );
+    return String(base).replace(/\/$/, '');
+  } catch {
+    return 'https://zixx.vercel.app';
+  }
+};
+
 UserRouter.use(passport.initialize());
 UserRouter.use(passport.session());
 
@@ -67,8 +82,8 @@ UserRouter.get(
     try {
       req.session = req.session || {};
       // allow caller to specify desired return URL, default to FRONTEND_URL/auth
-      const FRONTEND = (process.env.FRONTEND_URL || process.env.FRONTEND_DEV_URL || '').replace(/\/$/, '');
-      req.session.returnTo = req.query.returnTo || (FRONTEND ? `${FRONTEND}/auth` : undefined);
+      const FRONTEND = getFrontendBase();
+      req.session.returnTo = req.query.returnTo || `${FRONTEND}/auth`;
     } catch {}
     next();
   },
@@ -108,9 +123,7 @@ UserRouter.get(
         
         req.session.returnTo = returnTo;
       } else {
-        const frontendUrl = process.env.NODE_ENV === 'production' 
-          ? (process.env.FRONTEND_URL)
-          : (process.env.FRONTEND_DEV_URL);
+        const frontendUrl = getFrontendBase();
         req.session.returnTo = `${frontendUrl}/auth`;
       }
       
@@ -119,9 +132,7 @@ UserRouter.get(
     } catch (error) {
       console.error('Error in Google OAuth callback setup:', error);
       // Redirect to a safe URL on error based on environment
-      const fallbackUrl = process.env.NODE_ENV === 'production' 
-        ? (process.env.FRONTEND_URL)
-        : (process.env.FRONTEND_DEV_URL);
+      const fallbackUrl = getFrontendBase();
       res.redirect(fallbackUrl);
     }
   },
@@ -150,13 +161,14 @@ UserRouter.get(
     try {
       const profile = req.user || {};
       const email = (profile.emails && profile.emails[0] && profile.emails[0].value) || '';
-      const given = (profile.name && profile.name.givenName) || (profile.displayName || '').split(' ')[0] || '';
-      const family = (profile.name && profile.name.familyName) || (profile.displayName || '').split(' ').slice(1).join(' ') || '';
+      const given = (profile.name && profile.name.givenName) || (profile.displayName || '').split(' ')[0] || (email.split('@')[0] || '');
+      const family = (profile.name && profile.name.familyName) || (profile.displayName || '').split(' ').slice(1).join(' ') || 'User';
       const avatar = (profile.photos && profile.photos[0] && profile.photos[0].value) || '';
       
       if (!email) {
         console.error('No email provided by Google OAuth');
-        return res.redirect(`${process.env.FRONTEND_URL }/auth?error=no_email`);
+        const FRONTEND = getFrontendBase();
+        return res.redirect(`${FRONTEND}/auth?error=no_email`);
       }
 
       // Find or create user
@@ -178,12 +190,12 @@ UserRouter.get(
           isActive: true,
           authProvider: 'google',
           authProviderId: profile.id,
-          // Set default role if needed
-          role: 'user',
-          // Add any other default fields required by your schema
-          phone: '',
-          gender: '',
-          dob: null,
+          // Role must match enum ["admin","customer"]
+          role: 'customer',
+          // Satisfy required fields in schema with safe defaults
+          phone: 0,
+          gender: 'unspecified',
+          dob: '1970-01-01',
           address: {
             personal_address: '',
             shoping_address: '',
@@ -237,9 +249,7 @@ UserRouter.get(
       res.cookie('token', token, cookieOpts);
 
       // Determine the safe redirect URL based on environment
-      let redirectBase = process.env.NODE_ENV === 'production' 
-        ? (process.env.FRONTEND_URL )
-        : (process.env.FRONTEND_DEV_URL);
+      let redirectBase = getFrontendBase();
       
       // Try to get the returnTo from session if it's a trusted domain
       let returnTo = '';
@@ -264,7 +274,6 @@ UserRouter.get(
       
       // If no valid returnTo in session, use the default frontend URL
       if (!returnTo) {
-        redirectBase = redirectBase.replace(/\/$/, '');
         returnTo = `${redirectBase}/auth`;
       }
       
@@ -301,10 +310,8 @@ UserRouter.get(
         .redirect(url.toString());
     } catch (e) {
       console.error('[google-callback] error:', e);
-      const FRONTEND = process.env.NODE_ENV === 'production' 
-        ? (process.env.FRONTEND_URL )
-        : (process.env.FRONTEND_DEV_URL );
-      return res.redirect(`${FRONTEND.replace(/\/$/, '')}/auth?error=google_oauth_failed`);
+      const FRONTEND = getFrontendBase();
+      return res.redirect(`${FRONTEND}/auth?error=google_oauth_failed`);
     }
   }
 );
@@ -312,10 +319,8 @@ UserRouter.get(
 // Google OAuth failure -> send user back to frontend /auth with error
 UserRouter.get('/auth/google/failed', (req, res) => {
   try {
-    const FRONTEND = process.env.NODE_ENV === 'production' 
-      ? (process.env.FRONTEND_URL )
-      : (process.env.FRONTEND_DEV_URL );
-    const dest = `${FRONTEND.replace(/\/$/, '')}/auth?error=google_oauth_failed`;    return res.redirect(dest);
+    const FRONTEND = getFrontendBase();
+    const dest = `${FRONTEND}/auth?error=google_oauth_failed`;    return res.redirect(dest);
   } catch (e) {
     return res.status(400).json({ ok: false, msg: 'Google OAuth failed' });
   }
