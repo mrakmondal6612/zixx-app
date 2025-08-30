@@ -260,7 +260,7 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                         frontend = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}`;
                       }
                       try { const u = new URL(frontend); frontend = u.origin; } catch (err) {}
-                      const returnTo = encodeURIComponent(`${frontend}/auth`);
+                      const returnTo = encodeURIComponent(`${frontend}`);
                       const fallbackUrl = `${backendOrigin}/api/logout?returnTo=${returnTo}`;
                       window.location.href = fallbackUrl;
                       return;
@@ -298,14 +298,14 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                     setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) {} }, 4000);
                   } catch (e) {}
 
-                  // Redirect to frontend auth page
+                  // Redirect to frontend main page
                   const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
                   let frontend = import.meta.env.VITE_FRONTEND_URL;
                   if (!frontend) {
                     frontend = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}`;
                   }
                   try { const u = new URL(frontend); frontend = u.origin; } catch (e) {}
-                  window.location.replace(`${frontend}/auth`);
+                  window.location.replace(`${frontend}`);
                 }}
               >
                 Log out
