@@ -255,12 +255,12 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                     try {
                       const backendOrigin = getApiBase().replace(/\/?api\/?$/i, '').replace(/\/$/, '');
                       const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
-                      let frontend = import.meta.env.VITE_FRONTEND_URL;
-                      if (!frontend) {
-                        frontend = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}`;
+                      let adminUrl = import.meta.env.VITE_ADMIN_PANEL_URL;
+                      if (!adminUrl) {
+                        adminUrl = isProd ? 'https://zixx-admin.vercel.app' : `http://${window.location.hostname}:8000`;
                       }
-                      try { const u = new URL(frontend); frontend = u.origin; } catch (err) {}
-                      const returnTo = encodeURIComponent(`${frontend}`);
+                      try { const u = new URL(adminUrl); adminUrl = u.origin; } catch (err) {}
+                      const returnTo = encodeURIComponent(`${adminUrl}`);
                       const fallbackUrl = `${backendOrigin}/api/logout?returnTo=${returnTo}`;
                       window.location.href = fallbackUrl;
                       return;
@@ -298,14 +298,14 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                     setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) {} }, 4000);
                   } catch (e) {}
 
-                  // Redirect to frontend main page
+                  // Redirect to admin panel main page
                   const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
-                  let frontend = import.meta.env.VITE_FRONTEND_URL;
-                  if (!frontend) {
-                    frontend = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}`;
+                  let adminUrl = import.meta.env.VITE_ADMIN_PANEL_URL;
+                  if (!adminUrl) {
+                    adminUrl = isProd ? 'https://zixx-admin.vercel.app' : `http://${window.location.hostname}:8000`;
                   }
-                  try { const u = new URL(frontend); frontend = u.origin; } catch (e) {}
-                  window.location.replace(`${frontend}`);
+                  try { const u = new URL(adminUrl); adminUrl = u.origin; } catch (e) {}
+                  window.location.replace(`${adminUrl}`);
                 }}
               >
                 Log out
