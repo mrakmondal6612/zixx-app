@@ -253,7 +253,7 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                     console.debug('[admin logout] POST /api/clients/logout failed, will fallback to GET /api/logout', e);
                     // fallback to top-level logout navigation which is most reliable for expiring httpOnly cookies
                     try {
-                      const backendOrigin = getApiBase().replace(/\/?api\/?$/i, '').replace(/\/$/, '');
+                      const backendOrigin = getApiBase().replace(/\/?api\/?$/i, '');
                       const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
                       let frontend = import.meta.env.VITE_FRONTEND_URL;
                       if (!frontend) {
