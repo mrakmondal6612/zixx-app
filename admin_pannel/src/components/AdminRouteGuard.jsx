@@ -25,6 +25,19 @@ export default function AdminRouteGuard({ children }) {
   useEffect(() => {
     const checkAccess = async () => {
       try {
+        // Check for token in URL parameters (passed from main site)
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlToken = urlParams.get('token');
+        if (urlToken) {
+          try {
+            localStorage.setItem('token', urlToken);
+            // Clean URL by removing token parameter
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('token');
+            window.history.replaceState({}, '', newUrl);
+          } catch {}
+        }
+
         // helper to build auth headers from localStorage token
         const buildAuthHeaders = () => {
           const h = {};

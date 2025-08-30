@@ -21,10 +21,29 @@ const Admin = () => {
               replace: true,
             });
           } else {
-            window.location.replace(ADMIN_PANEL_URL);
+            // Pass token as URL parameter for cross-origin admin panel access
+            const token = localStorage.getItem('token');
+            let finalUrl = ADMIN_PANEL_URL;
+            if (token) {
+              const url = new URL(ADMIN_PANEL_URL);
+              url.searchParams.set('token', token);
+              finalUrl = url.toString();
+            }
+            window.location.replace(finalUrl);
           }
         } catch (err) {
-          window.location.href = ADMIN_PANEL_URL;
+          // Fallback: try to pass token via URL parameter
+          try {
+            const token = localStorage.getItem('token');
+            let finalUrl = ADMIN_PANEL_URL;
+            if (token) {
+              const separator = ADMIN_PANEL_URL.includes('?') ? '&' : '?';
+              finalUrl = `${ADMIN_PANEL_URL}${separator}token=${encodeURIComponent(token)}`;
+            }
+            window.location.href = finalUrl;
+          } catch {
+            window.location.href = ADMIN_PANEL_URL;
+          }
         }
       }
     }
