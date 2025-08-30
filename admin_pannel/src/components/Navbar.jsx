@@ -255,12 +255,12 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                     try {
                       const backendOrigin = getApiBase().replace(/\/?api\/?$/i, '');
                       const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
-                      let frontend = import.meta.env.VITE_FRONTEND_URL;
-                      if (!frontend) {
-                        frontend = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}:8080`;
+                      let adminPanelUrl = import.meta.env.VITE_ADMIN_PANEL_URL;
+                      if (!adminPanelUrl) {
+                        adminPanelUrl = isProd ? 'https://zixx-admin.vercel.app' : `http://${window.location.hostname}:8000`;
                       }
-                      try { const u = new URL(frontend); frontend = u.origin; } catch (err) {}
-                      const returnTo = encodeURIComponent(`${frontend}/auth`);
+                      try { const u = new URL(adminPanelUrl); adminPanelUrl = u.origin; } catch (err) {}
+                      const returnTo = encodeURIComponent(`${adminPanelUrl}/auth`);
                       const fallbackUrl = `${backendOrigin}/api/logout?returnTo=${returnTo}`;
                       window.location.href = fallbackUrl;
                       return;
@@ -298,14 +298,14 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                     setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) {} }, 4000);
                   } catch (e) {}
 
-                  // Redirect to frontend auth page
+                  // Redirect to admin panel auth page
                   const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
-                  let frontend = import.meta.env.VITE_FRONTEND_URL;
-                  if (!frontend) {
-                    frontend = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}:8080`;
+                  let adminPanelUrl = import.meta.env.VITE_ADMIN_PANEL_URL;
+                  if (!adminPanelUrl) {
+                    adminPanelUrl = isProd ? 'https://zixx-admin.vercel.app' : `http://${window.location.hostname}:8000`;
                   }
-                  try { const u = new URL(frontend); frontend = u.origin; } catch (e) {}
-                  window.location.replace(`${frontend}/auth`);
+                  try { const u = new URL(adminPanelUrl); adminPanelUrl = u.origin; } catch (e) {}
+                  window.location.replace(`${adminPanelUrl}/auth`);
                 }}
               >
                 Log out
