@@ -298,13 +298,21 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                     setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) {} }, 4000);
                   } catch (e) {}
 
-                  // Redirect to admin panel main page (clean origin, no ports/paths)
-                  let adminUrl = import.meta.env.VITE_ADMIN_PANEL_URL;
-                  if (!adminUrl || typeof adminUrl !== 'string' || !/^https?:\/\//i.test(adminUrl)) {
-                    adminUrl = 'https://zixx-admin.vercel.app';
-                  }
-                  try { const u = new URL(adminUrl); adminUrl = u.origin; } catch (e) { /* keep as-is if parsing fails */ }
-                  window.location.replace(`${adminUrl}`);
+                  // Try to close the current tab/window after logout
+                  const tryClose = () => {
+                    try { window.open('', '_self'); } catch (e) {}
+                    try { window.close(); } catch (e) {}
+                  };
+                  // Attempt immediate close
+                  tryClose();
+                  // If the browser blocks closing, fall back to navigating to a safe blank page to allow close
+                  try {
+                    const blank = 'about:blank';
+                    if (document.visibilityState !== 'hidden') {
+                      window.location.href = blank;
+                      setTimeout(tryClose, 100);
+                    }
+                  } catch (e) {}
                 }}
               >
                 Log out
