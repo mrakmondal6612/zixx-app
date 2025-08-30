@@ -12,6 +12,7 @@ import {
 
 const Row = ({ t, onApprove, onDelete, onEdit }) => {
   const theme = useTheme();
+  const mode = (theme && theme.palette && theme.palette.mode) ? theme.palette.mode : 'light';
   const displayName = t.user ? `${t.user.first_name} ${t.user.last_name}`.trim() : t.name || "Anonymous";
   const profilePic = t.user?.profile_pic;
   const [editing, setEditing] = React.useState(false);
@@ -76,7 +77,7 @@ const Row = ({ t, onApprove, onDelete, onEdit }) => {
           </Box>
           <Box>
           <Typography variant="subtitle2" sx={{
-            color: theme.palette.mode === 'dark' ? 'white' : 'black',
+            color: mode === 'dark' ? 'white' : 'black',
             fontWeight: 'bold',
           }}>{displayName}</Typography>
           {editing && (
@@ -127,7 +128,7 @@ const Row = ({ t, onApprove, onDelete, onEdit }) => {
         ) : (
           <Typography variant="body2" sx={{ 
             mt: { xs: 0.5, md: 0 },
-            color: theme.palette.mode === 'dark' ? 'white' : 'black',
+            color: mode === 'dark' ? 'white' : 'black',
             fontWeight: 'bold',
           }}>
             {t.text}
@@ -137,23 +138,23 @@ const Row = ({ t, onApprove, onDelete, onEdit }) => {
       <Box sx={{ mt: { xs: 2, md: 0 }, display: { xs: 'none', md: 'block' } }}>
         <Typography variant="caption" color="text.secondary">Meta</Typography>
         <Typography variant="body2" sx={{
-          color: theme.palette.mode === 'dark' ? 'white' : 'black',
+          color: mode === 'dark' ? 'white' : 'black',
           fontWeight: 'bold',
         }}>Device: {t.device || '-'}</Typography>
         <Typography variant="body2" sx={{
-          color: theme.palette.mode === 'dark' ? 'white' : 'black',
+          color: mode === 'dark' ? 'white' : 'black',
           fontWeight: 'bold',
         }}>Locale: {t.locale || '-'}</Typography>
         <Typography variant="body2" sx={{
-          color: theme.palette.mode === 'dark' ? 'white' : 'black',
+          color: mode === 'dark' ? 'white' : 'black',
           fontWeight: 'bold',
         }}>Path: {t.path || '-'}</Typography>
         <Typography variant="body2" sx={{
-          color: theme.palette.mode === 'dark' ? 'white' : 'black',
+          color: mode === 'dark' ? 'white' : 'black',
           fontWeight: 'bold',
         }}>Referrer: {t.referrer || '-'}</Typography>
         <Typography variant="body2" sx={{
-          color: theme.palette.mode === 'dark' ? 'white' : 'black',
+          color: mode === 'dark' ? 'white' : 'black',
           fontWeight: 'bold',
         }}>IP: {t.ip || '-'}</Typography>
       </Box>
@@ -189,8 +190,8 @@ const Row = ({ t, onApprove, onDelete, onEdit }) => {
 
 const Testimonials = () => {
   const theme = useTheme();
+  const mode = (theme && theme.palette && theme.palette.mode) ? theme.palette.mode : 'light';
   const dispatch = useDispatch();
-  const mode = useSelector((state) => state.global.mode);
   
   const [status, setStatus] = React.useState('all');
   const [q, setQ] = React.useState('');
@@ -225,7 +226,7 @@ const Testimonials = () => {
       >
         <Box display="flex" alignItems="center" gap={1}>
           <Typography variant="h4" sx={{
-            color: theme.palette.mode === 'dark' ? 'white' : 'black',
+            color: mode === 'dark' ? 'white' : 'black',
             fontWeight: 'bold',
           }}>Testimonials Moderation</Typography>
         </Box>
@@ -274,41 +275,39 @@ const Testimonials = () => {
       <Box border="1px solid" borderColor="divider" borderRadius={1}>
         <Box 
           sx={{
-            color: theme.palette.mode === 'dark' ? '1px solid transparent' : `1px solid ${theme.palette.neutral[200]}`,
             display: { xs: 'none', md: 'grid' },
             gridTemplateColumns: '1fr 80px 1fr 160px 200px',
             gap: 1,
             p: 1,
             bgcolor: 'background.paper',
-            borderBottom: '1px solid',
-            borderColor: 'divider'
+            borderBottom: `1px solid ${theme && theme.palette ? theme.palette.divider : '#e0e0e0'}`,
           }}
         >
           <Typography variant="subtitle2" sx={{
-            color: theme.palette.mode === 'dark' ? 'white' : 'black',
+            color: mode === 'dark' ? 'white' : 'black',
             fontWeight: 'bold',
           }}>
             User
           </Typography>
           <Typography variant="subtitle2" sx={{
-            color: theme.palette.mode === 'dark' ? 'white' : 'black',
+            color: mode === 'dark' ? 'white' : 'black',
             fontWeight: 'bold',
           }}>Stars</Typography>
           <Typography variant="subtitle2"
           sx={{
-            color: theme.palette.mode === 'dark' ? 'white' : 'black',
+            color: mode === 'dark' ? 'white' : 'black',
             fontWeight: 'bold',
           }}
           >Text</Typography>
           <Typography variant="subtitle2"
           sx={{
-            color: theme.palette.mode === 'dark' ? 'white' : 'black',
+            color: mode === 'dark' ? 'white' : 'black',
             fontWeight: 'bold',
           }}
           >Metadata</Typography>
           <Typography variant="subtitle2"
           sx={{
-            color: theme.palette.mode === 'dark' ? 'white' : 'black',
+            color: mode === 'dark' ? 'white' : 'black',
             fontWeight: 'bold',
           }}
           >Actions</Typography>
