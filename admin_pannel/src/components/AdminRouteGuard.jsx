@@ -14,7 +14,7 @@ export default function AdminRouteGuard({ children }) {
         // Safe default for production if env not set
         f = 'https://zixx.vercel.app';
       } else {
-        // Dev fallback: assume main frontend runs on :8080 on same host
+        // Dev fallback: use same host without hardcoded port
         f = `http://${window.location.hostname}`;
       }
     }
