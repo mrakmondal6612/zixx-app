@@ -6,21 +6,15 @@ export default function AdminRouteGuard({ children }) {
   const [checking, setChecking] = useState(true);
   const [allowed, setAllowed] = useState(false);
   const apiBase = getApiBase();
-  const frontendBase = (() => {
-    const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
-    let f = import.meta.env.VITE_FRONTEND_URL;
-    if (!f) {
-      if (isProd) {
-        // Safe default for production if env not set
-        f = 'https://zixx.vercel.app';
-      } else {
-        // Dev fallback: use same host without hardcoded port
-        f = `http://${window.location.hostname}`;
-      }
+  // Determine the admin panel base URL (clean origin) for redirects
+  const adminBase = (() => {
+    let a = import.meta.env.VITE_ADMIN_PANEL_URL;
+    if (!a || typeof a !== 'string' || !/^https?:\/\//i.test(a)) {
+      a = 'https://zixx-admin.vercel.app';
     }
-    try { const u = new URL(f); return u.origin; } catch { return f; }
+    try { const u = new URL(a); return u.origin; } catch { return a; }
   })().replace(/\/$/, '');
-  const mainLogin = `${frontendBase}/auth`;
+  const mainLogin = adminBase; // redirect to admin root (no /auth)
 
   useEffect(() => {
     const checkAccess = async () => {

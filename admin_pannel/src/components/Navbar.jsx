@@ -256,13 +256,13 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                       const backendOrigin = getApiBase().replace(/\/?api\/?$/i, '').replace(/\/$/, '');
                       const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
                       let adminUrl = import.meta.env.VITE_ADMIN_PANEL_URL;
-                      // if (!adminUrl) {
-                      //   adminUrl = isProd ? 'https://zixx-admin.vercel.app' : `http://${window.location.hostname}:8000`;
-                      // }
-                      try { const u = new URL(adminUrl); adminUrl = u.origin; } catch (err) {}
+                      // Fallback to safe defaults if env is missing or malformed
+                      if (!adminUrl || typeof adminUrl !== 'string' || !/^https?:\/\//i.test(adminUrl)) {
+                        adminUrl = isProd ? 'https://zixx-admin.vercel.app' : `http://${window.location.hostname}:8000`;
+                      }
+                      try { const u = new URL(adminUrl); adminUrl = u.origin; } catch (err) { /* keep as-is if parsing fails */ }
                       const returnTo = encodeURIComponent(`${adminUrl}`);
                       const fallbackUrl = `${backendOrigin}/api/logout?returnTo=${returnTo}`;
-                      console.log("fallbackUrl", fallbackUrl);
                       window.location.href = fallbackUrl;
                       return;
                     } catch (er) {
@@ -285,10 +285,9 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                   // Also notify main site origin instantly via hidden iframe to /logout-sync.html
                   // This makes zixx.vercel.app tabs receive storage/BroadcastChannel events on their origin
                   try {
-                    const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
                     let frontendOrigin = import.meta.env.VITE_FRONTEND_URL;
-                    if (!frontendOrigin) {
-                      frontendOrigin = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}`;
+                    if (!frontendOrigin || typeof frontendOrigin !== 'string' || !/^https?:\/\//i.test(frontendOrigin)) {
+                      frontendOrigin = 'https://zixx.vercel.app';
                     }
                     try { const u = new URL(frontendOrigin); frontendOrigin = u.origin; } catch (e) {}
                     const iframe = document.createElement('iframe');
@@ -299,13 +298,12 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                     setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) {} }, 4000);
                   } catch (e) {}
 
-                  // Redirect to admin panel main page
-                  const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
+                  // Redirect to admin panel main page (clean origin, no ports/paths)
                   let adminUrl = import.meta.env.VITE_ADMIN_PANEL_URL;
-                  if (!adminUrl) {
-                    adminUrl = isProd ? 'https://zixx-admin.vercel.app' : `http://${window.location.hostname}:8000`;
+                  if (!adminUrl || typeof adminUrl !== 'string' || !/^https?:\/\//i.test(adminUrl)) {
+                    adminUrl = 'https://zixx-admin.vercel.app';
                   }
-                  try { const u = new URL(adminUrl); adminUrl = u.origin; } catch (e) {}
+                  try { const u = new URL(adminUrl); adminUrl = u.origin; } catch (e) { /* keep as-is if parsing fails */ }
                   window.location.replace(`${adminUrl}`);
                 }}
               >

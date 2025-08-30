@@ -168,10 +168,9 @@ const Sidebar = ({
                   gap="0.5rem"
                   sx={{ cursor: "pointer" }}
                   onClick={() => {
-                    const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
                     let frontend = import.meta.env.VITE_FRONTEND_URL;
-                    if (!frontend) {
-                      frontend = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}`;
+                    if (!frontend || typeof frontend !== 'string' || !/^https?:\/\//i.test(frontend)) {
+                      frontend = 'https://zixx.vercel.app';
                     }
                     try { const u = new URL(frontend); frontend = u.origin; } catch (e) {}
                     window.location.href = `${frontend.replace(/\/$/, '')}/`;
