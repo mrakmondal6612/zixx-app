@@ -253,14 +253,14 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                     console.debug('[admin logout] POST /api/clients/logout failed, will fallback to GET /api/logout', e);
                     // fallback to top-level logout navigation which is most reliable for expiring httpOnly cookies
                     try {
-                      const backendOrigin = getApiBase().replace(/\/?api\/?$/i, '');
+                      const backendOrigin = getApiBase().replace(/\/?api\/?$/i, '').replace(/\/$/, '');
                       const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
-                      let adminPanelUrl = import.meta.env.VITE_ADMIN_PANEL_URL;
-                      if (!adminPanelUrl) {
-                        adminPanelUrl = isProd ? 'https://zixx-admin.vercel.app' : `http://${window.location.hostname}:8000`;
+                      let frontend = import.meta.env.VITE_FRONTEND_URL;
+                      if (!frontend) {
+                        frontend = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}:8080`;
                       }
-                      try { const u = new URL(adminPanelUrl); adminPanelUrl = u.origin; } catch (err) {}
-                      const returnTo = encodeURIComponent(`${adminPanelUrl}/auth`);
+                      try { const u = new URL(frontend); frontend = u.origin; } catch (err) {}
+                      const returnTo = encodeURIComponent(`${frontend.replace(/\/$/, '')}/auth`);
                       const fallbackUrl = `${backendOrigin}/api/logout?returnTo=${returnTo}`;
                       window.location.href = fallbackUrl;
                       return;
@@ -293,19 +293,19 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                     const iframe = document.createElement('iframe');
                     iframe.style.display = 'none';
                     iframe.referrerPolicy = 'no-referrer';
-                    iframe.src = `${frontendOrigin}/logout-sync.html`;
+                    iframe.src = `${frontendOrigin.replace(/\/$/, '')}/logout-sync.html`;
                     document.body.appendChild(iframe);
                     setTimeout(() => { try { document.body.removeChild(iframe); } catch (e) {} }, 4000);
                   } catch (e) {}
 
-                  // Redirect to admin panel auth page
+                  // Redirect to frontend auth page
                   const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
-                  let adminPanelUrl = import.meta.env.VITE_ADMIN_PANEL_URL;
-                  if (!adminPanelUrl) {
-                    adminPanelUrl = isProd ? 'https://zixx-admin.vercel.app' : `http://${window.location.hostname}:8000`;
+                  let frontend = import.meta.env.VITE_FRONTEND_URL;
+                  if (!frontend) {
+                    frontend = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}:8080`;
                   }
-                  try { const u = new URL(adminPanelUrl); adminPanelUrl = u.origin; } catch (e) {}
-                  window.location.replace(`${adminPanelUrl}/auth`);
+                  try { const u = new URL(frontend); frontend = u.origin; } catch (e) {}
+                  window.location.replace(`${frontend.replace(/\/$/, '')}/auth`);
                 }}
               >
                 Log out
