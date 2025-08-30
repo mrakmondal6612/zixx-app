@@ -168,25 +168,27 @@ const Auth = () => {
       // Get the current path to return to after login
       const from = (location.state as any)?.from?.pathname || '/';
       
-      // Create the return URL with the frontend URL
-      const frontendUrl = window.location.origin.replace(/\/$/, '');
-      const returnTo = `${frontendUrl}/auth?next=${encodeURIComponent(from)}`;
+      // Always use production frontend URL for OAuth flow to avoid localhost redirects
+      const productionFrontend = 'https://zixx.vercel.app';
+      const returnTo = `${productionFrontend}${from}`;
       
       // Build the OAuth URL with the correct returnTo parameter
-      const oauthUrl = apiUrl(`/clients/auth/google?returnTo=${encodeURIComponent(returnTo)}`);
+      const oauthUrl = `${apiUrl('/clients/auth/google')}?returnTo=${encodeURIComponent(returnTo)}`;
       
       // Clear any existing auth data before starting new OAuth flow
       try {
         localStorage.removeItem('token');
         localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('user');
+        sessionStorage.clear();
       } catch (e) {
         console.warn('Failed to clear auth data:', e);
       }
       
-      // console.log('Initiating Google OAuth with URL:', oauthUrl);
+      console.log('Initiating Google OAuth with URL:', oauthUrl);
       
-      // Redirect to the OAuth URL
-      window.location.href = oauthUrl;
+      // Redirect to the OAuth URL - force full page reload to clear any state
+      window.location.replace(oauthUrl);
     } catch (error) {
       console.error('Error in Google OAuth:', error);
       toast({
