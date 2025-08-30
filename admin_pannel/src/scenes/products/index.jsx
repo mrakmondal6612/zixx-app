@@ -94,6 +94,17 @@ const Product = ({ product, onDelete, onUpdate }) => {
         .map((s) => s.trim())
         .filter(Boolean);
     }
+    // features: array of strings (optional)
+    if (Array.isArray(editedProduct.features)) {
+      payload.features = editedProduct.features
+        .map((s) => String(s).trim())
+        .filter(Boolean);
+    } else if (typeof editedProduct.features === "string") {
+      payload.features = editedProduct.features
+        .split(/\r?\n|,/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
     // price/discount as numbers when possible
     if (payload.price !== undefined) payload.price = Number(payload.price);
     if (payload.discount !== undefined && payload.discount !== "") payload.discount = Number(payload.discount);
@@ -266,6 +277,16 @@ const Product = ({ product, onDelete, onUpdate }) => {
               value={Array.isArray(editedProduct.colors) ? editedProduct.colors.join(", ") : (editedProduct.color ?? editedProduct.colors ?? "")}
               onChange={handleInputChange}
             />
+            <TextField
+              fullWidth
+              margin="dense"
+              name="features"
+              label="Features (comma or new line separated)"
+              multiline
+              rows={3}
+              value={Array.isArray(editedProduct.features) ? editedProduct.features.join(", ") : (editedProduct.features ?? "")}
+              onChange={handleInputChange}
+            />
             
           </>
         ) : (
@@ -375,6 +396,11 @@ const Product = ({ product, onDelete, onUpdate }) => {
           <Typography>Discount: {product.discount}%</Typography>
           <Typography>Theme: {product.theme}</Typography>
           <Typography>Supply Left: {product.supply}</Typography>
+          {product.features && (Array.isArray(product.features) ? product.features.length > 0 : String(product.features).trim()) && (
+            <Typography>
+              Features: {Array.isArray(product.features) ? product.features.join(" • ") : String(product.features)}
+            </Typography>
+          )}
         </CardContent>
       </Collapse>
     </Card>
@@ -406,6 +432,7 @@ const Products = () => {
     stock: "1",
     brand: "",
     theme: "",
+    features: "",
   });
   const [imagesList, setImagesList] = useState([]); // [{url, from:'url'|'uploaded', caption:'', alt:''}]
   const [isDragOver, setIsDragOver] = useState(false);
@@ -442,6 +469,10 @@ const Products = () => {
       const structured = imagesList.map((i, idx) => ({ url: i.url, caption: i.caption || "", alt: i.alt || "", order: idx }));
       const sizeArr = newProduct.size.split(",").map((s) => s.trim()).filter(Boolean);
       const colorArr = newProduct.colors.split(",").map((s) => s.trim()).filter(Boolean);
+      const featuresArr = String(newProduct.features || "")
+        .split(/\r?\n|,/)
+        .map((s) => s.trim())
+        .filter(Boolean);
       const body = {
         title: newProduct.title.trim(),
         description: newProduct.description.trim(),
@@ -457,13 +488,14 @@ const Products = () => {
         supply: newProduct.stock === "" ? 1 : Number(newProduct.stock),
         brand: newProduct.brand.trim() || undefined,
         theme: newProduct.theme.trim() || undefined,
+        ...(featuresArr.length ? { features: featuresArr } : {}),
       };
       await addProduct({ body }).unwrap();
       setToast({ open: true, severity: "success", message: "Product added." });
       setAddOpen(false);
       setNewProduct({
         title: "", description: "", price: "", category: "", subcategory: "", gender: "",
-        images: "", size: "", colors: "", discount: "", stock: "1", brand: "", theme: "",
+        images: "", size: "", colors: "", discount: "", stock: "1", brand: "", theme: "", features: "",
       });
       setImagesList([]);
       refetch();
@@ -1008,6 +1040,18 @@ const Products = () => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField fullWidth required label="Theme" name="theme" value={newProduct.theme} onChange={handleNewChange} />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Features (comma or new line separated)"
+                name="features"
+                value={newProduct.features}
+                onChange={handleNewChange}
+                helperText="Example: 100% cotton, Regular fit, Machine washable"
+                multiline
+                rows={3}
+              />
             </Grid>
           </Grid>
         </DialogContent>
