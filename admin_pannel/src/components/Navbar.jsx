@@ -256,9 +256,9 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                       const backendOrigin = getApiBase().replace(/\/?api\/?$/i, '').replace(/\/$/, '');
                       const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
                       let adminUrl = import.meta.env.VITE_ADMIN_PANEL_URL;
-                      if (!adminUrl) {
-                        adminUrl = isProd ? 'https://zixx-admin.vercel.app' : `http://${window.location.hostname}:8000`;
-                      }
+                      // if (!adminUrl) {
+                      //   adminUrl = isProd ? 'https://zixx-admin.vercel.app' : `http://${window.location.hostname}:8000`;
+                      // }
                       try { const u = new URL(adminUrl); adminUrl = u.origin; } catch (err) {}
                       const returnTo = encodeURIComponent(`${adminUrl}`);
                       const fallbackUrl = `${backendOrigin}/api/logout?returnTo=${returnTo}`;
