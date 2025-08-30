@@ -262,6 +262,7 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                       try { const u = new URL(adminUrl); adminUrl = u.origin; } catch (err) {}
                       const returnTo = encodeURIComponent(`${adminUrl}`);
                       const fallbackUrl = `${backendOrigin}/api/logout?returnTo=${returnTo}`;
+                      console.log("fallbackUrl", fallbackUrl);
                       window.location.href = fallbackUrl;
                       return;
                     } catch (er) {
