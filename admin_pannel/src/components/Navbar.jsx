@@ -98,6 +98,7 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
   const resolveAvatarSrc = () => {
     try {
       const candidates = [
+        user && user.profile_pic,
         user && (user.photo || user.avatar || user.image || user.imageUrl || user.profileImage || user.picture || user.profilePic || user.profile_photo || user.photoURL),
         // Role-specific fields that might exist
         user && user.adminPhoto,
@@ -110,6 +111,8 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
       for (const c of candidates) {
         const raw = String(c).trim();
         if (!raw) continue;
+        // Skip default/placeholder URLs
+        if (raw.includes('example.com') || raw.includes('default-profile-pic')) continue;
         if (/^https?:\/\//i.test(raw)) return raw; // absolute URL
         if (raw.startsWith('/')) return origin + raw; // absolute path on API origin
         return `${origin}/${raw}`; // relative path -> join
@@ -142,7 +145,8 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
         justifyContent: "space-between",
         minHeight: { xs: 56, sm: 64 },
         pt: 'env(safe-area-inset-top)',
-        position: 'relative'
+        position: 'relative',
+        px: { xs: 1, sm: 2 }
       }}>
         {/*  Left side  */}
         <FlexBetween>
@@ -155,32 +159,36 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
         </FlexBetween>
         {/*  Right side */}
 
-        <FlexBetween gap={{ xs: "1rem", sm: "1.5rem" }} sx={{ position: 'relative', zIndex: (t) => t.zIndex.modal + 2 }}>
+        <FlexBetween gap={{ xs: "0.5rem", sm: "1rem" }} sx={{ position: 'relative', zIndex: (t) => t.zIndex.modal + 2 }}>
           {isSmall && (
-            <IconButton aria-label="Search" onClick={() => setSearchOpen(true)} sx={{ zIndex: (t) => t.zIndex.modal + 3, mr: { xs: 0.25, sm: 0 } }}>
-              <Search />
+            <IconButton 
+              aria-label="Search" 
+              onClick={() => setSearchOpen(true)} 
+              sx={{ zIndex: (t) => t.zIndex.modal + 3 }}
+              size="small"
+            >
+              <Search sx={{ fontSize: { xs: "20px", sm: "24px" } }} />
             </IconButton>
           )}
           <IconButton
-            onClick={(e) => {
-              try { e.stopPropagation(); } catch {}
-              dispatch(setMode());
-            }}
-            onTouchEnd={(e) => {
-              try { e.preventDefault(); e.stopPropagation(); } catch {}
-              dispatch(setMode());
-            }}
-            sx={{ zIndex: (t) => t.zIndex.modal + 3, ml: { xs: 0.25, sm: 0 } }}
+            onClick={() => dispatch(setMode())}
+            sx={{ zIndex: (t) => t.zIndex.modal + 3 }}
             aria-label="Toggle theme"
+            size="small"
           >
             {theme.palette.mode === "dark" ? (
-              <DarkModeOutlined sx={{ fontSize: "25px" }} />
+              <LightModeOutlined sx={{ fontSize: { xs: "20px", sm: "24px" } }} />
             ) : (
-              <LightModeOutlined sx={{ fontSize: "25px" }} />
+              <DarkModeOutlined sx={{ fontSize: { xs: "20px", sm: "24px" } }} />
             )}
           </IconButton>
-          <IconButton aria-label="Settings" onClick={openSettings} sx={{ zIndex: (t) => t.zIndex.modal + 3 }}>
-            <SettingsOutlined sx={{ fontSize: "25px" }} />
+          <IconButton 
+            aria-label="Settings" 
+            onClick={openSettings} 
+            sx={{ zIndex: (t) => t.zIndex.modal + 3 }}
+            size="small"
+          >
+            <SettingsOutlined sx={{ fontSize: { xs: "20px", sm: "24px" } }} />
           </IconButton>
 
           <FlexBetween sx={{ position: 'relative', zIndex: 1 }}>
@@ -191,8 +199,9 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                 justifyContent: "space-between",
                 alignItems: "center",
                 textTransform: "none",
-                gap: "1rem",
+                gap: { xs: "0.5rem", sm: "1rem" },
                 minWidth: 'auto',
+                px: { xs: 0.5, sm: 1 },
               }}
             >
               <Box
@@ -205,20 +214,22 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                 sx={{ objectFit: "cover" }}
                 onError={(e) => { try { e.currentTarget.src = profileImage; } catch (_) {} }}
               />
-              <Box textAlign="left">
+              <Box textAlign="left" sx={{ display: { xs: 'none', sm: 'block' } }}>
                 <Typography
                   fontWeight="bold"
                   fontSize="0.85rem"
                   sx={{ color: theme.palette.secondary[100] }}
                 >
-                  {user.name}
+                  {user && (user.name || user.first_name) 
+                    ? (user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim()) 
+                    : "Admin User"}
                 </Typography>
 
                 <Typography
                   fontSize="0.75rem"
                   sx={{ color: theme.palette.secondary[200] }}
                 >
-                  {user.occupation}
+                  {user?.occupation || user?.role || "Administrator"}
                 </Typography>
               </Box>
               <ArrowDropDownOutlined
@@ -305,15 +316,26 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
 
         {/* Centered search (desktop only) */}
         {!isSmall && (
-          <Box sx={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', width: { md: '42%', lg: '38%', xl: '34%' }, maxWidth: 680 }}>
+          <Box sx={{ 
+            position: 'absolute', 
+            left: '50%', 
+            transform: 'translateX(-50%)', 
+            width: { md: '300px', lg: '350px', xl: '400px' }, 
+            maxWidth: '400px',
+            zIndex: 1
+          }}>
             <FlexBetween
               backgroundColor={theme.palette.background.alt}
               borderRadius="9px"
               gap="1rem"
               p="0.1rem 1rem"
+              sx={{ 
+                border: `1px solid ${theme.palette.divider}`,
+                boxShadow: theme.shadows[1]
+              }}
             >
               <InputBase
-                placeholder="Search ... "
+                placeholder="Search pages..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
@@ -323,8 +345,9 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                   }
                 }}
                 fullWidth
+                sx={{ fontSize: '0.9rem' }}
               />
-              <IconButton onClick={() => setSearchOpen(true)}>
+              <IconButton onClick={() => setSearchOpen(true)} size="small">
                 <Search />
               </IconButton>
             </FlexBetween>
@@ -372,21 +395,84 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
         onClose={closeSettings}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            minWidth: 200,
+            boxShadow: theme.shadows[8],
+            border: `1px solid ${theme.palette.divider}`,
+          }
+        }}
       >
-        <MenuItem onClick={() => { dispatch(setMode()); closeSettings(); }}>
-          Toggle Theme
+        <MenuItem 
+          onClick={() => { dispatch(setMode()); closeSettings(); }}
+          sx={{ 
+            py: 1.5,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2
+          }}
+        >
+          {theme.palette.mode === "dark" ? (
+            <LightModeOutlined sx={{ fontSize: "20px" }} />
+          ) : (
+            <DarkModeOutlined sx={{ fontSize: "20px" }} />
+          )}
+          <Box>
+            <Typography variant="body2" fontWeight="medium">
+              Switch to {theme.palette.mode === "dark" ? "Light" : "Dark"} Mode
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Change the theme appearance
+            </Typography>
+          </Box>
         </MenuItem>
-        <MenuItem onClick={() => { setIsSidebarOpen((v) => !v); closeSettings(); }}>
-          {isSidebarOpen ? 'Close Sidebar' : 'Open Sidebar'}
+        
+        <MenuItem 
+          onClick={() => { setIsSidebarOpen((v) => !v); closeSettings(); }}
+          sx={{ 
+            py: 1.5,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2
+          }}
+        >
+          <MenuIcon sx={{ fontSize: "20px" }} />
+          <Box>
+            <Typography variant="body2" fontWeight="medium">
+              {isSidebarOpen ? 'Hide Sidebar' : 'Show Sidebar'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Toggle navigation panel
+            </Typography>
+          </Box>
         </MenuItem>
-        <MenuItem onClick={() => {
-          closeSettings();
-          const ok = window.confirm('Clear local storage and caches? You may be logged out.');
-          if (!ok) return;
-          try { localStorage.clear(); sessionStorage.clear(); } catch {}
-          try { window.location.reload(); } catch {}
-        }}>
-          Clear Local Caches
+        
+        <MenuItem 
+          onClick={() => {
+            closeSettings();
+            const ok = window.confirm('This will clear all local data and refresh the page. Continue?');
+            if (!ok) return;
+            try { localStorage.clear(); sessionStorage.clear(); } catch {}
+            try { window.location.reload(); } catch {}
+          }}
+          sx={{ 
+            py: 1.5,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            color: theme.palette.warning.main
+          }}
+        >
+          <CloseIcon sx={{ fontSize: "20px" }} />
+          <Box>
+            <Typography variant="body2" fontWeight="medium">
+              Clear Cache & Reload
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Reset local storage and refresh
+            </Typography>
+          </Box>
         </MenuItem>
       </Menu>
     </AppBar>

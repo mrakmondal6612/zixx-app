@@ -3,6 +3,9 @@ import React, { useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
+import { apiUrl, getAuthHeaders } from '@/lib/api';
+import { Mail, Phone, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -11,10 +14,54 @@ const Contact = () => {
     subject: '',
     message: ''
   });
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // console.log('Contact form submitted:', formData);
+
+    // Basic validation
+    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+      toast({ title: 'Missing fields', description: 'Please fill out all fields.' });
+      return;
+    }
+    const emailOk = /.+@.+\..+/.test(formData.email);
+    if (!emailOk) {
+      toast({ title: 'Invalid email', description: 'Please enter a valid email address.' });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const res = await fetch(apiUrl('/clients/contact'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        credentials: 'include',
+        body: JSON.stringify(formData),
+      });
+
+      if (!res.ok) {
+        const t = await res.text().catch(() => '');
+        throw new Error(t || `Request failed (${res.status})`);
+      }
+      const data = await res.json().catch(() => null);
+      if (data?.ok) {
+        if (data?.sent) {
+          toast({ title: 'Message sent', description: 'Thanks! We will get back to you shortly.' });
+        } else {
+          toast({ title: 'Message received', description: 'We received your message. Notifications are not yet configured.' });
+        }
+      } else {
+        throw new Error(data?.error || 'Unexpected response');
+      }
+      setFormData({ name: '', email: '', subject: '', message: '' });
+    } catch (err: any) {
+      toast({ title: 'Failed to send', description: err?.message || 'Something went wrong. Please try again later.' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -25,51 +72,71 @@ const Contact = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <Header />
       
-      <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-8 py-10">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Contact Us</h1>
-          <p className="text-xl text-gray-600">We'd love to hear from you</p>
+      {/* Hero Section */}
+      <div className="bg-gradient-to-r from-[#D92030] to-[#BC1C2A] text-white py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">Get In Touch</h1>
+          <p className="text-xl text-white/90 max-w-3xl mx-auto">We're here to help and answer any questions you might have.</p>
         </div>
+      </div>
 
+      <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Contact Form */}
-          <div>
-            <h2 className="text-2xl font-semibold mb-6">Send us a message</h2>
+          <div className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Send us a message</h2>
+              <p className="text-gray-600">Fill out the form and our team will get back to you within 24 hours.</p>
+            </div>
+            
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#D92030] focus:outline-none"
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                    Full Name *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D92030] focus:border-transparent transition-all"
+                      placeholder="John Doe"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                    Email Address *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Mail className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className="w-full pl-10 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D92030] focus:border-transparent transition-all"
+                      placeholder="you@example.com"
+                      required
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#D92030] focus:outline-none"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
-                  Subject
+              
+              <div className="space-y-2">
+                <label htmlFor="subject" className="block text-sm font-medium text-gray-700">
+                  Subject *
                 </label>
                 <input
                   type="text"
@@ -77,61 +144,123 @@ const Contact = () => {
                   name="subject"
                   value={formData.subject}
                   onChange={handleChange}
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#D92030] focus:outline-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D92030] focus:border-transparent transition-all"
+                  placeholder="How can we help?"
                   required
                 />
               </div>
-              <div>
-                <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
-                  Message
+              
+              <div className="space-y-2">
+                <label htmlFor="message" className="block text-sm font-medium text-gray-700">
+                  Your Message *
                 </label>
                 <textarea
                   id="message"
                   name="message"
                   value={formData.message}
                   onChange={handleChange}
-                  rows={6}
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#D92030] focus:outline-none"
+                  rows={5}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D92030] focus:border-transparent transition-all"
+                  placeholder="Tell us more about your needs..."
                   required
                 ></textarea>
               </div>
-              <Button
-                type="submit"
-                className="w-full bg-[#D92030] hover:bg-[#BC1C2A] py-3"
-              >
-                Send Message
-              </Button>
+              
+              <div className="pt-2">
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-[#D92030] to-[#BC1C2A] hover:from-[#BC1C2A] hover:to-[#A31822] text-white py-3 px-6 rounded-lg font-medium text-base transition-all transform hover:scale-[1.02] flex items-center justify-center space-x-2"
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-5 w-5" />
+                      <span>Send Message</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </form>
           </div>
 
           {/* Contact Information */}
-          <div>
-            <h2 className="text-2xl font-semibold mb-6">Get in touch</h2>
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-semibold mb-2">Address</h3>
-                <p className="text-gray-600">
-                  1, Khan Road Mankundu<br />
-                  Hooghly - 720012<br />
-                  India
-                </p>
+          <div className="space-y-8">
+            <div className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Contact Information</h2>
+              
+              <div className="space-y-6">
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0 bg-red-50 p-3 rounded-full text-[#D92030]">
+                    <MapPin className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Our Location</h3>
+                    <p className="text-gray-600 mt-1">
+                      1, Khan Road Mankundu<br />
+                      Hooghly - 720012<br />
+                      West Bengal, India
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0 bg-red-50 p-3 rounded-full text-[#D92030]">
+                    <Phone className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Phone Number</h3>
+                    <p className="text-gray-600 mt-1">+91 015-8436-9999</p>
+                    <p className="text-gray-600">+91 98765 43210</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0 bg-red-50 p-3 rounded-full text-[#D92030]">
+                    <Mail className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Email Address</h3>
+                    <p className="text-gray-600 mt-1">contact@zixxapp.com</p>
+                    <p className="text-gray-600">support@zixxapp.com</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0 bg-red-50 p-3 rounded-full text-[#D92030]">
+                    <Clock className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Working Hours</h3>
+                    <div className="text-gray-600 mt-1 space-y-1">
+                      <p className="flex justify-between"><span>Monday - Friday:</span> <span>9:00 AM - 6:00 PM</span></p>
+                      <p className="flex justify-between"><span>Saturday:</span> <span>10:00 AM - 4:00 PM</span></p>
+                      <p className="flex justify-between"><span>Sunday:</span> <span>Closed</span></p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold mb-2">Phone</h3>
-                <p className="text-gray-600">+91015-8436-9999</p>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-2">Email</h3>
-                <p className="text-gray-600">xyzabcgmail.com</p>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-2">Business Hours</h3>
-                <p className="text-gray-600">
-                  Monday - Friday: 9:00 AM - 6:00 PM<br />
-                  Saturday: 10:00 AM - 4:00 PM<br />
-                  Sunday: Closed
-                </p>
-              </div>
+            </div>
+            
+            {/* Map Section */}
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3682.0413150601777!2d88.36376941533467!3d22.656859137187!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39f89e5d9c7c7b5b%3A0x1a1a1a1a1a1a1a1a!2sKhan%20Road%2C%20Mankundu%2C%20West%20Bengal%20712123!5e0!3m2!1sen!2sin!4v1620000000000!5m2!1sen!2sin"
+                width="100%"
+                height="300"
+                style={{ border: 0 }}
+                allowFullScreen={true}
+                loading="lazy"
+                title="Our Location"
+                className="rounded-b-lg"
+              ></iframe>
             </div>
           </div>
         </div>
@@ -143,3 +272,4 @@ const Contact = () => {
 };
 
 export default Contact;
+

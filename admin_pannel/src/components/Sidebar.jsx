@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setMode } from "@state";
 
 import {
   Box,
@@ -14,6 +16,8 @@ import {
   ListItemText,
   Typography,
   useTheme,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 
 import {
@@ -32,6 +36,10 @@ import {
   TrendingUpOutlined,
   PieChartOutlined,
   LocalShippingOutlined,
+  LightModeOutlined,
+  DarkModeOutlined,
+  Menu as MenuIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
 import FlexBetween from "./FlexBetween";
 import profileImage from "@assets/profile.jpg";
@@ -42,6 +50,7 @@ const navItems = [
   { text: "Client Facing", icon: null },
   { text: "Products", icon: <ShoppingCartOutlined /> },
   { text: "Banners", icon: <ReceiptLongOutlined /> },
+  { text: "Testimonials", icon: <ReceiptLongOutlined /> },
   { text: "Customers", icon: <Groups2Outlined /> },
   { text: "Orders", icon: <LocalShippingOutlined /> },
   { text: "Transactions", icon: <ReceiptLongOutlined /> },
@@ -67,12 +76,20 @@ const Sidebar = ({
   const [active, setActive] = useState("");
   const navigate = useNavigate();
   const theme = useTheme();
+  const dispatch = useDispatch();
   const [lastSync, setLastSync] = useState(null);
+  
+  // Settings menu state
+  const [settingsAnchor, setSettingsAnchor] = useState(null);
+  const settingsOpen = Boolean(settingsAnchor);
+  const openSettings = (e) => setSettingsAnchor(e.currentTarget);
+  const closeSettings = () => setSettingsAnchor(null);
 
   // Resolve avatar/photo URL for user/admin with robust fallbacks
   const resolveAvatarSrc = () => {
     try {
       const candidates = [
+        user && user.profile_pic,
         user && (user.photo || user.avatar || user.image || user.imageUrl || user.profileImage || user.picture || user.profilePic || user.profile_photo || user.photoURL),
         user && user.adminPhoto,
         user && user.userPhoto,
@@ -84,6 +101,8 @@ const Sidebar = ({
       for (const c of candidates) {
         const raw = String(c).trim();
         if (!raw) continue;
+        // Skip default/placeholder URLs
+        if (raw.includes('example.com') || raw.includes('default-profile-pic')) continue;
         if (/^https?:\/\//i.test(raw)) return raw;
         if (raw.startsWith('/')) return origin + raw;
         return `${origin}/${raw}`;
@@ -122,13 +141,14 @@ const Sidebar = ({
           anchor="left"
           ModalProps={{ keepMounted: true }}
           sx={{
-            width: isNonMobile ? drawerWidth : "80vw",
+            width: isNonMobile ? drawerWidth : "85vw",
             "& .MuiDrawer-paper": {
               color: theme.palette.secondary[200],
               backgroundColor: theme.palette.background.alt,
               boxSizing: "border-box",
               borderWidth: isNonMobile ? 0 : "2px",
-              width: isNonMobile ? drawerWidth : "80vw",
+              width: isNonMobile ? drawerWidth : "85vw",
+              maxWidth: isNonMobile ? drawerWidth : "320px",
             },
           }}
         >
@@ -236,7 +256,7 @@ const Sidebar = ({
               flexDirection="column"
               alignItems="center"
               mt={1}
-              mx={2}
+              mx={{ xs: 1, sm: 2 }}
               mb={2}
             >
               <Box
@@ -257,37 +277,61 @@ const Sidebar = ({
                 />
                 <Typography
                   fontWeight="bold"
-                  fontSize="1rem"
-                  sx={{ color: theme.palette.secondary[100], mb: 1 }}
+                  fontSize={{ xs: "0.9rem", sm: "1rem" }}
+                  sx={{ color: theme.palette.secondary[100], mb: 1, textAlign: "center" }}
                 >
-                  {user && user.name ? user.name : "Admin User"}
+                  {user && (user.name || user.first_name) 
+                    ? (user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim()) 
+                    : "Admin User"}
                 </Typography>
                 <Typography
-                  fontSize="0.85rem"
-                  sx={{ color: theme.palette.secondary[200], mb: 1 }}
+                  fontSize={{ xs: "0.75rem", sm: "0.85rem" }}
+                  sx={{ color: theme.palette.secondary[200], mb: 1, textAlign: "center" }}
                 >
-                  {user?.occupation}
+                  {user?.occupation || user?.role || "Administrator"}
                 </Typography>
               </Box>
               <Box
                 display="flex"
-                flexDirection="row"
+                flexDirection={{ xs: "column", sm: "row" }}
                 alignItems="center"
                 justifyContent="center"
                 width="100%"
-                gap={2}
+                gap={{ xs: 1, sm: 2 }}
                 mt={1}
               >
                 <IconButton
                   size="small"
-                  sx={{ color: theme.palette.secondary[300] }}
+                  onClick={openSettings}
+                  sx={{ 
+                    color: theme.palette.secondary[300],
+                    '&:hover': { 
+                      backgroundColor: theme.palette.action.hover,
+                      color: theme.palette.primary.main 
+                    }
+                  }}
+                  title="Settings"
                 >
-                  <SettingsOutlined sx={{ fontSize: "24px" }} />
+                  <SettingsOutlined sx={{ fontSize: { xs: "20px", sm: "24px" } }} />
                 </IconButton>
                 <Button
                   variant="contained"
                   size="small"
-                  sx={{ fontWeight: 700, borderRadius: 2, px: 2 }}
+                  sx={{ 
+                    fontWeight: 700, 
+                    borderRadius: 2, 
+                    px: { xs: 1.5, sm: 2 },
+                    py: 0.5,
+                    fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                    minWidth: { xs: "80px", sm: "auto" },
+                    background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                    '&:hover': {
+                      background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+                      transform: 'translateY(-1px)',
+                      boxShadow: theme.shadows[4]
+                    },
+                    transition: 'all 0.2s ease-in-out'
+                  }}
                   onClick={async () => {
                     try {
                       const token = localStorage.getItem("token");
@@ -296,6 +340,13 @@ const Sidebar = ({
                         alert("Sync is not configured. Set VITE_ADMIN_SYNC_TRIGGER_URL in your env.");
                         return;
                       }
+                      
+                      // Show loading state
+                      const button = document.activeElement;
+                      const originalText = button.textContent;
+                      button.textContent = "Syncing...";
+                      button.disabled = true;
+                      
                       const res = await fetch(trigger, {
                         method: "POST",
                         headers: {
@@ -305,30 +356,38 @@ const Sidebar = ({
                         credentials: "include",
                       });
                       const json = await res.json();
+                      
+                      button.textContent = originalText;
+                      button.disabled = false;
+                      
                       if (!res.ok) throw new Error(json.message);
                       const products = json?.result?.products?.synced;
                       const users = json?.result?.users?.synced;
                       if (typeof products === 'number' || typeof users === 'number') {
-                        alert(`Sync complete: products ${products ?? 0}, users ${users ?? 0}`);
+                        alert(`✅ Sync Complete!\nProducts: ${products ?? 0}\nUsers: ${users ?? 0}`);
                       } else {
-                        alert('Sync triggered successfully');
+                        alert('✅ Sync triggered successfully');
                       }
                       setLastSync(json.at || new Date().toISOString());
                     } catch (err) {
-                      alert("Sync failed: " + (err.message || err));
+                      const button = document.activeElement;
+                      button.textContent = "Sync";
+                      button.disabled = false;
+                      alert("❌ Sync failed: " + (err.message || err));
                     }
                   }}
                 >
-                  Sync
+                  Sync Data
                 </Button>
               </Box>
               {lastSync && (
                 <Typography
                   sx={{
                     mt: 1,
-                    fontSize: "0.75rem",
+                    fontSize: { xs: "0.7rem", sm: "0.75rem" },
                     color: theme.palette.secondary[200],
                     textAlign: "center",
+                    px: 1
                   }}
                 >
                   Last sync: {new Date(lastSync).toLocaleString()}
@@ -338,6 +397,118 @@ const Sidebar = ({
           </Box>
         </Drawer>
       )}
+
+      {/* Settings Menu */}
+      <Menu
+        anchorEl={settingsAnchor}
+        open={settingsOpen}
+        onClose={closeSettings}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        PaperProps={{
+          sx: {
+            mt: -1,
+            minWidth: 220,
+            boxShadow: theme.shadows[8],
+            border: `1px solid ${theme.palette.divider}`,
+            borderRadius: 2,
+          }
+        }}
+      >
+        <MenuItem 
+          onClick={() => { dispatch(setMode()); closeSettings(); }}
+          sx={{ 
+            py: 1.5,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2
+          }}
+        >
+          {theme.palette.mode === "dark" ? (
+            <LightModeOutlined sx={{ fontSize: "20px" }} />
+          ) : (
+            <DarkModeOutlined sx={{ fontSize: "20px" }} />
+          )}
+          <Box>
+            <Typography variant="body2" fontWeight="medium">
+              Switch to {theme.palette.mode === "dark" ? "Light" : "Dark"} Mode
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Change theme appearance
+            </Typography>
+          </Box>
+        </MenuItem>
+        
+        <MenuItem 
+          onClick={() => { setIsSidebarOpen(false); closeSettings(); }}
+          sx={{ 
+            py: 1.5,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2
+          }}
+        >
+          <ChevronLeft sx={{ fontSize: "20px" }} />
+          <Box>
+            <Typography variant="body2" fontWeight="medium">
+              Close Sidebar
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Hide navigation panel
+            </Typography>
+          </Box>
+        </MenuItem>
+        
+        <MenuItem 
+          onClick={() => {
+            closeSettings();
+            navigate('/admin');
+          }}
+          sx={{ 
+            py: 1.5,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2
+          }}
+        >
+          <AdminPanelSettingsOutlined sx={{ fontSize: "20px" }} />
+          <Box>
+            <Typography variant="body2" fontWeight="medium">
+              Admin Management
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Manage admin users
+            </Typography>
+          </Box>
+        </MenuItem>
+        
+        <MenuItem 
+          onClick={() => {
+            closeSettings();
+            const ok = window.confirm('This will clear all local data and refresh the page. Continue?');
+            if (!ok) return;
+            try { localStorage.clear(); sessionStorage.clear(); } catch {}
+            try { window.location.reload(); } catch {}
+          }}
+          sx={{ 
+            py: 1.5,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            color: theme.palette.warning.main
+          }}
+        >
+          <CloseIcon sx={{ fontSize: "20px" }} />
+          <Box>
+            <Typography variant="body2" fontWeight="medium">
+              Clear Cache & Reload
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Reset local storage
+            </Typography>
+          </Box>
+        </MenuItem>
+      </Menu>
     </Box>
   );
 };

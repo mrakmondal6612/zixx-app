@@ -13,6 +13,7 @@ import {
   Stack,
   TextField,
   Typography,
+  useTheme,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/DeleteOutline';
 import EditIcon from '@mui/icons-material/Edit';
@@ -25,6 +26,7 @@ import { getApiBase } from '@utils/apiBase';
 const apiBase = getApiBase();
 
 const Banners = () => {
+  const theme = useTheme();
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -340,14 +342,38 @@ const Banners = () => {
 
   return (
     <Box p={3}>
-      <Typography variant="h4" fontWeight={700} mb={2}>Banners</Typography>
+      <Typography 
+        variant="h4" fontWeight={700} mb={2} 
+        sx={{
+          backgroundColor:  theme.palette.mode === 'dark' ? theme.palette.background.default : theme.palette.background.default,
+          fontWeight: 'bold',
+          color: theme.palette.mode === 'dark' ? 'white' : 'black',
+         }}
+      >
+        Banners</Typography>
 
-      <Grid container spacing={2}>
+      <Grid 
+        container spacing={2}
+      >
         <Grid item xs={12} md={5}>
           <Card>
-            <CardHeader title="Create / Upload" />
-            <Divider />
-            <CardContent>
+            <CardHeader 
+              sx={{ 
+                backgroundColor:  theme.palette.mode === 'dark' ? theme.palette.background.default : "#838383",
+                
+              }}
+              title="Create / Upload" 
+            />
+            <Divider 
+            
+            />
+            <CardContent
+            sx={{ 
+              backgroundColor:  theme.palette.mode === 'dark' ? theme.palette.background.default : "#838383",
+              color: theme.palette.mode === 'dark' ? 'white' : 'white',
+              fontWeight: 'bold',
+            }}
+            >
               <Stack spacing={2}>
                 <Stack direction="row" spacing={2}>
                   <Select fullWidth value={form.page} onChange={(e) => setForm({ ...form, page: String(e.target.value), position: (positionOptions[String(e.target.value)]?.[0]?.value) || 'hero' })}>
@@ -355,9 +381,15 @@ const Banners = () => {
                       <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
                     ))}
                   </Select>
-                  <Select fullWidth value={form.position} onChange={(e) => setForm({ ...form, position: String(e.target.value) })}>
+                  <Select 
+                    sx={{ 
+                      backgroundColor:  theme.palette.mode === 'dark' ? theme.palette.background.default : "#838383",
+                      color: theme.palette.mode === 'dark' ? 'white' : 'white',
+              fontWeight: 'bold',
+                    }}
+                    fullWidth value={form.position} onChange={(e) => setForm({ ...form, position: String(e.target.value) })}>
                     {currentPositions.map(opt => (
-                      <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                      <MenuItem  key={opt.value} value={opt.value}>{opt.label}</MenuItem>
                     ))}
                   </Select>
                 </Stack>
@@ -399,7 +431,13 @@ const Banners = () => {
         </Grid>
 
         <Grid item xs={12} md={7}>
-          <Card>
+          <Card
+            sx={{ 
+              backgroundColor:  theme.palette.mode === 'dark' ? theme.palette.background.default : "#838383",
+              color: theme.palette.mode === 'dark' ? 'white' : 'white',
+              fontWeight: 'bold',
+            }}
+          > 
             <CardHeader title="Existing Banners" subheader={loading ? 'Loading...' : `${list.length} items`} />
             <Divider />
             <CardContent>

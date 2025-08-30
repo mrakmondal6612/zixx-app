@@ -7,8 +7,9 @@ import { geoData } from "@state/geoData";
 
 const Geography = () => {
   const theme = useTheme();
-  const { data: apiData, isLoading, isError } = useGetGeographyQuery();
-
+  const { data: apiData, error, isLoading, isError, refetch } = useGetGeographyQuery();
+  
+  // State for markers and geocoding progress
   const [markers, setMarkers] = React.useState([]);
   const [geoProgress, setGeoProgress] = React.useState({ done: 0, total: 0 });
 
@@ -61,6 +62,7 @@ const Geography = () => {
               coords: [geo.lon, geo.lat], // [lon, lat]
               label: q,
               count: Number(loc.count) || 0,
+              users: loc.users || [],
             });
           }
         } catch (e) {
@@ -244,7 +246,7 @@ const Geography = () => {
                     let pt;
                     try { pt = projection(m.coords); } catch (e) { continue; }
                     if (!pt || !isFinite(pt[0]) || !isFinite(pt[1])) continue;
-                    const cluster = { x: pt[0], y: pt[1], total: m.count || 1, labels: [m.label], id: m.id };
+                    const cluster = { x: pt[0], y: pt[1], total: m.count || 1, labels: [m.label], id: m.id, users: m.users || [] };
                     used[i] = true;
                     for (let j = i + 1; j < markers.length; j++) {
                       if (used[j]) continue;
@@ -259,6 +261,8 @@ const Geography = () => {
                         used[j] = true;
                         cluster.labels.push(m2.label);
                         cluster.total += (m2.count || 1);
+                        // merge users from both markers
+                        if (m2.users) cluster.users = [...(cluster.users || []), ...m2.users];
                         // recompute cluster centroid (weighted by count)
                         const w1 = cluster.total;
                         const w2 = (m2.count || 1);
@@ -279,7 +283,13 @@ const Geography = () => {
                           <g key={key} transform={`translate(${c.x}, ${c.y})`}>
                             <circle r={r} fill="#ff7043" stroke="#fff" strokeWidth={1.2} />
                             <text x={0} y={4} textAnchor="middle" fontSize={10} fill="#fff">{c.total}</text>
-                            <title>{c.labels.slice(0,5).join('; ')}</title>
+                            <title>
+                              {c.labels.slice(0,3).join('; ')}
+                              {c.users && c.users.length > 0 && (
+                                '\nCustomers: ' + c.users.slice(0,10).map(u => u.name).join(', ') + 
+                                (c.users.length > 10 ? ` and ${c.users.length - 10} more...` : '')
+                              )}
+                            </title>
                           </g>
                         );
                       })}

@@ -84,7 +84,7 @@ const Dashboard = () => {
               background: theme.palette.mode === 'dark'
                 ? 'linear-gradient(135deg, rgba(255,209,102,0.35), rgba(255,209,102,0.15))'
                 : 'linear-gradient(135deg, rgba(255,209,102,0.9), rgba(255,209,102,0.65))',
-              color: theme.palette.mode === 'dark' ? theme.palette.secondary[50] : theme.palette.grey[1000],
+              color: theme.palette.mode === 'dark' ? theme.palette.secondary[50] : theme.palette.grey[600],
               fontSize: "14px",
               fontWeight: 700,
               padding: "10px 20px",
@@ -98,7 +98,7 @@ const Dashboard = () => {
                 opacity: 0.95,
                 background: theme.palette.mode === 'dark'
                   ? 'linear-gradient(135deg, rgba(255,209,102,0.45), rgba(255,209,102,0.2))'
-                  : 'linear-gradient(135deg, rgba(255,209,102,1), rgba(255,209,102,0.75))',
+                  : 'linear-gradient(135deg, rgb(243, 220, 166), rgba(206, 198, 178, 0.75))',
               }
             }}
           >
@@ -236,24 +236,26 @@ const Dashboard = () => {
               border: "none",
               borderRadius: "12px",
               minWidth: 0,
-              boxShadow: '0 4px 14px rgba(0,0,0,0.15)'
+              minHeight: 0,
+              height: 520,
+              boxShadow: "0 4px 14px rgba(0,0,0,0.15)",
             },
             "& .MuiDataGrid-cell": {
               borderBottom: "none",
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
               color: theme.palette.text.primary,
             },
             "& .MuiDataGrid-columnHeaders": {
               backgroundColor: theme.palette.background.alt,
               color: theme.palette.secondary[100],
               borderBottom: "none",
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              borderTopLeftRadius: '12px',
-              borderTopRightRadius: '12px',
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              borderTopLeftRadius: "12px",
+              borderTopRightRadius: "12px",
             },
             "& .MuiDataGrid-virtualScroller": {
               backgroundColor: theme.palette.background.alt,
@@ -262,8 +264,8 @@ const Dashboard = () => {
               backgroundColor: theme.palette.background.alt,
               color: theme.palette.secondary[100],
               borderTop: "none",
-              borderBottomLeftRadius: '12px',
-              borderBottomRightRadius: '12px',
+              borderBottomLeftRadius: "12px",
+              borderBottomRightRadius: "12px",
             },
             "& .MuiDataGrid-toolbarContainer .MuiButton-text": {
               color: `${theme.palette.secondary[200]} !important`,
@@ -279,9 +281,13 @@ const Dashboard = () => {
             rows={(data && data.transactions) || []}
             columns={columns}
             disableRowSelectionOnClick
-            autoHeight
+            sx={{
+              height: 400, // fixed height
+              overflowY: "auto", // vertical scroll
+            }}
           />
         </Box>
+
 
       </Box>
     </Box>

@@ -48,6 +48,8 @@ interface ProductType {
     color: string;
     quantity: number;
   };
+  // backend field for stock quantity
+  supply?: number;
 }
 
 const Product = () => {
@@ -164,8 +166,27 @@ const Product = () => {
     return true;
   };
 
+  // out-of-stock derived from backend quantity `supply` (preferred) or `inStock` fallback
+  const outOfStock = !!product && (
+    typeof (product as any).supply === 'number' ? (product as any).supply <= 0 : product.inStock === false
+  );
+  // available stock number (fallback to 0 when unknown)
+  const availableStock: number = product && typeof (product as any).supply === 'number'
+    ? Math.max(0, (product as any).supply as number)
+    : (product?.inStock ? 1 : 0);
+
   const handleQuantityChange = (action: 'increase' | 'decrease') => {
-    setQuantity((prev) => (action === 'increase' ? prev + 1 : prev > 1 ? prev - 1 : prev));
+    setQuantity((prev) => {
+      if (action === 'increase') {
+        const next = prev + 1;
+        if (availableStock > 0 && next > availableStock) {
+          toast.error(`Only ${availableStock} in stock`);
+          return prev;
+        }
+        return next;
+      }
+      return prev > 1 ? prev - 1 : prev;
+    });
   };
 
   const handleAddToCart = async () => {
@@ -331,7 +352,7 @@ const Product = () => {
                 <li>• Eco-friendly Dyes</li>
               </ul>
             </Card>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <span className="text-2xl md:text-3xl font-bold text-destructive">₹{product.price}</span>
               {product.discount > 0 && (
                 <>
@@ -339,7 +360,15 @@ const Product = () => {
                   <Badge variant="destructive">{Math.round(product.discount)}% OFF</Badge>
                 </>
               )}
+              {outOfStock ? (
+                <Badge variant="destructive">Out of Stock</Badge>
+              ) : (
+                <Badge variant="secondary">In Stock</Badge>
+              )}
             </div>
+            {!outOfStock && (
+              <p className="text-sm text-muted-foreground -mt-2">{availableStock} item{availableStock === 1 ? '' : 's'} left</p>
+            )}
 
             {/* Size Selector */}
             <div>
@@ -371,11 +400,11 @@ const Product = () => {
             <div>
               <label className="text-sm font-medium mb-2 block">Quantity</label>
               <div className="flex items-center gap-3">
-                <Button variant="outline" size="icon" onClick={() => handleQuantityChange('decrease')} disabled={quantity <= 1}>
+                <Button variant="outline" size="icon" onClick={() => handleQuantityChange('decrease')} disabled={quantity <= 1 || outOfStock}>
                   <Minus className="w-4 h-4" />
                 </Button>
                 <span className="font-medium text-lg w-8 text-center">{quantity}</span>
-                <Button variant="outline" size="icon" onClick={() => handleQuantityChange('increase')}>
+                <Button variant="outline" size="icon" onClick={() => handleQuantityChange('increase')} disabled={outOfStock || (availableStock > 0 && quantity >= availableStock)}>
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
@@ -383,7 +412,7 @@ const Product = () => {
 
             {/* Buttons */}
             <div className="flex gap-3 md:gap-4">
-              <Button className="flex-1 bg-destructive hover:bg-destructive/90" onClick={handleAddToCart}>
+              <Button className="flex-1 bg-destructive hover:bg-destructive/90" onClick={handleAddToCart} disabled={outOfStock || (availableStock > 0 && quantity > availableStock)}>
                 <ShoppingCart className="w-4 h-4 mr-2" /> Add to Cart
               </Button>
               <Button variant="outline" size="icon" onClick={handleAddToWishlist} className={isWishlisted ? 'text-destructive border-destructive' : ''}>

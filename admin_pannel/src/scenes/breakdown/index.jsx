@@ -240,27 +240,28 @@ const Breakdown = () => {
         {/* Chart */}
         <Grid item xs={12}>
           <Paper 
-            elevation={3}
+            elevation={12}
             sx={{
               p: { xs: 2.5, md: 3 },
               borderRadius: 3,
-              height: { xs: 480, md: 600 },
+              height: { xs: 480, md: 650 },
               background: `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
               overflow: "hidden",
               border: `1px solid ${theme.palette.divider}`,
+              color: theme.palette.mode === 'dark' ? 'white' : 'black',fontWeight: 'bold',
             }}
             ref={chartRef}
           >
             <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
-              <Typography variant="h6" fontWeight={700} sx={{ color: theme.palette.mode === "dark" ? "#fff" : "#000" }}>
+              <Typography variant="h6" fontWeight={700} sx={{  color: theme.palette.mode === 'dark' ? 'white' : 'black',fontWeight: 'bold', }}>
                 Sales Breakdown
               </Typography>
             </Stack>
-            <Divider sx={{ mb: 2,  }} />
+            <Divider sx={{ mb: 1}} />
             {isLoading ? (
               <Skeleton variant="rounded" width="100%" height="100%" sx={{ borderRadius: 2, backgroundColor: theme.palette.mode === "dark" ? "#fff" : "black", borderColor: theme.palette.mode === "dark" ? "#fff" : "black", color: theme.palette.mode === "dark" ? "#fff" : "black" }} />
             ) : (
-              <Box height="100%" sx={{ color: theme.palette.mode === "dark" ? "#fff" : "black" , borderColor: theme.palette.mode === "dark" ? "#fff" : "black" }}>
+              <Box height="100%" sx={{ color: theme.palette.mode === "dark" ? "#fff" : "black" , bgcolorColor: theme.palette.mode === "dark" ? "#fff" : "black" }}>
                 <BreakdownChart currencySymbol="₹" disableArcLinkLabels  />
               </Box>
             )}

@@ -37,8 +37,14 @@ const CategoryPage: React.FC = () => {
       try {
         const res = await fetch(apiUrl('/clients/products'), { credentials: 'include' } );
         const result = await res.json();
-        if (!result.ok) throw new Error(result.message || 'Failed to fetch');
-        setProducts(result.data as Product[]);
+        // Accept multiple common shapes
+        let list: any = null;
+        if (Array.isArray(result)) list = result;
+        else if (Array.isArray(result?.data)) list = result.data;
+        else if (Array.isArray(result?.products)) list = result.products;
+        else if (Array.isArray(result?.data?.products)) list = result.data.products;
+        if (!list) throw new Error(result.message || 'Failed to fetch');
+        setProducts(list as Product[]);
         setLoading(false);
       } catch (e: any) {
         setError(e.message || 'Error fetching products');
@@ -55,6 +61,34 @@ const CategoryPage: React.FC = () => {
       ? `${cap(subcategory)} | ${cap(category)} — Shop`
       : `${cap(category)} — Shop`;
   }, [category, subcategory]);
+
+  // Reconcile navigation context so only one of kids/men can be active at a time.
+  // Prefer referrer when available; otherwise fall back to session flags.
+  useEffect(() => {
+    if (!location.pathname.includes('/category/')) return;
+    const refFromKids = document.referrer.includes('/kids');
+    const refFromMen = document.referrer.includes('/men');
+    let ctx: 'kids' | 'men' | '' = '';
+    if (refFromKids) ctx = 'kids';
+    else if (refFromMen) ctx = 'men';
+    else {
+      const k = sessionStorage.getItem('kidsContext') === 'true';
+      const m = sessionStorage.getItem('menContext') === 'true';
+      if (k && !m) ctx = 'kids';
+      else if (m && !k) ctx = 'men';
+      else if (k && m) ctx = 'kids'; // default to kids when ambiguous
+    }
+    if (ctx === 'kids') {
+      sessionStorage.setItem('kidsContext', 'true');
+      sessionStorage.removeItem('menContext');
+    } else if (ctx === 'men') {
+      sessionStorage.setItem('menContext', 'true');
+      sessionStorage.removeItem('kidsContext');
+    } else {
+      sessionStorage.removeItem('kidsContext');
+      sessionStorage.removeItem('menContext');
+    }
+  }, [location.pathname]);
 
   // Helper: normalize tokens to improve matching across minor naming differences
   const normalize = (v?: string) => {
@@ -76,12 +110,16 @@ const CategoryPage: React.FC = () => {
     };
     if (aliases[base]) return aliases[base];
     // plural trim (keep words like 'clothes' intact)
-    if (base.endsWith('s') && base !== 'clothes') return base.slice(0, -1);
+    if (base.endsWith('s') && base !== 'clothes' && base !== 'flowers' && base !== 'accessories') return base.slice(0, -1);
     return base;
   };
 
   const normalizedCategory = normalize(category);
   const normalizedSub = normalize(subcategory);
+  // Compact versions remove spaces for robust matching (e.g., "top wear" vs "topwear")
+  const compact = (s: string) => s.replace(/\s+/g, '');
+  const normalizedCategoryC = compact(normalizedCategory);
+  const normalizedSubC = compact(normalizedSub);
 
   const filteredByCategory = useMemo(() => {
     // Special collection for pseudo-category routes
@@ -95,9 +133,130 @@ const CategoryPage: React.FC = () => {
         .sort((a, b) => b.r - a.r)
         .map(item => item.p);
     }
-    // Default: match real category exactly
-    return products.filter(p => normalize(p.category) === normalizedCategory);
-  }, [products, normalizedCategory]);
+    // Pseudo-category: new arrivals -> theme/title contains 'new'
+    if (normalizedCategory === 'new arrival' || normalizedCategory === 'new') {
+      return products.filter(p => {
+        const t = (normalize(p.theme) || '');
+        const title = (normalize(p.title) || '');
+        return t.includes('new') || title.includes('new');
+      });
+    }
+    // Pseudo-category: kids -> include items with gender kid/boy/girl OR category containing 'kid'
+    if (normalizedCategory === 'kids') {
+      return products.filter(p => {
+        const g = (normalize(p.gender) || '');
+        const c = (normalize(p.category) || '');
+        return /(kid|boy|girl)/.test(g) || /kid/.test(c);
+      });
+    }
+    // Default: strict category match first
+    let categoryProducts = products.filter(p => {
+      const productCat = compact(normalize(p.category));
+      return productCat === normalizedCategoryC;
+    });
+
+    // If too few or zero, try subcategory-first categories (e.g., saree, kurta, shirt, topwear)
+    if (categoryProducts.length === 0) {
+      const bySubExact = products.filter(p => compact(normalize(p.subcategory)) === normalizedCategoryC);
+      if (bySubExact.length > 0) {
+        categoryProducts = bySubExact;
+      }
+    }
+
+    // If still empty, try alias keyword groups for common umbrella categories
+    if (categoryProducts.length === 0) {
+      const kw: Record<string, string[]> = {
+        ethnic: ['ethnic', 'ethnic wear', 'kurta', 'kurti', 'saree', 'sari', 'lehenga', 'sherwani', 'anarkali', 'ethnic set', 'ethnic coord', 'ethnic co-ord'],
+        topwear: ['topwear', 'top wear', 'tshirt', 't-shirt', 'tee', 'shirt', 'shirts', 'polo', 'polos', 'hoodie', 'sweatshirt', 'sweater'],
+        bottoms: ['bottoms', 'bottom wear', 'trouser', 'trousers', 'pant', 'pants', 'jean', 'jeans', 'chinos', 'short', 'shorts', 'skirt', 'palazzo', 'legging', 'leggings'],
+        saree: ['saree', 'sari'],
+        kurta: ['kurta', 'kurti'],
+        accessories: ['accessory', 'accessories', 'belt', 'cap', 'hat', 'bag', 'bags', 'wallet', 'watch', 'jewellery', 'jewelry', 'scarf'],
+        shirt: ['shirt', 'shirts'],
+        collections: ['collection', 'collections'],
+      };
+      const key = normalizedCategoryC;
+      const entries = Object.entries(kw);
+      const matchEntry = entries.find(([k]) => k === key);
+      if (matchEntry) {
+        const words = matchEntry[1].map(w => compact(normalize(w)));
+        categoryProducts = products.filter(p => {
+          const fields = [p.category, p.subcategory, p.theme, p.brand, p.title]
+            .map(x => compact(normalize((x as string) || '')));
+          return words.some(w => fields.some(f => f.includes(w)));
+        });
+      }
+    }
+
+    // If still empty, try loose contains across subcategory, category, theme, brand, and title
+    if (categoryProducts.length === 0) {
+      const needle = normalizedCategoryC;
+      const tokens = (normalize(category) || '').split(' ').filter(Boolean).map(compact);
+      categoryProducts = products.filter(p => {
+        const fields = [p.category, p.subcategory, p.theme, p.brand, p.title]
+          .map(x => compact(normalize((x as string) || '')));
+        // simple contains for exact/substring
+        const containsNeedle = fields.some(f => f && (f === needle || f.includes(needle)));
+        if (containsNeedle) return true;
+        // token-based AND: every token must appear in at least one field
+        if (tokens.length > 1) {
+          return tokens.every(tok => fields.some(f => f.includes(tok)));
+        }
+        return false;
+      });
+    }
+    
+    // Determine exclusive context flags (resolved by the effect above)
+    const kidsFlag = sessionStorage.getItem('kidsContext') === 'true';
+    const menFlag = sessionStorage.getItem('menContext') === 'true';
+    const shouldShowKidsOnly = location.pathname.includes('/category/') && kidsFlag && !menFlag;
+    const shouldShowMenOnly = location.pathname.includes('/category/') && menFlag && !kidsFlag;
+    
+    console.log('Category filtering debug:', {
+      normalizedCategory,
+      normalizedCategoryC,
+      shouldShowKidsOnly,
+      categoryProductsCount: categoryProducts.length,
+      referrer: document.referrer,
+      kidsContext: sessionStorage.getItem('kidsContext'),
+      allCategories: [...new Set(products.map(p => p.category))].sort(),
+      flowersProducts: products.filter(p => p.category && p.category.toLowerCase().includes('flower'))
+    });
+    
+    if (shouldShowKidsOnly) {
+      console.log(`Filtering ${normalizedCategory} for kids only. Before filter:`, categoryProducts.length);
+      const kidsFiltered = categoryProducts.filter(p => {
+        const g = (normalize(p.gender) || '');
+        const c = (normalize(p.category) || '');
+        const sc = (normalize(p.subcategory) || '');
+        return /(kid|boy|girl)/.test(g) || /kid/.test(c) || /kid/.test(sc);
+      });
+      if (kidsFiltered.length > 0) {
+        categoryProducts = kidsFiltered;
+      } else {
+        console.log('Kids filter produced 0 items; keeping unfiltered category results.');
+      }
+      console.log(`After kids filter (applied=${kidsFiltered.length > 0}):`, kidsFiltered.length);
+    }
+    
+    if (shouldShowMenOnly) {
+      console.log(`Filtering ${normalizedCategory} for men only. Before filter:`, categoryProducts.length);
+      const menFiltered = categoryProducts.filter(p => {
+        const g = (normalize(p.gender) || '');
+        const c = (normalize(p.category) || '');
+        const sc = (normalize(p.subcategory) || '');
+        return /(men|man|male)/.test(g) || /men/.test(c) || /men/.test(sc);
+      });
+      if (menFiltered.length > 0) {
+        categoryProducts = menFiltered;
+      } else {
+        console.log('Men filter produced 0 items; keeping unfiltered category results.');
+      }
+      console.log(`After men filter (applied=${menFiltered.length > 0}):`, menFiltered.length);
+    }
+    
+    return categoryProducts;
+  }, [products, normalizedCategory, location.pathname]);
 
   const subcategories = useMemo(() => {
     const set = new Set<string>();
@@ -139,9 +298,19 @@ const CategoryPage: React.FC = () => {
   }, [selectedBrand]);
 
   const filteredProducts = useMemo(() => {
+    const stripGenderTokens = (s: string) => s.replace(/\b(girl|girls|boy|boys|kid|kids)\b/g, '').replace(/\s+/g, ' ').trim();
     let list = !normalizedSub
       ? filteredByCategory
-      : filteredByCategory.filter(p => normalize(p.subcategory) === normalizedSub);
+      : filteredByCategory.filter(p => {
+          const ps = compact(normalize(p.subcategory));
+          if (ps === normalizedSubC) return true;
+          // try after removing gender tokens from both sides
+          const psBase = compact(stripGenderTokens(normalize(p.subcategory)));
+          const subBase = compact(stripGenderTokens(normalizedSub));
+          if (psBase && subBase && psBase === subBase) return true;
+          // loose contains match as a last resort
+          return ps.includes(normalizedSubC) || psBase.includes(subBase);
+        });
     // brand filter (skip when 'all')
     if (selectedBrand && selectedBrand !== 'all') {
       list = list.filter(p => (p.brand || '').toLowerCase() === selectedBrand.toLowerCase());
@@ -164,7 +333,10 @@ const CategoryPage: React.FC = () => {
       <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-8 py-8">
         {/* Heading */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold capitalize">{decodedURIComponentSafe(category)}</h1>
+          <div className="flex items-end gap-3 flex-wrap">
+            <h1 className="text-3xl font-bold capitalize">{decodedURIComponentSafe(category)}</h1>
+            <span className="text-sm text-muted-foreground">({filteredProducts.length} items)</span>
+          </div>
           {subcategory && (
             <p className="text-muted-foreground capitalize">Subcategory: {decodedURIComponentSafe(subcategory)}</p>
           )}
@@ -178,17 +350,30 @@ const CategoryPage: React.FC = () => {
                 to={`/category/${encodeURIComponent(normalizedCategory)}`}
                 className={`px-3 py-1 rounded-full text-sm border ${!normalizedSub ? 'bg-black text-white border-black' : 'bg-white text-black border-gray-300'}`}
               >
-                All
+                All ({filteredByCategory.length})
               </Link>
-              {subcategories.map((sub) => (
-                <Link
-                  key={sub}
-                  to={`/category/${encodeURIComponent(normalizedCategory)}/${encodeURIComponent(sub.toLowerCase())}`}
-                  className={`px-3 py-1 rounded-full text-sm border ${normalizedSub === sub.toLowerCase() ? 'bg-black text-white border-black' : 'bg-white text-black border-gray-300'}`}
-                >
-                  {sub}
-                </Link>
-              ))}
+              {subcategories.map((sub) => {
+                const stripGenderTokens = (s: string) => s.replace(/\b(girl|girls|boy|boys|kid|kids)\b/g, '').replace(/\s+/g, ' ').trim();
+                // compute count for this sub using same logic as filteredProducts
+                const subC = (sub || '').toLowerCase().replace(/\s+/g, '');
+                const baseCount = filteredByCategory.filter(p => {
+                  const ps = (p.subcategory ? p.subcategory.toLowerCase().replace(/\s+/g, '') : '');
+                  if (ps === subC) return true;
+                  const psBase = (stripGenderTokens(p.subcategory || '').toLowerCase().replace(/\s+/g, ''));
+                  const subBase = (stripGenderTokens(sub).toLowerCase().replace(/\s+/g, ''));
+                  if (psBase && subBase && psBase === subBase) return true;
+                  return ps.includes(subC) || psBase.includes(subBase);
+                }).length;
+                return (
+                  <Link
+                    key={sub}
+                    to={`/category/${encodeURIComponent(normalizedCategory)}/${encodeURIComponent(sub.toLowerCase())}`}
+                    className={`px-3 py-1 rounded-full text-sm border ${normalizedSub === sub.toLowerCase() ? 'bg-black text-white border-black' : 'bg-white text-black border-gray-300'}`}
+                  >
+                    {sub} ({baseCount})
+                  </Link>
+                );
+              })}
             </div>
           </div>
         )}

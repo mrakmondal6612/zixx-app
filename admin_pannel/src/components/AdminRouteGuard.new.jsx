@@ -5,7 +5,7 @@ export default function AdminRouteGuard({ children }) {
   const [checking, setChecking] = useState(true);
   const [allowed, setAllowed] = useState(false);
   const frontendBase = (() => {
-    let f = import.meta.env.VITE_FRONTEND_URL || `http://${window.location.hostname}:8080`;
+    let f = import.meta.env.VITE_FRONTEND_URL;
     try { const u = new URL(f); return u.origin; } catch { return f; }
   })().replace(/\/$/, '');
   const mainLogin = `${frontendBase}/auth`;

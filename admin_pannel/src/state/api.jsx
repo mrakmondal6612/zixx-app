@@ -128,6 +128,7 @@ export const api = createApi({
     "Admins",
     "Performance",
     "Dashboard",
+    "Testimonials",
   ],
   endpoints: (build) => ({
     getUser: build.query({
@@ -352,6 +353,47 @@ export const api = createApi({
       query: () => ({ url: "admin/dashboard", method: "GET" }),
       providesTags: ["Dashboard"],
     }),
+
+    // Testimonials moderation (admin)
+    getAdminTestimonials: build.query({
+      query: ({ status = 'pending', page = 1, pageSize = 50, q = '', sortBy = 'createdAt', sortDir = 'desc' } = {}) => ({
+        url: `admin/testimonials`,
+        method: 'GET',
+        params: { status, page, pageSize, q, sortBy, sortDir },
+      }),
+      providesTags: ["Testimonials"],
+    }),
+    approveAdminTestimonial: build.mutation({
+      query: ({ id } = {}) => ({
+        url: `admin/testimonials/${id}/approve`,
+        method: 'PATCH',
+      }),
+      invalidatesTags: ["Testimonials"],
+    }),
+    updateAdminTestimonial: build.mutation({
+      query: ({ id, name, text, rating } = {}) => ({
+        url: `admin/testimonials/${id}`,
+        method: 'PUT',
+        body: { name, text, rating },
+      }),
+      invalidatesTags: ["Testimonials"],
+    }),
+    deleteAdminTestimonial: build.mutation({
+      query: ({ id } = {}) => ({
+        url: `admin/testimonials/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ["Testimonials"],
+    }),
+
+    // Get current admin user info
+    getCurrentAdmin: build.query({
+      query: () => ({
+        url: "clients/user/me",
+        method: "GET",
+      }),
+      providesTags: ["User"],
+    }),
   }),
 });
 
@@ -381,8 +423,13 @@ export const {
   useGetAdminsQuery,
   useGetUserPerformanceQuery,
   useGetDashboardQuery,
+  useGetAdminTestimonialsQuery,
+  useApproveAdminTestimonialMutation,
+  useUpdateAdminTestimonialMutation,
+  useDeleteAdminTestimonialMutation,
   useGetAdminTransactionsQuery,
   useBackfillAdminTransactionsMutation,
   useGetAdminUsersQuery,
   useGetClientsUsersQuery,
+  useGetCurrentAdminQuery,
 } = api;

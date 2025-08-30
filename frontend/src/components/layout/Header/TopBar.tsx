@@ -145,12 +145,11 @@ export const TopBar = () => {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => logout()}
-                  className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer text-red-600"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Sign Out
+                <DropdownMenuItem asChild>
+                  <Link to="/logout" className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer text-red-600">
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

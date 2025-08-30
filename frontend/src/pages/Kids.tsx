@@ -34,8 +34,29 @@ const Kids = () => {
         const result = await res.json();
         if (!result.ok) throw new Error("API returned not ok");
         // console.log("result.data", result.data);
+        // Strictly keep only kids items (defensive in case API returns mixed data)
+        const isKidsProduct = (p: any) => {
+          const g = (p?.gender || '').toString().toLowerCase();
+          const c = (p?.category || '').toString().toLowerCase();
+          const sc = (p?.subcategory || '').toString().toLowerCase();
+          const isKid = /(kid|boy|girl)/.test(g) || /kids?/.test(c) || /kids?/.test(sc);
+          const isAdult = /(women|woman|men|man|adult)/.test(g) || /(women|men|adult)/.test(c);
+          return isKid && !isAdult;
+        };
+        const kidsOnly: Product[] = (result.data || [])
+          // filter by kids predicate
+          .filter((p: any) => isKidsProduct(p))
+          // exclude any known misclassified IDs (safety net)
+          .filter((p: any) => p?._id !== '687ddfb9331086b5654f73ac')
+          // exclude products with problematic categories
+          .filter((p: any) => {
+            const cat = (p?.category || '').toString();
+            const problematicCategories = ['Flowers', 'flowers', 'ethnic', 'Ethnic'];
+            return !problematicCategories.includes(cat);
+          });
+
         const grouped: { [category: string]: { [subcategory: string]: Product[] } } = {};
-        result.data.forEach((product: Product) => {
+        kidsOnly.forEach((product: Product) => {
           const cat = product.category || 'Others';
           const sub = product.subcategory || 'Others';
           if (!grouped[cat]) grouped[cat] = {};
@@ -43,6 +64,19 @@ const Kids = () => {
           grouped[cat][sub].push(product);
         });
 
+        console.log("Kids products grouped by category:", grouped);
+        // Debug the Flowers category specifically
+        if (grouped['Flowers']) {
+          console.log("Flowers category products:", grouped['Flowers']);
+          Object.keys(grouped['Flowers']).forEach(sub => {
+            console.log(`Flowers -> ${sub}:`, grouped['Flowers'][sub].map(p => ({
+              title: p.title,
+              category: p.category,
+              subcategory: p.subcategory,
+              gender: p.gender
+            })));
+          });
+        }
         setGroupedProducts(grouped);
         setLoading(false);
       } catch (err: any) {
@@ -58,16 +92,35 @@ const Kids = () => {
   const allProducts = Object.values(groupedProducts).flatMap(subcategories => Object.values(subcategories).flat());
   const bestSellers = allProducts.filter(p => p.theme?.toLowerCase().includes('best')).slice(0, 8);
   const newArrivals = allProducts.filter(p => p.theme?.toLowerCase().includes('new')).slice(0, 8);
-  const categoriesList = Object.keys(groupedProducts).map((cat) => {
-    const subcats = Object.keys(groupedProducts[cat] || {});
-    const firstSub = subcats[0];
-    const firstProd = firstSub ? groupedProducts[cat][firstSub][0] : undefined;
-    return {
-      name: cat,
-      image: firstProd?.image?.[0] || '',
-      subcategories: subcats,
-    };
-  });
+  const categoriesList = Object.keys(groupedProducts)
+    .filter(cat => {
+      // Remove problematic categories that don't work properly
+      const problematicCategories = ['Flowers', 'flowers', 'ethnic', 'Ethnic'];
+      return !problematicCategories.includes(cat);
+    })
+    .map((cat) => {
+      const allSubs = Object.keys(groupedProducts[cat] || {});
+      // keep only subcategories that actually have products
+      const subcats = allSubs.filter((s) => (groupedProducts[cat][s] || []).length > 0);
+      // find first product with an image across all subcategories
+      let img = '';
+      for (const s of subcats) {
+        const arr = groupedProducts[cat][s] || [];
+        const withImg = arr.find(p => Array.isArray(p.image) && p.image[0]);
+        if (withImg?.image?.[0]) { img = withImg.image[0]; break; }
+      }
+      
+      // Double-check that this category will have products when filtered on Category page
+      const totalProducts = subcats.reduce((sum, s) => sum + (groupedProducts[cat][s] || []).length, 0);
+      console.log(`Category "${cat}" has ${totalProducts} products across ${subcats.length} subcategories`);
+      
+      return {
+        name: cat,
+        image: img,
+        subcategories: subcats,
+        productCount: totalProducts,
+      };
+    }).filter(c => (c.subcategories && c.subcategories.length > 0 && c.productCount > 0));
   
 
   return (
@@ -91,44 +144,26 @@ const Kids = () => {
 
         {loading && <p>Loading...</p>}
         {error && <p className="text-red-500">{error}</p>}
-        {!loading && !error && Object.keys(groupedProducts).map((category, i) => (
-          <section key={i} className="mb-16">
-            <h2 className="text-2xl font-bold mb-6">{category}</h2>
-            {Object.keys(groupedProducts[category]).map((subcategory, j) => (
-              <div key={j} className="mb-10">
-                <h3 className="text-xl font-semibold mb-4">{subcategory}</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-                  {groupedProducts[category][subcategory].map((p) => (
-                    <ProductCard
-                      key={p._id}
-                      id={p._id}
-                      title={p.title}
-                      image={p.image?.[0]}
-                      price={p.price}
-                      discount={p.discount}
-                      badge={p.theme?.toLowerCase().includes('best') ? 'Best Seller' : p.theme?.toLowerCase().includes('new') ? 'New Arrival' : undefined}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </section>
-        ))}  
 
-        {/* Shop by Category */}
+        {/* Shop by Category (Kids) - shown first */}
         {categoriesList.length > 0 && (
           <section className="mb-16">
             <h2 className="text-2xl font-bold mb-8">Shop by Category</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {categoriesList.map((category, index) => (
                 <div key={index} className="group">
-                  <Link to={`/category/${encodeURIComponent(category.name.toLowerCase())}`} className="block">
+                  <Link 
+                    to={`/category/${encodeURIComponent(category.name.toLowerCase())}`} 
+                    className="block"
+                    onClick={() => { sessionStorage.setItem('kidsContext', 'true'); sessionStorage.removeItem('menContext'); }}
+                  >
                     <Card className="overflow-hidden">
                       <div className="aspect-square relative">
                         <img
-                          src={category.image || '/placeholder.svg'}
+                          src={category.image || `https://source.unsplash.com/featured/400x400?kid,children,${encodeURIComponent(category.name)}`}
                           alt={category.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/placeholder.svg'; }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
                           <h3 className="text-white text-xl font-bold">{category.name}</h3>
@@ -140,7 +175,12 @@ const Kids = () => {
                     <ul className="text-sm text-gray-600 space-y-1">
                       {category.subcategories.map((sub, idx) => (
                         <li key={idx} className="hover:text-[#D92030]">
-                          <Link to={`/category/${encodeURIComponent(category.name.toLowerCase())}/${encodeURIComponent(sub.toLowerCase())}`}>{sub}</Link>
+                          <Link 
+                            to={`/category/${encodeURIComponent(category.name.toLowerCase())}/${encodeURIComponent(sub.toLowerCase())}`}
+                            onClick={() => { sessionStorage.setItem('kidsContext', 'true'); sessionStorage.removeItem('menContext'); }}
+                          >
+                            {sub}
+                          </Link>
                         </li>
                       ))}
                     </ul>
@@ -151,10 +191,33 @@ const Kids = () => {
           </section>
         )}
 
+        {/* All Kids Products */}
+        {!loading && !error && (
+          <section className="mb-16">
+            <h2 className="text-2xl font-bold mb-6">All Kids Products</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              {allProducts.map((p) => (
+                <ProductCard
+                  key={p._id}
+                  id={p._id}
+                  title={p.title}
+                  image={p.image?.[0]}
+                  price={p.price}
+                  discount={p.discount}
+                  badge={p.theme?.toLowerCase().includes('best') ? 'Best Seller' : p.theme?.toLowerCase().includes('new') ? 'New Arrival' : undefined}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Special Sections */}
         <section className="mb-16">
           {/* Best Sellers Banner always visible */}
+            </section>
           <section className="mb-16">
+        {bestSellers.length > 0 && (
+          <>
             <DynamicBanner
               page="kids"
               position="best"
@@ -167,9 +230,6 @@ const Kids = () => {
               }}
               style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
             />
-          </section>
-          {bestSellers.length > 0 && (
-            <>
               <h2 className="text-2xl font-bold mb-6">Best Sellers</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
                 {bestSellers.map(p => (
@@ -189,6 +249,8 @@ const Kids = () => {
         </section>
 
         <section className="mb-16">
+          {newArrivals.length > 0 && (
+            <>
           <DynamicBanner
             page="kids"
             position="new"
@@ -201,8 +263,6 @@ const Kids = () => {
             }}
             style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
           />
-          {newArrivals.length > 0 && (
-            <>
               <h2 className="text-2xl font-bold mb-6">New Arrivals</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
                 {newArrivals.map(p => (

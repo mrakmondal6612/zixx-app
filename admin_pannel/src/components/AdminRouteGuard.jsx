@@ -15,7 +15,7 @@ export default function AdminRouteGuard({ children }) {
         f = 'https://zixx.vercel.app';
       } else {
         // Dev fallback: assume main frontend runs on :8080 on same host
-        f = `http://${window.location.hostname}:8080`;
+        f = `http://${window.location.hostname}`;
       }
     }
     try { const u = new URL(f); return u.origin; } catch { return f; }

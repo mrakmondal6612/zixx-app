@@ -20,6 +20,7 @@ import Overview from "@scenes/overview";
 import Daily from "@scenes/daily";
 import Monthly from "@scenes/monthly";
 import Breakdown from "@scenes/breakdown";
+import Testimonials from "@scenes/testimonials";
 
 // management
 import Admin from "@scenes/admin";
@@ -80,6 +81,7 @@ function App() {
               <Route path="/admin" element={<Admin />} />
               <Route path="/performance" element={<Performance />} />
               <Route path="/banners" element={<Banners />} />
+              <Route path="/testimonials" element={<Testimonials />} />
             </Route>
           </Routes>
         </ThemeProvider>

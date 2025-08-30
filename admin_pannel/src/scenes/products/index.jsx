@@ -22,6 +22,12 @@ import {
   Tooltip,
   Divider,
   Autocomplete,
+  InputAdornment,
+  Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import Header from "@components/Header";
 import { 
@@ -31,7 +37,7 @@ import {
   useAddAdminProductMutation,
   useUploadAdminProductImageMutation,
 } from "@state/api";
-import { Add as AddIcon } from "@mui/icons-material";
+import { Add as AddIcon, Search as SearchIcon, Clear as ClearIcon, FilterList as FilterIcon } from "@mui/icons-material";
 import CloseIcon from "@mui/icons-material/Close";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 
@@ -49,7 +55,58 @@ const Product = ({ product, onDelete, onUpdate }) => {
   };
 
   const handleSave = () => {
-    onUpdate(product._id, editedProduct);
+    // Normalize fields to match backend expectations
+    const payload = { ...editedProduct };
+    // subcategory mapping
+    payload.subcategory = editedProduct.subCategory ?? editedProduct.subcategory ?? "";
+    delete payload.subCategory;
+    // images: ensure array of strings in `images` for backend normalization
+    if (Array.isArray(editedProduct.image)) {
+      payload.images = editedProduct.image;
+    } else if (typeof editedProduct.image === "string") {
+      payload.images = editedProduct.image
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    // size: array
+    if (Array.isArray(editedProduct.size)) {
+      payload.size = editedProduct.size;
+    } else if (typeof editedProduct.size === "string") {
+      payload.size = editedProduct.size
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    // color: array (schema field is `color`)
+    if (Array.isArray(editedProduct.colors)) {
+      payload.color = editedProduct.colors;
+    } else if (typeof editedProduct.colors === "string") {
+      payload.color = editedProduct.colors
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    } else if (Array.isArray(editedProduct.color)) {
+      payload.color = editedProduct.color;
+    } else if (typeof editedProduct.color === "string") {
+      payload.color = editedProduct.color
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    // price/discount as numbers when possible
+    if (payload.price !== undefined) payload.price = Number(payload.price);
+    if (payload.discount !== undefined && payload.discount !== "") payload.discount = Number(payload.discount);
+    // stock -> supply mapping
+    if (editedProduct.stock !== undefined || editedProduct.supply !== undefined) {
+      const supplyVal = editedProduct.stock ?? editedProduct.supply ?? 1;
+      payload.supply = Number(supplyVal);
+    }
+    // Cleanup fields not used by backend
+    delete payload.image; // backend derives legacy `image` from `images`
+    delete payload.colors;
+
+    onUpdate(product._id, payload);
     setIsEditing(false);
   };
 
@@ -135,7 +192,7 @@ const Product = ({ product, onDelete, onUpdate }) => {
               margin="dense"
               name="subCategory"
               label="Sub Category"
-              value={editedProduct.subCategory}
+              value={editedProduct.subCategory ?? editedProduct.subcategory ?? ""}
               onChange={handleInputChange}
             />
             {/* Add multiple image URLs */}
@@ -190,7 +247,7 @@ const Product = ({ product, onDelete, onUpdate }) => {
               margin="dense"
               name="stock"
               label="Stock"
-              value={editedProduct.stock}
+              value={editedProduct.stock ?? editedProduct.supply ?? ""}
               onChange={handleInputChange}
             />
             <TextField
@@ -198,7 +255,7 @@ const Product = ({ product, onDelete, onUpdate }) => {
               margin="dense"
               name="size"
               label="Size"
-              value={editedProduct.size}
+              value={Array.isArray(editedProduct.size) ? editedProduct.size.join(", ") : (editedProduct.size ?? "")}
               onChange={handleInputChange}
             />
             <TextField
@@ -206,7 +263,7 @@ const Product = ({ product, onDelete, onUpdate }) => {
               margin="dense"
               name="color"
               label="Color"
-              value={editedProduct.color}
+              value={Array.isArray(editedProduct.colors) ? editedProduct.colors.join(", ") : (editedProduct.color ?? editedProduct.colors ?? "")}
               onChange={handleInputChange}
             />
             
@@ -225,7 +282,7 @@ const Product = ({ product, onDelete, onUpdate }) => {
             <Rating value={parseFloat(product.rating)} readOnly precision={0.5} />
             <Typography
               variant="body2"
-              sx={{ mt: 1, color: theme.palette.text.secondary, color: theme.palette.mode === "dark" ? "white" : "black" }}
+              sx={{ mt: 1, color: theme.palette.mode === "dark" ? "white" : "black" }}
             >
               {product.description}
             </Typography>
@@ -237,9 +294,15 @@ const Product = ({ product, onDelete, onUpdate }) => {
             </Typography>
             <Typography
               variant="body2"
-              sx={{ mt: 1, color: theme.palette.text.secondary, color: theme.palette.mode === "dark" ? "white" : "black" }}
+              sx={{ mt: 1, color: theme.palette.mode === "dark" ? "white" : "black" }}
             >
               Theme : {product.theme}
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ mt: 1, color: theme.palette.mode === "dark" ? "white" : "black" }}
+            >
+              Gender : {product.gender}
             </Typography>
           </>
         )}
@@ -304,8 +367,10 @@ const Product = ({ product, onDelete, onUpdate }) => {
           <Typography>Category: {product.category}</Typography>
           <Typography>Brand: {product.brand}</Typography>
           <Typography>Gender: {product.gender}</Typography>
-          <Typography>Color: {product.color}</Typography>
-          <Typography>Size: {product.size}</Typography>
+          <Typography>
+            Color: {Array.isArray(product.color) ? product.color.join(", ") : (product.color ?? "")}
+          </Typography>
+          <Typography>Size: {Array.isArray(product.size) ? product.size.join(", ") : (product.size ?? "")}</Typography>
           <Typography>Subcategory: {product.subcategory}</Typography>
           <Typography>Discount: {product.discount}%</Typography>
           <Typography>Theme: {product.theme}</Typography>
@@ -317,6 +382,7 @@ const Product = ({ product, onDelete, onUpdate }) => {
 };
 
 const Products = () => {
+  const theme = useTheme();
   const { data, isLoading, isError, refetch } = useGetProductsQuery();
   const [updateProduct, { isLoading: isUpdating }] = useUpdateAdminProductMutation();
   const [deleteProduct, { isLoading: isDeleting }] = useDeleteAdminProductMutation();
@@ -336,6 +402,8 @@ const Products = () => {
     images: "",
     size: "",
     colors: "",
+    discount: "",
+    stock: "1",
     brand: "",
     theme: "",
   });
@@ -383,7 +451,10 @@ const Products = () => {
         gender: newProduct.gender.trim(),
         images: structured, // backend accepts objects and normalizes
         size: sizeArr,
-        colors: colorArr,
+        colors: colorArr, // required by controller validation
+        color: colorArr,  // persisted by schema (field name is `color`)
+        discount: newProduct.discount === "" ? 0 : Number(newProduct.discount),
+        supply: newProduct.stock === "" ? 1 : Number(newProduct.stock),
         brand: newProduct.brand.trim() || undefined,
         theme: newProduct.theme.trim() || undefined,
       };
@@ -392,7 +463,7 @@ const Products = () => {
       setAddOpen(false);
       setNewProduct({
         title: "", description: "", price: "", category: "", subcategory: "", gender: "",
-        images: "", size: "", colors: "", brand: "", theme: "",
+        images: "", size: "", colors: "", discount: "", stock: "1", brand: "", theme: "",
       });
       setImagesList([]);
       refetch();
@@ -538,6 +609,52 @@ const Products = () => {
   };
 
   const products = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+  
+  // Enhanced search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [genderFilter, setGenderFilter] = useState("");
+  const [stockFilter, setStockFilter] = useState("");
+  
+  // Get unique values for filters
+  const uniqueCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
+  const uniqueGenders = [...new Set(products.map(p => p.gender).filter(Boolean))];
+  
+  const q = searchQuery.trim().toLowerCase();
+  const filteredProducts = products.filter((p) => {
+    // Text search
+    const matchesSearch = !q || [
+      p.title,
+      p.category,
+      p.subcategory,
+      p.brand,
+      p.theme,
+      p.gender,
+      Array.isArray(p.color) ? p.color.join(", ") : p.color,
+      p._id
+    ].some((field) => (field || "").toString().toLowerCase().includes(q));
+    
+    // Category filter
+    const matchesCategory = !categoryFilter || p.category === categoryFilter;
+    
+    // Gender filter
+    const matchesGender = !genderFilter || p.gender === genderFilter;
+    
+    // Stock filter
+    const matchesStock = !stockFilter || 
+      (stockFilter === "in-stock" && (p.supply > 0)) ||
+      (stockFilter === "out-of-stock" && (p.supply <= 0)) ||
+      (stockFilter === "low-stock" && (p.supply > 0 && p.supply <= 5));
+    
+    return matchesSearch && matchesCategory && matchesGender && matchesStock;
+  });
+  
+  const clearFilters = () => {
+    setSearchQuery("");
+    setCategoryFilter("");
+    setGenderFilter("");
+    setStockFilter("");
+  };
 
   const handleDelete = async (id) => {
     const confirmDelete = window.confirm("Are you sure you want to delete this product?");
@@ -566,10 +683,10 @@ const Products = () => {
   if (isLoading) return <p>Loading...</p>;
   if (isError) return <p>Error loading products.</p>;
   return (
-    <Box m="1.5rem 2.5rem">
-      <Box display="flex" alignItems="center" justifyContent="space-between">
+    <Box m="1.5rem 2.5rem" >
+      <Box display="flex" alignItems="center" justifyContent="space-between" >
         <Header title="PRODUCTS" subtitle="See your list of products." />
-        <Tooltip title="Add a new product">
+        <Tooltip title="Add a new product" >
           <span>
             <Button
               variant="contained"
@@ -583,8 +700,161 @@ const Products = () => {
         </Tooltip>
       </Box>
 
+      {/* Enhanced Search and Filters */}
+      <Box mt={3} mb={2}>
+        <Card sx={{
+          border: theme.palette.mode === 'dark' ? '0px solid gray' : '0px solid black', boxShadow: 4,
+          p: 2, 
+          backgroundColor:  theme.palette.mode === 'dark' ? theme.palette.background.default : theme.palette.background.default,
+          fontWeight: 'bold',
+          color: theme.palette.mode === 'dark' ? 'white' : 'black',
+         }}>
+          <Box display="flex" alignItems="center" gap={2} mb={2}>
+            <FilterIcon color="primary" />
+            <Typography variant="h6" sx={{
+            color: theme.palette.mode === 'dark' ? 'white' : 'black',
+            fontWeight: 'bold',
+          }}>
+              Search & Filter Products
+            </Typography>
+            {(searchQuery || categoryFilter || genderFilter || stockFilter) && (
+              <Chip
+                label="Clear All"
+                variant="outlined"
+                size="small"
+                deleteIcon={<ClearIcon />}
+                onDelete={clearFilters}
+                sx={{ ml: 'auto' }}
+              />
+            )}
+          </Box>
+          
+          {/* Search Bar */}
+          <TextField
+            fullWidth
+            placeholder="Search by title, category, brand, theme, color, or ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+              endAdornment: searchQuery && (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => setSearchQuery("")}
+                    edge="end"
+                  >
+                    <ClearIcon />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+            sx={{ mb: 2 }}
+          />
+          
+          {/* Filter Row */}
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Category</InputLabel>
+                <Select
+                  value={categoryFilter}
+                  label="Category"
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                >
+                  <MenuItem value="">All Categories</MenuItem>
+                  {uniqueCategories.map((cat) => (
+                    <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Gender</InputLabel>
+                <Select
+                  value={genderFilter}
+                  label="Gender"
+                  onChange={(e) => setGenderFilter(e.target.value)}
+                >
+                  <MenuItem value="">All Genders</MenuItem>
+                  {uniqueGenders.map((gender) => (
+                    <MenuItem key={gender} value={gender}>{gender}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Stock Status</InputLabel>
+                <Select
+                  value={stockFilter}
+                  label="Stock Status"
+                  onChange={(e) => setStockFilter(e.target.value)}
+                >
+                  <MenuItem value="">All Stock</MenuItem>
+                  <MenuItem value="in-stock">In Stock</MenuItem>
+                  <MenuItem value="low-stock">Low Stock (≤5)</MenuItem>
+                  <MenuItem value="out-of-stock">Out of Stock</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Typography variant="body2" color="text.secondary">
+                  <strong>{filteredProducts.length}</strong> of <strong>{products.length}</strong> products
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+          
+          {/* Active Filters */}
+          {(categoryFilter || genderFilter || stockFilter) && (
+            <Box mt={2} display="flex" gap={1} flexWrap="wrap">
+              <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center', mr: 1 }}>
+                Active filters:
+              </Typography>
+              {categoryFilter && (
+                <Chip
+                  label={`Category: ${categoryFilter}`}
+                  size="small"
+                  onDelete={() => setCategoryFilter("")}
+                  color="primary"
+                  variant="outlined"
+                />
+              )}
+              {genderFilter && (
+                <Chip
+                  label={`Gender: ${genderFilter}`}
+                  size="small"
+                  onDelete={() => setGenderFilter("")}
+                  color="primary"
+                  variant="outlined"
+                />
+              )}
+              {stockFilter && (
+                <Chip
+                  label={`Stock: ${stockFilter.replace('-', ' ')}`}
+                  size="small"
+                  onDelete={() => setStockFilter("")}
+                  color="primary"
+                  variant="outlined"
+                />
+              )}
+            </Box>
+          )}
+        </Card>
+      </Box>
+
       <Grid container spacing={3} mt={2}>
-        {products.map((product) => (
+        {filteredProducts.map((product) => (
           <Grid item xs={12} sm={6} md={4} lg={3} key={product._id}>
             <Product
               product={product}
@@ -593,6 +863,13 @@ const Products = () => {
             />
           </Grid>
         ))}
+        {filteredProducts.length === 0 && (
+          <Grid item xs={12}>
+            <Typography align="center" sx={{ color: 'text.secondary', mt: 4 }}>
+              No products match your search.
+            </Typography>
+          </Grid>
+        )}
       </Grid>
 
       <Snackbar
@@ -654,6 +931,12 @@ const Products = () => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField fullWidth required label="Price" name="price" type="number" value={newProduct.price} onChange={handleNewChange} />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField fullWidth label="Discount (%)" name="discount" type="number" value={newProduct.discount} onChange={handleNewChange} />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField fullWidth label="Stock (quantity)" name="stock" type="number" value={newProduct.stock} onChange={handleNewChange} helperText="Default 1. 0 means Out of Stock." />
             </Grid>
             <Grid item xs={12}>
               <Divider sx={{ my: 1.5 }} />
@@ -721,10 +1004,10 @@ const Products = () => {
               <TextField fullWidth required label="Colors (comma separated)" name="colors" value={newProduct.colors} onChange={handleNewChange} helperText="Example: red, blue, black" />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField fullWidth label="Brand (optional)" name="brand" value={newProduct.brand} onChange={handleNewChange} />
+              <TextField fullWidth required label="Brand" name="brand" value={newProduct.brand} onChange={handleNewChange} />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField fullWidth label="Theme (optional)" name="theme" value={newProduct.theme} onChange={handleNewChange} />
+              <TextField fullWidth required label="Theme" name="theme" value={newProduct.theme} onChange={handleNewChange} />
             </Grid>
           </Grid>
         </DialogContent>
@@ -743,7 +1026,9 @@ const Products = () => {
               !newProduct.price || Number(newProduct.price) <= 0 ||
               (imagesList.length === 0) ||
               (newProduct.size.split(',').map(s=>s.trim()).filter(Boolean).length === 0) ||
-              (newProduct.colors.split(',').map(s=>s.trim()).filter(Boolean).length === 0)
+              (newProduct.colors.split(',').map(s=>s.trim()).filter(Boolean).length === 0) ||
+              !newProduct.brand.trim() ||
+              !newProduct.theme.trim()
             }
           >
             Add

@@ -143,6 +143,26 @@ const Women = () => {
           </div>
         </section>
 
+        {/* All Women's Products */}
+        {allData.length > 0 && (
+          <section className="mb-16">
+            <h2 className="text-2xl font-bold mb-6">All Women's Products</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              {allData.map((p) => (
+                <ProductCard
+                  key={p._id}
+                  id={p._id}
+                  title={p.title}
+                  image={p.image?.[0]}
+                  price={p.price}
+                  discount={p.discount}
+                  badge={p.theme?.toLowerCase().includes('best') ? 'Best Seller' : p.theme?.toLowerCase().includes('new') ? 'New Arrival' : undefined}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Product Grid */}
         {loading && <p>Loading...</p>}
         {error && <p className="text-red-500">{error}</p>}
