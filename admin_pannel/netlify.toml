@@ -1,10 +1,4 @@
 [[redirects]]
   from = "/*"
-  to = "https://zixx.in/auth"
-  status = 301
-  force = true
-
-[[redirects]]
-  from = "/*"
   to = "/index.html"
   status = 200

@@ -6,15 +6,15 @@ export default function AdminRouteGuard({ children }) {
   const [checking, setChecking] = useState(true);
   const [allowed, setAllowed] = useState(false);
   const apiBase = getApiBase();
-  // Determine the admin panel base URL (clean origin) for redirects
-  const adminBase = (() => {
-    let a = import.meta.env.VITE_ADMIN_PANEL_URL;
-    if (!a || typeof a !== 'string' || !/^https?:\/\//i.test(a)) {
-      a = 'https://admin.zixx.in';
+  // Determine the frontend base URL (clean origin) for redirects to site login
+  const frontendBase = (() => {
+    let f = import.meta.env.VITE_FRONTEND_URL;
+    if (!f || typeof f !== 'string' || !/^https?:\/\//i.test(f)) {
+      f = 'https://zixx.in';
     }
-    try { const u = new URL(a); return u.origin; } catch { return a; }
+    try { const u = new URL(f); return u.origin; } catch { return f; }
   })().replace(/\/$/, '');
-  const mainLogin = adminBase; // redirect to admin root (no /auth)
+  const mainLogin = `${frontendBase}/auth`;
 
   useEffect(() => {
     const checkAccess = async () => {
