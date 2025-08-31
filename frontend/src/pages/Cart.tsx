@@ -8,6 +8,7 @@ import { ScrollToTop } from '@/components/ui/scroll-to-top';
 import { toast } from 'sonner';
 import { useAuthContext } from '@/hooks/AuthProvider';
 import { apiUrl, getAuthHeaders } from '@/lib/api';
+import axios from 'axios';
 
 type CartItem = {
   id: string;
@@ -36,6 +37,8 @@ const Cart = () => {
   const [showAddrModal, setShowAddrModal] = useState(false);
   const [addrSaving, setAddrSaving] = useState(false);
   const [modalAutoTriggered, setModalAutoTriggered] = useState(false);
+  const [topSellingProducts, setTopSellingProducts] = useState<any[]>([]);
+  const [newArrivals, setNewArrivals] = useState<any[]>([]);
   const [addrForm, setAddrForm] = useState({
     personal_address: '',
     shoping_address: '',
@@ -102,6 +105,27 @@ const Cart = () => {
     };
     fetchCart();
   }, [user, navigate]);
+
+  // Fetch real products for recommendations
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await axios.get(apiUrl('/clients/products'), {
+          withCredentials: true,
+        });
+        if (res.data?.data && Array.isArray(res.data.data)) {
+          const products = res.data.data;
+          // Get random products for top selling (first 4)
+          const shuffled = [...products].sort(() => 0.5 - Math.random());
+          setTopSellingProducts(shuffled.slice(0, 4));
+          setNewArrivals(shuffled.slice(4, 8));
+        }
+      } catch (err) {
+        console.error('Failed to fetch products for recommendations:', err);
+      }
+    };
+    fetchProducts();
+  }, []);
 
   const ensureLoggedIn = () => {
     if (!user) {
@@ -188,6 +212,8 @@ const Cart = () => {
   const onAddrChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
+    e.preventDefault();
+    e.stopPropagation();
     const { name, value } = e.target;
     setAddrForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -456,24 +482,24 @@ const Cart = () => {
                     {cartItems.map((item, index) => (
                       <div
                         key={item.id}
-                        className={`responsive-flex p-4 sm:p-6 cursor-pointer hover:bg-gray-100 transition ${index < cartItems.length - 1 ? 'border-b border-gray-200' : ''}`}
-                        onClick={() => navigate(`/cart/product/${item.id}`)}
+                        className={`flex flex-col sm:flex-row gap-4 p-4 sm:p-6 cursor-pointer hover:bg-gray-100 transition ${index < cartItems.length - 1 ? 'border-b border-gray-200' : ''}`}
+                        onClick={() => navigate(`/product/${item.productId}`)}
                       >
-                        <div className="w-full sm:w-20 md:w-24 h-20 md:h-24 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden image-container">
+                        <div className="w-full sm:w-20 md:w-24 h-32 sm:h-20 md:h-24 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden image-container">
                           <img 
                             src={item.image} 
                             alt={item.name} 
                             className="w-full h-full object-contain product-image" 
                           />
                         </div>
-                        <div className="flex-grow space-y-2 min-w-0">
+                        <div className="flex-grow space-y-2 min-w-0 max-w-full overflow-hidden">
                           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                            <div className="min-w-0">
-                              <h3 className="font-semibold text-sm sm:text-base lg:text-lg truncate">{item.name}</h3>
+                            <div className="min-w-0 max-w-full overflow-hidden">
+                              <h3 className="font-semibold text-sm sm:text-base lg:text-lg line-clamp-2 break-words">{item.name}</h3>
                               <div className="text-xs sm:text-sm text-gray-600 space-y-1">
-                                <p><span className="font-medium">Brand:</span> {item.brand}</p>
-                                <p><span className="font-medium">Color:</span> {item.color}</p>
-                                <p><span className="font-medium">Size:</span> {item.size}</p>
+                                <p className="truncate"><span className="font-medium">Brand:</span> {item.brand}</p>
+                                <p className="truncate"><span className="font-medium">Color:</span> {item.color}</p>
+                                <p className="truncate"><span className="font-medium">Size:</span> {item.size}</p>
                               </div>
                             </div>
                             <div className="text-left sm:text-right flex-shrink-0">
@@ -682,43 +708,21 @@ const Cart = () => {
         <section className="mt-12 sm:mt-16">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12">TOP SELLING</h2>
           <div className="responsive-grid-4">
-            {[
-              {
-                name: 'Vertical Striped Shirt',
-                price: 29.99,
-                oldPrice: 44.99,
-                image: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/a3eb5973361b70df8423fb8187c106fa1cccf9ee?placeholderIfAbsent=true'
-              },
-              {
-                name: 'Orange Graphic T-shirt',
-                price: 19.99,
-                image: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/1ae9ee2293ad29eef209760dacb27c2cfcc587ac?placeholderIfAbsent=true'
-              },
-              {
-                name: 'Loose Fit Bermuda Shorts',
-                price: 34.99,
-                image: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/195176e2222a7c41d44bd7662e7402d74c61a9a0?placeholderIfAbsent=true'
-              },
-              {
-                name: 'Faded Skinny Jeans',
-                price: 49.99,
-                image: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/323635352eed4542ef83c5e9d41e0f884d43499e?placeholderIfAbsent=true'
-              }
-            ].map((product, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-sm spacing-sm hover:shadow-lg transition-shadow">
-                <Link to={`/product?name=${encodeURIComponent(product.name)}`} className="block">
+            {topSellingProducts.map((product, index) => (
+              <div key={product._id || index} className="bg-white rounded-lg shadow-sm spacing-sm hover:shadow-lg transition-shadow">
+                <Link to={`/product/${product._id}`} className="block">
                   <div className="aspect-square bg-gray-100 mb-3 sm:mb-4 rounded-lg overflow-hidden image-container">
                     <img 
-                      src={product.image} 
-                      alt={product.name} 
+                      src={Array.isArray(product.image) ? product.image[0] : product.image || `https://source.unsplash.com/400x400/${(product.category || 'fashion').replace(/\s+/g, '+')}`} 
+                      alt={product.title} 
                       className="w-full h-full object-contain product-image" 
                     />
                   </div>
-                  <h3 className="text-xs sm:text-sm font-semibold mb-2 line-clamp-2">{product.name}</h3>
+                  <h3 className="text-xs sm:text-sm font-semibold mb-2 line-clamp-2">{product.title}</h3>
                   <div className="flex items-center gap-2">
                     <div className="text-sm sm:text-lg font-bold text-[#D92030]">₹{product.price}</div>
-                    {product.oldPrice && (
-                      <div className="text-xs sm:text-sm text-gray-500 line-through">₹{product.oldPrice}</div>
+                    {product.discount > 0 && (
+                      <div className="text-xs sm:text-sm text-gray-500 line-through">₹{(product.price / (1 - product.discount / 100)).toFixed(2)}</div>
                     )}
                   </div>
                 </Link>
@@ -731,44 +735,21 @@ const Cart = () => {
         <section className="mt-12 sm:mt-16">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12">NEW ARRIVALS</h2>
           <div className="responsive-grid-4">
-            {[
-              {
-                name: 'T-SHIRT WITH TAPE DETAILS',
-                price: 120,
-                image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&h=500'
-              },
-              {
-                name: 'SKINNY FIT JEANS',
-                price: 240,
-                oldPrice: 260,
-                image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=400&h=500'
-              },
-              {
-                name: 'CHECKERED SHIRT',
-                price: 180,
-                image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=400&h=500'
-              },
-              {
-                name: 'SLEEVE STRIPED T-SHIRT',
-                price: 130,
-                oldPrice: 160,
-                image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=400&h=500'
-              }
-            ].map((product, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-sm spacing-sm hover:shadow-lg transition-shadow">
-                <Link to={`/product?name=${encodeURIComponent(product.name)}`} className="block">
+            {newArrivals.map((product, index) => (
+              <div key={product._id || index} className="bg-white rounded-lg shadow-sm spacing-sm hover:shadow-lg transition-shadow">
+                <Link to={`/product/${product._id}`} className="block">
                   <div className="aspect-square bg-gray-100 mb-3 sm:mb-4 rounded-lg overflow-hidden image-container">
                     <img 
-                      src={product.image} 
-                      alt={product.name} 
+                      src={Array.isArray(product.image) ? product.image[0] : product.image || `https://source.unsplash.com/400x400/${(product.category || 'fashion').replace(/\s+/g, '+')}`} 
+                      alt={product.title} 
                       className="w-full h-full object-contain product-image" 
                     />
                   </div>
-                  <h3 className="text-xs sm:text-sm font-semibold mb-2 line-clamp-2">{product.name}</h3>
+                  <h3 className="text-xs sm:text-sm font-semibold mb-2 line-clamp-2">{product.title}</h3>
                   <div className="flex items-center gap-2">
                     <div className="text-sm sm:text-lg font-bold text-[#D92030]">₹{product.price}</div>
-                    {product.oldPrice && (
-                      <div className="text-xs sm:text-sm text-gray-500 line-through">₹{product.oldPrice}</div>
+                    {product.discount > 0 && (
+                      <div className="text-xs sm:text-sm text-gray-500 line-through">₹{(product.price / (1 - product.discount / 100)).toFixed(2)}</div>
                     )}
                   </div>
                 </Link>
@@ -788,32 +769,32 @@ const Cart = () => {
             <form onSubmit={saveAddress} className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Personal Address</label>
-                <textarea ref={refPersonal} name="personal_address" rows={2} className="w-full p-2 border border-gray-300 rounded-md" value={addrForm.personal_address} onChange={onAddrChange} />
+                <textarea ref={refPersonal} name="personal_address" rows={2} className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent" value={addrForm.personal_address} onChange={onAddrChange} onKeyDown={(e) => e.stopPropagation()} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Village / Locality</label>
-                  <input ref={refVillage} name="address_village" className="w-full p-2 border border-gray-300 rounded-md" value={addrForm.address_village} onChange={onAddrChange} />
+                  <input ref={refVillage} name="address_village" className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent" value={addrForm.address_village} onChange={onAddrChange} onKeyDown={(e) => e.stopPropagation()} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Landmark</label>
-                  <input ref={refLandmark} name="landmark" className="w-full p-2 border border-gray-300 rounded-md" value={addrForm.landmark} onChange={onAddrChange} />
+                  <input ref={refLandmark} name="landmark" className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent" value={addrForm.landmark} onChange={onAddrChange} onKeyDown={(e) => e.stopPropagation()} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                  <input ref={refCity} name="city" className="w-full p-2 border border-gray-300 rounded-md" value={addrForm.city} onChange={onAddrChange} />
+                  <input ref={refCity} name="city" className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent" value={addrForm.city} onChange={onAddrChange} onKeyDown={(e) => e.stopPropagation()} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                  <input ref={refState} name="state" className="w-full p-2 border border-gray-300 rounded-md" value={addrForm.state} onChange={onAddrChange} />
+                  <input ref={refState} name="state" className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent" value={addrForm.state} onChange={onAddrChange} onKeyDown={(e) => e.stopPropagation()} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-                  <input ref={refCountry} name="country" className="w-full p-2 border border-gray-300 rounded-md" value={addrForm.country} onChange={onAddrChange} />
+                  <input ref={refCountry} name="country" className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent" value={addrForm.country} onChange={onAddrChange} onKeyDown={(e) => e.stopPropagation()} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">ZIP</label>
-                  <input ref={refZip} name="zip" className="w-full p-2 border border-gray-300 rounded-md" value={addrForm.zip} onChange={onAddrChange} />
+                  <input ref={refZip} name="zip" className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent" value={addrForm.zip} onChange={onAddrChange} onKeyDown={(e) => e.stopPropagation()} />
                 </div>
               </div>
               <div className="flex items-center justify-end gap-2 pt-2">

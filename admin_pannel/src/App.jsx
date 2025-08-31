@@ -2,8 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CssBaseline } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { themeSettings } from "./theme";
-import { useSelector } from "react-redux";
-import { useMemo, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { useMemo, useEffect, useState } from "react";
+import { setMode } from "@state";
 
 import Layout from "@scenes/layout";
 import AdminRouteGuard from "@components/AdminRouteGuard";
@@ -31,8 +32,52 @@ import Banners from "@scenes/banners";
 import "./App.css";
 
 function App() {
-  const mode = useSelector((state) => (state && state.global && state.global.mode) || 'dark');
-  const theme = useMemo(() => createTheme(themeSettings(mode || 'dark')), [mode]);
+  const dispatch = useDispatch();
+  const [localMode, setLocalMode] = useState('dark');
+  const reduxMode = useSelector((state) => {
+    try {
+      return (state && state.global && state.global.mode) || 'dark';
+    } catch (e) {
+      console.warn('Redux state access failed, using default theme mode');
+      return 'dark';
+    }
+  });
+
+  // Sync local state with Redux and handle theme changes
+  useEffect(() => {
+    setLocalMode(reduxMode);
+    
+    // Apply theme immediately to DOM for production reliability
+    if (typeof window !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', reduxMode);
+      document.documentElement.className = document.documentElement.className
+        .replace(/theme-(light|dark)/g, '') + ` theme-${reduxMode}`;
+    }
+  }, [reduxMode]);
+
+  // Listen for custom theme change events (production fallback)
+  useEffect(() => {
+    const handleThemeChange = (event) => {
+      const newMode = event.detail.mode;
+      if (newMode !== reduxMode) {
+        setLocalMode(newMode);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('themeChanged', handleThemeChange);
+      return () => window.removeEventListener('themeChanged', handleThemeChange);
+    }
+  }, [reduxMode]);
+
+  const theme = useMemo(() => {
+    try {
+      return createTheme(themeSettings(localMode || 'dark'));
+    } catch (e) {
+      console.warn('Theme creation failed, using fallback theme');
+      return createTheme(themeSettings('dark'));
+    }
+  }, [localMode]);
 
   // Capture token from URL (?t=...) for cross-origin handoff from main site
   useEffect(() => {
@@ -49,10 +94,6 @@ function App() {
     } catch {}
   }, []);
 
-  // Persist theme mode on change
-  useEffect(() => {
-    try { localStorage.setItem('admin_theme_mode', mode === 'light' ? 'light' : 'dark'); } catch {}
-  }, [mode]);
 
   return (
     <div className="app">

@@ -29,8 +29,7 @@
     "skipLibCheck": true,
     "allowJs": true,
     "noUnusedLocals": false,
-    "strictNullChecks": false,
-    "verbatimModuleSyntax": true
+    "strictNullChecks": false
   },
   "exclude": ["node_modules", "build", "dist"]
 }

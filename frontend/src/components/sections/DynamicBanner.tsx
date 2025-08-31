@@ -3,17 +3,16 @@ import { Banner } from './Banner';
 import { apiUrl } from '@/lib/api';
 
 interface DynamicBannerProps {
-  page: string; // e.g., 'home', 'women', 'men'
-  position: string; // e.g., 'hero', 'mid', 'section'
+  page: string;
+  position: string;
   fallback: {
     imageUrl: string;
     heading: string;
     description: string;
     linkText: string;
-    linkUrl: string; // Prefer /category/... if possible
+    linkUrl: string;
     align?: Parameters<typeof Banner>[0]['align'];
   };
-  // Optional style overrides for Banner
   style?: {
     variant?: Parameters<typeof Banner>[0]['variant'];
     overlay?: Parameters<typeof Banner>[0]['overlay'];
@@ -45,7 +44,6 @@ export const DynamicBanner: React.FC<DynamicBannerProps> = ({ page, position, fa
         const params = new URLSearchParams({ page, position, active: 'true' });
         const url = apiUrl(`/clients/banners?${params.toString()}`);
         const res = await fetch(url);
-        // console.log("banner url", url);
         if (!res.ok) throw new Error('Failed to fetch banner');
         const result = await res.json();
         if (result.ok && Array.isArray(result.data) && result.data.length > 0) {
@@ -62,7 +60,6 @@ export const DynamicBanner: React.FC<DynamicBannerProps> = ({ page, position, fa
     fetchBanner();
   }, [page, position]);
 
-  // Normalize image URL (trim spaces, handle protocol-relative URLs)
   const rawImg = (banner?.imageUrl || fallback.imageUrl) as string;
   let img = typeof rawImg === 'string' ? rawImg.trim() : rawImg;
   if (typeof img === 'string' && img.startsWith('//')) {
@@ -77,7 +74,6 @@ export const DynamicBanner: React.FC<DynamicBannerProps> = ({ page, position, fa
     linkUrl = '/' + linkUrl;
   }
   const align = fallback.align;
-  // Mobile-specific tweaks: shorter description and safer defaults
   const mobileDesc = (desc || '').length > 90 ? `${desc?.slice(0, 90)}…` : (desc || '');
 
   return (
@@ -118,7 +114,6 @@ export const DynamicBanner: React.FC<DynamicBannerProps> = ({ page, position, fa
           cta={style?.cta}
           radius={style?.radius}
           hover={style?.hover}
-          // Ensure visibility for transparent PNGs and avoid aggressive cropping
           containerClassName={'bg-black'}
           imageClassName={'object-contain'}
         />

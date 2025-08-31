@@ -100,7 +100,6 @@ exports.userRegister = async (req, res) => {
     await newUser.save();
     res.status(201).json({ msg: "User registered successfully", ok: true });
   } catch (error) {
-    console.error(error);
 
     res.status(500).json({ msg: "Server error", error: error.message, ok: false });
   }
@@ -212,21 +211,16 @@ exports.getCurrentUserInfo = async (req, res) => {
       try {
         decoded = jwt.verify(token, process.env.JWT_SECRET);
       } catch (e) {
-        console.error('[user.controler] token verify failed for getCurrentUserInfo:', e.message);
         return res.status(401).json({ msg: 'Invalid token', ok: false });
       }
       userId = decoded.userid || decoded.id;
     }
-    if (isDebug) console.log('[user.controler] getCurrentUserInfo - resolved userId:', userId);
-    if (isDebug) console.log('[user.controler] getCurrentUserInfo - incoming Authorization header:', req.headers.authorization);
 
     const user = await UserModel.findById(userId).select("-password");
-    if (isDebug) console.log('[user.controler] getCurrentUserInfo - db user found:', !!user);
 
     if (!user) return res.status(404).json({ msg: "User not found", ok: false });
     res.json({ user, ok: true });
   } catch (err) {
-    console.error('[user.controler] getCurrentUserInfo error:', err);
 
     res.status(401).json({ msg: "Invalid token", ok: false });
   }
@@ -401,7 +395,6 @@ exports.deleteUsersByAdmin = async (req, res) => {
     if (!user) {
       return res.status(404).json({ msg: "User not found", ok: false });
     }
-    if (isDebug) console.log("User deleted:", user);
 
     res.json({ msg: "User deleted", ok: true });
   } catch (error) {
@@ -426,7 +419,6 @@ exports.updateUser = async (req, res) => {
 
         // Debug incoming payload when enabled
         if (isDebug) {
-            try { console.log('[updateUser] incoming updates:', { ...updates, profile_pic: updates.profile_pic ? '[set]' : undefined }); } catch {}
         }
 
         // If phone is present, validate and convert to number
@@ -507,7 +499,6 @@ exports.updateUser = async (req, res) => {
 
         return res.json({ msg: "User updated successfully", user: updatedUser, ok: true });
     } catch (error) {
-        console.error('[updateUser] error:', error);
         return res.status(500).json({ msg: "Failed to update user", error: error.message, ok: false });
     }
 }
@@ -534,23 +525,73 @@ exports.logoutUser = (req, res) => {
         req.session.destroy(() => {});
       }
     } catch (err) {
-      console.error('[logoutUser] session destroy error:', err);
     }
 
     // Log incoming cookies for debugging
     try {
-      if (isDebug) console.log('[logoutUser] Incoming cookies:', req.headers.cookie || 'none');
     } catch (err) {}
 
     // Send success response
     return res.json({ msg: 'Logged out', ok: true });
   } catch (err) {
-    console.error('[logoutUser] Error:', err);
 
     return res.status(500).json({ msg: 'Logout failed', ok: false, error: err.message });
   }
 };
 
+
+// =====================
+// Change Password
+// =====================
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.userid;
+    if (!userId) {
+      return res.status(401).json({ msg: 'Unauthorized: missing user id', ok: false });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ msg: 'Current password and new password are required', ok: false });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ msg: 'New password must be at least 6 characters long', ok: false });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ msg: 'New password must be different from current password', ok: false });
+    }
+
+    // Find user
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found', ok: false });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      return res.status(401).json({ msg: 'Current password is incorrect', ok: false });
+    }
+
+    // Hash new password
+    const saltRounds = 10;
+    const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password
+    await UserModel.findByIdAndUpdate(userId, {
+      password: hashedNewPassword,
+      updatedAt: new Date()
+    });
+
+    res.json({ msg: 'Password updated successfully', ok: true });
+  } catch (error) {
+    res.status(500).json({ msg: 'Server error', error: error.message, ok: false });
+  }
+};
 
 // GET logout that redirects back to frontend - useful for top-level navigation to clear httpOnly cookies
 exports.logoutRedirect = (req, res) => {
@@ -569,7 +610,6 @@ exports.logoutRedirect = (req, res) => {
 
     try { if (req.session) req.session.destroy(() => {}); } catch (e) {}
     // optional diagnostic log
-    try { if (isDebug) console.log('[logoutRedirect] incoming cookies:', req.headers.cookie); } catch (e) {}
 
     // Redirect back to provided returnTo or frontend auth
     let frontend = process.env.FRONTEND_URL || `http://${req.hostname}:8080`;
@@ -581,4 +621,66 @@ exports.logoutRedirect = (req, res) => {
   } catch (err) {
     return res.status(500).json({ msg: 'Logout redirect failed', ok: false, error: err.message });
   }
-}
+};
+
+// =====================
+// Verify Email
+// =====================
+exports.verifyEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ ok: false, msg: 'Email is required' });
+    }
+    
+    // Find the user by email
+    const user = await UserModel.findOne({ email: email.toLowerCase().trim() });
+    
+    if (!user) {
+      return res.status(404).json({ ok: false, msg: 'User not found' });
+    }
+    
+    // If already verified, just return success with current user data
+    if (user.emailVerified) {
+      const currentUser = await UserModel.findById(user._id).select('-password -refreshToken').lean();
+      return res.status(200).json({ 
+        ok: true, 
+        msg: 'Email was already verified',
+        user: currentUser
+      });
+    }
+    
+    // Mark email as verified
+    const now = new Date();
+    const updatedUser = await UserModel.findByIdAndUpdate(
+      user._id,
+      { 
+        $set: { 
+          emailVerified: true,
+          emailVerifiedAt: now,
+          updatedAt: now
+        } 
+      },
+      { new: true, runValidators: true }
+    ).select('-password -refreshToken').lean();
+    
+    if (!updatedUser) {
+      throw new Error('Failed to update user verification status');
+    }
+    
+    // Return success response with complete user data
+    return res.status(200).json({ 
+      ok: true, 
+      msg: 'Email verified successfully',
+      user: updatedUser
+    });
+    
+  } catch (error) {
+    return res.status(500).json({ 
+      ok: false, 
+      msg: 'Server error during email verification',
+      error: error.message 
+    });
+  }
+};

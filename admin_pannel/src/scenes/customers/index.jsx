@@ -21,7 +21,6 @@ import {
 function UserCard({ user, onEdit, onDelete }) {
   const [showAll, setShowAll] = useState(false);
   const [address, setAddress] = useState({});
-  console.log("address:", address);
   useEffect(() => {
     let addr = {};
     try {

@@ -33,7 +33,6 @@ const Kids = () => {
         const res = await fetch(apiUrl('/clients/products/kids'), { credentials: 'include' });
         const result = await res.json();
         if (!result.ok) throw new Error("API returned not ok");
-        // console.log("result.data", result.data);
         // Strictly keep only kids items (defensive in case API returns mixed data)
         const isKidsProduct = (p: any) => {
           const g = (p?.gender || '').toString().toLowerCase();
@@ -64,19 +63,6 @@ const Kids = () => {
           grouped[cat][sub].push(product);
         });
 
-        console.log("Kids products grouped by category:", grouped);
-        // Debug the Flowers category specifically
-        if (grouped['Flowers']) {
-          console.log("Flowers category products:", grouped['Flowers']);
-          Object.keys(grouped['Flowers']).forEach(sub => {
-            console.log(`Flowers -> ${sub}:`, grouped['Flowers'][sub].map(p => ({
-              title: p.title,
-              category: p.category,
-              subcategory: p.subcategory,
-              gender: p.gender
-            })));
-          });
-        }
         setGroupedProducts(grouped);
         setLoading(false);
       } catch (err: any) {
@@ -112,7 +98,6 @@ const Kids = () => {
       
       // Double-check that this category will have products when filtered on Category page
       const totalProducts = subcats.reduce((sum, s) => sum + (groupedProducts[cat][s] || []).length, 0);
-      console.log(`Category "${cat}" has ${totalProducts} products across ${subcats.length} subcategories`);
       
       return {
         name: cat,

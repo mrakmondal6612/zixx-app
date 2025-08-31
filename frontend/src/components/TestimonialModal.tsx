@@ -62,36 +62,107 @@ const TestimonialModal: React.FC<Props> = ({ open, onSubmit, onSkip, userName })
       role="dialog"
       aria-modal="true"
       aria-labelledby="testimonial-title"
-      style={{ position: 'fixed', inset: 0, zIndex: 2147483647, display: 'grid', placeItems: 'center' }}
+      className="fixed inset-0 z-[2147483647] flex items-center justify-center p-4"
     >
-      <div onClick={onSkip} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
-      <div style={{ position: 'relative', background: 'white', width: 520, maxWidth: '94%', borderRadius: 12, padding: 20, boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
-        <h3 id="testimonial-title" style={{ marginTop: 0, marginBottom: 8 }}>Share your experience</h3>
-        <p style={{ marginTop: 0, color: '#6b7280' }}>Before you logout, could you leave us a quick testimonial? It helps us improve.</p>
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: 12, color: '#374151', marginBottom: 6 }}>Your Name (optional)</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name"
-              style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 8 }} />
+      <div onClick={onSkip} className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="relative bg-gradient-to-br from-white to-gray-50 w-full max-w-lg rounded-2xl p-6 shadow-2xl border border-gray-200">
+        <div className="flex items-center justify-between mb-4">
+          <h3 id="testimonial-title" className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <span className="text-2xl">⭐</span>
+            Share your experience
+          </h3>
+          <button onClick={onSkip} className="text-gray-400 hover:text-gray-600 text-2xl font-light transition-colors">
+            ×
+          </button>
+        </div>
+        <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+          Before you logout, could you leave us a quick testimonial? Your feedback helps us improve and serve you better.
+        </p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <span className="text-lg">👤</span>
+              Your Name (optional)
+            </label>
+            <input 
+              value={name} 
+              onChange={(e) => setName(e.target.value)} 
+              placeholder="Enter your name"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent transition-all duration-200 bg-white/80"
+            />
           </div>
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: 12, color: '#374151', marginBottom: 6 }}>Rating</label>
-            <select value={rating} onChange={(e) => setRating(Number(e.target.value))}
-              style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 8 }}>
-              {[5,4,3,2,1].map(r => <option key={r} value={r}>{r} Star{r>1?'s':''}</option>)}
-            </select>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <span className="text-lg">⭐</span>
+              Rating
+            </label>
+            <div className="flex items-center gap-2 mb-2">
+              {[1,2,3,4,5].map(star => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setRating(star)}
+                  className={`text-2xl transition-all duration-200 hover:scale-110 ${
+                    star <= rating ? 'text-yellow-400' : 'text-gray-300'
+                  }`}
+                >
+                  ⭐
+                </button>
+              ))}
+              <span className="ml-2 text-sm text-gray-600 font-medium">
+                {rating} Star{rating > 1 ? 's' : ''}
+              </span>
+            </div>
           </div>
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: 12, color: '#374151', marginBottom: 6 }}>Feedback</label>
-            <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="What did you like? What could be better?" rows={4}
-              style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 8, resize: 'vertical' }} />
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <span className="text-lg">💬</span>
+              Your Feedback
+            </label>
+            <textarea 
+              value={text} 
+              onChange={(e) => setText(e.target.value)} 
+              placeholder="What did you like? What could be better? Your thoughts help us improve..."
+              rows={4}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent transition-all duration-200 resize-vertical bg-white/80"
+            />
           </div>
-          {error ? <div style={{ color: '#b91c1c', marginBottom: 10 }}>{error}</div> : null}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <button type="button" onClick={onSkip} disabled={loading}
-              style={{ padding: '10px 14px', background: '#e5e7eb', border: 'none', borderRadius: 8 }}>Skip</button>
-            <button type="submit" disabled={loading}
-              style={{ padding: '10px 14px', background: '#111827', color: 'white', border: 'none', borderRadius: 8 }}>{loading ? 'Submitting...' : 'Submit & Logout'}</button>
+          
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+              <span className="text-lg">⚠️</span>
+              {error}
+            </div>
+          )}
+          
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+            <button 
+              type="button" 
+              onClick={onSkip} 
+              disabled={loading}
+              className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Skip for now
+            </button>
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="px-6 py-3 bg-gradient-to-r from-[#D92030] to-[#BC1C2A] hover:from-[#BC1C2A] hover:to-[#A01829] text-white font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl flex items-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <span className="text-lg">🚀</span>
+                  Submit & Logout
+                </>
+              )}
+            </button>
           </div>
         </form>
       </div>

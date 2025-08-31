@@ -6,7 +6,7 @@ export default function Services() {
     {
       icon: Truck,
       title: "FREE AND FAST DELIVERY",
-      description: "Free delivery for all orders over $140"
+      description: "Free delivery for all orders over ₹140"
     },
     {
       icon: Headset,

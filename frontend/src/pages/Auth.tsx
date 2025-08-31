@@ -119,8 +119,17 @@ const Auth = () => {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data?.msg || 'Invalid OTP');
-      setEmailVerifyToken(data.data.token);
-      toast({ title: 'Email verified', description: 'Your email has been verified.' });
+      
+      // Set the verification token to mark email as verified
+      setEmailVerifyToken(data.data?.token);
+      
+      // Clear the OTP code after successful verification
+      setEmailOtpCode('');
+      
+      toast({ 
+        title: 'Email verified', 
+        description: 'Your email has been verified successfully!' 
+      });
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
     }
@@ -218,7 +227,6 @@ const Auth = () => {
             });
           }
         } catch (error: any) {
-          console.error('OAuth error:', error);
           toast({ 
             title: 'Login Error', 
             description: error?.message || 'Failed to complete Google login', 
@@ -271,16 +279,11 @@ const Auth = () => {
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('user');
         sessionStorage.clear();
-      } catch (e) {
-        console.warn('Failed to clear auth data:', e);
-      }
-      
-      console.log('Initiating Google OAuth with URL:', oauthUrl);
+      } catch (e) {}
       
       // Redirect to the OAuth URL - force full page reload to clear any state
       window.location.replace(oauthUrl);
     } catch (error) {
-      console.error('Error in Google OAuth:', error);
       toast({
         title: 'Error',
         description: 'Failed to start Google sign-in. Please try again.',

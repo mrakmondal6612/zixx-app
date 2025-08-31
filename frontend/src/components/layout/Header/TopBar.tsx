@@ -125,6 +125,12 @@ export const TopBar = () => {
                   src={user.profile_pic || "/placeholder.svg"}
                   alt="Profile"
                   className="w-7 h-7 rounded-full object-cover border border-gray-300 bg-white"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    if (target.src !== "/placeholder.svg") {
+                      target.src = "/placeholder.svg";
+                    }
+                  }}
                 />
                 <span className="hidden md:inline">
                   {user.first_name ? `${user.first_name} ${user.last_name}` : user.email?.split('@')[0] || 'Account'}

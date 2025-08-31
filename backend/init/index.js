@@ -64,13 +64,11 @@ const createDefaultAdmin = async () => {
 
   const admin = new UserModel(adminData);
   await admin.save();
-  console.log("✅ Default admin created with email: admin@zixx.com and password: admin123");
   return admin._id;
 };
 
 // Clear all collections
 const clearAllData = async () => {
-  console.log("🗑️  Clearing all existing data...");
   
   const collections = [
     { model: UserModel, name: "Users" },
@@ -90,22 +88,18 @@ const clearAllData = async () => {
   for (const collection of collections) {
     try {
       const result = await collection.model.deleteMany({});
-      console.log(`   ✅ Cleared ${collection.name}: ${result.deletedCount} documents`);
     } catch (error) {
-      console.log(`   ⚠️  Error clearing ${collection.name}:`, error.message);
     }
   }
 };
 
 // Import fresh data
 const importFreshData = async (adminId) => {
-  console.log("📥 Importing fresh data...");
 
   try {
     // Import users (excluding admin as it's already created)
     if (dataUser && dataUser.length > 0) {
       await UserModel.insertMany(dataUser);
-      console.log(`   ✅ Imported ${dataUser.length} users`);
     }
 
     // Import products and associate with admin
@@ -115,7 +109,6 @@ const importFreshData = async (adminId) => {
         userId: adminId
       }));
       await ProductModel.insertMany(productsWithAdmin);
-      console.log(`   ✅ Imported ${dataProduct.length} products`);
     }
 
     // Import other data
@@ -132,12 +125,10 @@ const importFreshData = async (adminId) => {
     for (const importItem of dataImports) {
       if (importItem.data && importItem.data.length > 0) {
         await importItem.model.insertMany(importItem.data);
-        console.log(`   ✅ Imported ${importItem.data.length} ${importItem.name}`);
       }
     }
 
   } catch (error) {
-    console.error("❌ Error importing data:", error);
     throw error;
   }
 };
@@ -145,11 +136,9 @@ const importFreshData = async (adminId) => {
 // Main initialization function
 const initializeDatabase = async () => {
   try {
-    console.log("🚀 Starting database initialization...");
     
     // Connect to database
     await connection;
-    console.log("✅ Database connected successfully");
 
     // Clear all existing data
     await clearAllData();
@@ -160,16 +149,9 @@ const initializeDatabase = async () => {
     // Import fresh data
     await importFreshData(adminId);
 
-    console.log("\n🎉 Database initialization completed successfully!");
-    console.log("📋 Summary:");
-    console.log("   - All old data cleared");
-    console.log("   - New admin created (admin@zixx.com / admin123)");
-    console.log("   - Fresh data imported with admin as owner");
-    console.log("\n✨ You can now use the application with fresh data!");
     
     process.exit(0);
   } catch (error) {
-    console.error("❌ Error during database initialization:", error);
     process.exit(1);
   }
 };

@@ -144,7 +144,6 @@ const Product = () => {
             }
             toast.error('Product not found');
           } catch (e) {
-            console.error('Fallback search failed:', e);
             toast.error('Failed to fetch product');
           }
         } else {
@@ -155,8 +154,6 @@ const Product = () => {
     };
     fetchProduct();
   }, [id, location.search]);
-
-  // console.log('Current user:', user);
   const ensureLoggedIn = () => {
     if (!user) {
       toast.error('You must be logged in.');
@@ -165,12 +162,9 @@ const Product = () => {
     }
     return true;
   };
-
-  // out-of-stock derived from backend quantity `supply` (preferred) or `inStock` fallback
   const outOfStock = !!product && (
     typeof (product as any).supply === 'number' ? (product as any).supply <= 0 : product.inStock === false
   );
-  // available stock number (fallback to 0 when unknown)
   const availableStock: number = product && typeof (product as any).supply === 'number'
     ? Math.max(0, (product as any).supply as number)
     : (product?.inStock ? 1 : 0);
@@ -227,7 +221,6 @@ const Product = () => {
         navigate('/cart');
       } else toast.error(res.data?.message || 'Failed to add to cart');
     } catch (err: any) {
-      console.error('Add to cart error:', err?.response || err);
       if (err?.response?.status === 401) navigate('/auth');
       else toast.error(err?.response?.data?.message || 'Add to cart failed');
     }
@@ -242,21 +235,16 @@ const Product = () => {
         { withCredentials: true, headers: { ...getAuthHeaders() } }
       );
 
-      // console.log("Add to Wishlist Responce : ", res);
-
       if (res.data?.ok || res.data?.success) {
         toast.success(`Added ${product.title} to wishlist!`);
         setIsWishlisted(true);
 
-        // Re-fetch wishlist to confirm DB update
         const check = await axios.get(
           apiUrl('/clients/user/wishlist'),
           { withCredentials: true, headers: { ...getAuthHeaders() } }
         );
-        // console.log('Updated wishlist from DB:', check.data);
       } else toast.error(res.data?.message || 'Failed to add to wishlist');
     } catch (err: any) {
-      console.error('Wishlist error:', err?.response || err);
       if (err?.response?.status === 401) navigate('/auth');
       else toast.error(err?.response?.data?.message || 'Add to wishlist failed');
     }

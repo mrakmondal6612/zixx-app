@@ -7,8 +7,6 @@ const OverviewChart = ({ isDashboard = false, view }) => {
   const theme = useTheme();
   const { data, isLoading } = useGetSalesQuery();
 
-  // console.log("data : ", data);
-
   const [totalSalesLine, totalUnitsLine] = useMemo(() => {
     if (!data || !data.monthlyData) return [[], []];
 
@@ -50,7 +48,7 @@ const OverviewChart = ({ isDashboard = false, view }) => {
     );
 
     return [[totalSalesLine], [totalUnitsLine]];
-  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data]);
 
   if (isLoading) return "Loading...";
   if (!data || !data.monthlyData) return (

@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { User, ShoppingBag, Heart, LogOut } from 'lucide-react';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
-import { useAuthContext } from '@/hooks/AuthProvider';
-import { apiUrl } from '@/lib/api';
+import { useAuthContext } from "@/hooks/AuthProvider";
+import { apiUrl, getAuthHeaders } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 const Account = () => {
-
+  const { toast } = useToast();
   const { user, token, setUser } = useAuthContext();
   const [showCompleteBanner, setShowCompleteBanner] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(false);
@@ -71,7 +72,6 @@ const Account = () => {
   useEffect(() => {
     if (user) {
       const u: any = user as any;
-      // If address is a string (from backend), parse it
       let addressObj = u.address;
       if (typeof addressObj === 'string') {
         try {
@@ -100,11 +100,9 @@ const Account = () => {
       });
       setProfilePic(u.profile_pic || "");
       setPreviewPic(u.profile_pic || "");
-      // Always show banner if profile incomplete
       if (!isProfileComplete(u) && !bannerDismissed) {
         setShowCompleteBanner(true);
       }
-      // Clean URL params now that we've computed banner visibility
       try {
         const url = new URL(window.location.href);
         const hadFirst = url.searchParams.has('first');
@@ -124,24 +122,49 @@ const Account = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handlePasswordChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const { name, value } = e.target;
+    setPasswordData((prev) => ({ ...prev, [name]: value }));
+    if (passwordErrors[name]) {
+      setPasswordErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+  };
+
 
   const [uploading, setUploading] = useState(false);
+  
+    const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<{[key: string]: string}>({});
+  
+  const [accountStats, setAccountStats] = useState({
+    wishlistCount: 0,
+    ordersCount: 0,
+    cartCount: 0,
+    reviewsCount: 0
+  });
+  const [accountLoading, setAccountLoading] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleProfilePicChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
     try {
-      // Prepare FormData for only image upload
       const form = new FormData();
       form.append('profile_pic', file);
-      // Only send image to backend for upload
   const res = await fetch(apiUrl('/clients/user/me'), {
         method: 'PATCH',
         body: form,
         credentials: 'include',
       });
-      // console.log("Profile picture upload response:", res);
       const data = await res.json();
       if (data.ok && data.user) {
         setUser(data.user);
@@ -162,7 +185,6 @@ const Account = () => {
     setLoading(true);
     try {
       const form = new FormData();
-      // Append non-address fields
       form.append('first_name', formData.first_name);
       form.append('middle_name', formData.middle_name);
       form.append('last_name', formData.last_name);
@@ -170,7 +192,6 @@ const Account = () => {
       form.append('phone', formData.phone);
       form.append('gender', formData.gender);
       form.append('dob', formData.dob);
-      // Append flat address fields (backend merges into address)
       form.append('personal_address', formData.personal_address ?? '');
       form.append('shoping_address', formData.shoping_address ?? '');
       form.append('billing_address', formData.billing_address ?? '');
@@ -215,7 +236,6 @@ const Account = () => {
           zip: data.user.address?.zip ?? "N/A",
         });
         try { localStorage.removeItem('profileSetupSkipped'); } catch {}
-        // Hide completion prompt if present
         setShowCompleteBanner(false);
         try {
           const url = new URL(window.location.href);
@@ -231,6 +251,177 @@ const Account = () => {
       alert('Update failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const validatePassword = () => {
+    const errors: {[key: string]: string} = {};
+    
+    if (!passwordData.currentPassword.trim()) {
+      errors.currentPassword = 'Current password is required';
+    }
+    
+    if (!passwordData.newPassword.trim()) {
+      errors.newPassword = 'New password is required';
+    } else if (passwordData.newPassword.length < 6) {
+      errors.newPassword = 'Password must be at least 6 characters long';
+    }
+    
+    if (!passwordData.confirmPassword.trim()) {
+      errors.confirmPassword = 'Please confirm your new password';
+    } else if (passwordData.newPassword !== passwordData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+    
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      errors.newPassword = 'New password must be different from current password';
+    }
+    
+    setPasswordErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const fetchAccountStats = async () => {
+    setAccountLoading(true);
+    try {
+      const authHeaders = getAuthHeaders();
+      const [wishlistRes, ordersRes, cartRes] = await Promise.all([
+        fetch(apiUrl('/clients/user/wishlist'), { 
+          credentials: 'include',
+          headers: authHeaders
+        }),
+        fetch(apiUrl('/clients/user/orders'), { 
+          credentials: 'include',
+          headers: authHeaders
+        }),
+        fetch(apiUrl('/clients/user/getcart'), { 
+          credentials: 'include',
+          headers: authHeaders
+        })
+      ]);
+
+      // Debug: Log response status for Google OAuth users
+      console.log('Account Stats API Status:', {
+        wishlist: wishlistRes.status,
+        orders: ordersRes.status,
+        cart: cartRes.status,
+        user: user?.email,
+        authProvider: (user as any)?.authProvider
+      });
+
+      const wishlistData = await wishlistRes.json().catch(() => ({ wishlist: [] }));
+      const ordersData = await ordersRes.json().catch(() => ({ orders: [] }));
+      const cartData = await cartRes.json().catch(() => ({ data: [] }));
+
+      // Debug: Log actual data received
+      console.log('Account Stats Data:', {
+        wishlistData,
+        ordersData,
+        cartData
+      });
+
+      setAccountStats({
+        wishlistCount: (Array.isArray(wishlistData?.wishlist) ? wishlistData.wishlist.length : 0) || 0,
+        ordersCount: (Array.isArray(ordersData?.orders) ? ordersData.orders.length : 0) || 0,
+        cartCount: (Array.isArray(cartData?.data) ? cartData.data.length : 0) || 0,
+        reviewsCount: 0 // Can be implemented later
+      });
+      setLastRefresh(new Date());
+    } catch (error) {
+    } finally {
+      setAccountLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchAccountStats();
+    }
+  }, [user]);
+
+  const handleEmailVerification = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
+      
+      toast({
+        title: 'Sending verification email',
+        description: 'Please wait...',
+      });
+      
+      const response = await fetch(apiUrl('/clients/user/resend-verification'), {
+        method: 'POST',
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.msg || 'Failed to send verification email');
+      }
+      
+      toast({
+        title: 'Verification email sent',
+        description: 'Please check your email for the verification link.',
+        variant: 'default',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to send verification email',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validatePassword()) {
+      return;
+    }
+    
+    setPasswordLoading(true);
+    try {
+      const response = await fetch(apiUrl('/clients/user/change-password'), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.ok) {
+        alert('Password updated successfully!');
+        // Clear form
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        setPasswordErrors({});
+      } else {
+        if (response.status === 401) {
+          setPasswordErrors({ currentPassword: 'Current password is incorrect' });
+        } else {
+          alert(data.msg || 'Failed to update password');
+        }
+      }
+    } catch (error) {
+      alert('Failed to update password. Please try again.');
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -310,10 +501,16 @@ const Account = () => {
                   <div className="flex flex-col md:flex-row gap-8 items-center mb-6">
                     <div className="relative w-28 h-28">
                       <img
-                        src={previewPic || "/placeholder.svg"}
+                        src={previewPic || user?.profile_pic || "/placeholder.svg"}
                         alt="Profile"
                         className="w-28 h-28 rounded-full object-cover border"
                         style={{ opacity: uploading ? 0.5 : 1 }}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          if (target.src !== "/placeholder.svg") {
+                            target.src = "/placeholder.svg";
+                          }
+                        }}
                       />
                       {uploading && (
                         <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-60 rounded-full">
@@ -342,112 +539,9 @@ const Account = () => {
                       />
                     </div>
                   </div>
-                  {/* Address Details */}
-                  <h3 className="text-lg font-semibold mb-2">Address Details</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Personal Address</label>
-                      <textarea
-                        name="personal_address"
-                        rows={2}
-                        placeholder="House, Street, Area"
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        value={formData.personal_address}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Shopping Address</label>
-                      <textarea
-                        name="shoping_address"
-                        rows={2}
-                        placeholder="House, Street, Area"
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        value={formData.shoping_address}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Billing Address</label>
-                      <textarea
-                        name="billing_address"
-                        rows={2}
-                        placeholder="House, Street, Area"
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        value={formData.billing_address}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                      <input
-                        type="text"
-                        name="city"
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        value={formData.city}
-                        onChange={handleInputChange}
-                        placeholder="e.g., Kolkata"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                      <input
-                        type="text"
-                        name="state"
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        value={formData.state}
-                        onChange={handleInputChange}
-                        placeholder="e.g., West Bengal"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-                      <input
-                        type="text"
-                        name="country"
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        value={formData.country}
-                        onChange={handleInputChange}
-                        placeholder="e.g., India"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-                      <input
-                        type="text"
-                        name="zip"
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        value={formData.zip}
-                        onChange={handleInputChange}
-                        placeholder="e.g., 700001"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Address (Village)</label>
-                      <input
-                        type="text"
-                        name="address_village"
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        value={formData.address_village}
-                        onChange={handleInputChange}
-                        placeholder="Village / Locality"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Landmark</label>
-                      <input
-                        type="text"
-                        name="landmark"
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        value={formData.landmark}
-                        onChange={handleInputChange}
-                        placeholder="Near ..."
-                      />
-                    </div>
-                  </div>
-                  {/* Personal Information */}
-                  <h3 className="text-lg font-semibold mt-8 mb-2">Personal Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  
+                  {/* Personal Information - First Section */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
                       <input
@@ -532,54 +626,266 @@ const Account = () => {
                   </div>
                   <div className="mt-8">
                     <Button className="bg-[#D92030] hover:bg-[#BC1C2A]" type="submit" disabled={loading}>
-                      {loading ? 'Saving...' : 'Save Changes'}
+                      {loading ? 'Saving...' : 'Save Personal Information'}
                     </Button>
                   </div>
                 </form>
               </CardContent>
             </Card>
 
-            {/* Show additional user info for e-commerce */}
+            {/* Address Details Section */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle>Account Details</CardTitle>
+                <CardTitle>Address Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSave}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Personal Address</label>
+                      <textarea
+                        name="personal_address"
+                        rows={2}
+                        placeholder="House, Street, Area"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent"
+                        value={formData.personal_address}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Shopping Address</label>
+                      <textarea
+                        name="shoping_address"
+                        rows={2}
+                        placeholder="House, Street, Area"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent"
+                        value={formData.shoping_address}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Billing Address</label>
+                      <textarea
+                        name="billing_address"
+                        rows={2}
+                        placeholder="House, Street, Area"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent"
+                        value={formData.billing_address}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                      <input
+                        type="text"
+                        name="city"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        placeholder="e.g., Kolkata"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                      <input
+                        type="text"
+                        name="state"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent"
+                        value={formData.state}
+                        onChange={handleInputChange}
+                        placeholder="e.g., West Bengal"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                      <input
+                        type="text"
+                        name="country"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent"
+                        value={formData.country}
+                        onChange={handleInputChange}
+                        placeholder="e.g., India"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
+                      <input
+                        type="text"
+                        name="zip"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent"
+                        value={formData.zip}
+                        onChange={handleInputChange}
+                        placeholder="e.g., 700001"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Address (Village)</label>
+                      <input
+                        type="text"
+                        name="address_village"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent"
+                        value={formData.address_village}
+                        onChange={handleInputChange}
+                        placeholder="Village / Locality"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Landmark</label>
+                      <input
+                        type="text"
+                        name="landmark"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent"
+                        value={formData.landmark}
+                        onChange={handleInputChange}
+                        placeholder="Near ..."
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-8">
+                    <Button className="bg-[#D92030] hover:bg-[#BC1C2A]" type="submit" disabled={loading}>
+                      {loading ? 'Saving...' : 'Save Address Details'}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Account Details Section */}
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle>Account Details</CardTitle>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={fetchAccountStats}
+                    disabled={accountLoading}
+                    className="text-[#D92030] border-[#D92030] hover:bg-[#D92030] hover:text-white"
+                  >
+                    {accountLoading ? (
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                      </svg>
+                    ) : (
+                      '🔄'
+                    )}
+                    Refresh
+                  </Button>
+                </div>
+                {lastRefresh && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Last updated: {lastRefresh.toLocaleString()}
+                  </p>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Wishlist Items</label>
-                    <div className="p-2 border border-gray-300 rounded-md bg-gray-50">
-                      {user?.wishlist?.length ? user.wishlist.length : 0}
+                  {/* Statistics Cards */}
+                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-blue-700">Wishlist Items</p>
+                        <p className="text-2xl font-bold text-blue-900">{accountStats.wishlistCount}</p>
+                      </div>
+                      <div className="text-blue-500 text-2xl">❤️</div>
+                    </div>
+                    <Link to="/wishlist" className="text-xs text-blue-600 hover:underline mt-2 block">
+                      View Wishlist →
+                    </Link>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-green-700">Total Orders</p>
+                        <p className="text-2xl font-bold text-green-900">{accountStats.ordersCount}</p>
+                      </div>
+                      <div className="text-green-500 text-2xl">📦</div>
+                    </div>
+                    <Link to="/orders" className="text-xs text-green-600 hover:underline mt-2 block">
+                      View Orders →
+                    </Link>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-purple-700">Cart Items</p>
+                        <p className="text-2xl font-bold text-purple-900">{accountStats.cartCount}</p>
+                      </div>
+                      <div className="text-purple-500 text-2xl">🛒</div>
+                    </div>
+                    <Link to="/cart" className="text-xs text-purple-600 hover:underline mt-2 block">
+                      View Cart →
+                    </Link>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-lg border border-orange-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-orange-700">Account Status</p>
+                        <p className="text-lg font-bold text-orange-900">
+                          {user?.isActive ? '✅ Active' : '❌ Inactive'}
+                        </p>
+                      </div>
+                      <div className="text-orange-500 text-2xl">👤</div>
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Orders</label>
-                    <div className="p-2 border border-gray-300 rounded-md bg-gray-50">
-                      {user?.orders?.length ? user.orders.length : 0}
+                </div>
+                
+                {/* Account Information */}
+                <div className="mt-6 space-y-4">
+                  <h4 className="font-semibold text-gray-900">Account Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <span className="text-sm font-medium text-gray-700">Email Verified</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-medium ${
+                          user?.emailVerified ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {user?.emailVerified ? '✅ Verified' : '❌ Not Verified'}
+                        </span>
+                        {!user?.emailVerified && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={handleEmailVerification}
+                            className="text-xs px-2 py-1 h-6"
+                          >
+                            Verify
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Verified</label>
-                    <div className="p-2 border border-gray-300 rounded-md bg-gray-50">
-                      {user?.emailVerified ? 'Yes' : 'No'}
+                    
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <span className="text-sm font-medium text-gray-700">Member Since</span>
+                      <span className="text-sm text-gray-600">
+                        {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        }) : '-'}
+                      </span>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Active</label>
-                    <div className="p-2 border border-gray-300 rounded-md bg-gray-50">
-                      {user?.isActive ? 'Yes' : 'No'}
+                    
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <span className="text-sm font-medium text-gray-700">Last Updated</span>
+                      <span className="text-sm text-gray-600">
+                        {user?.updatedAt ? new Date(user.updatedAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        }) : '-'}
+                      </span>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Created At</label>
-                    <div className="p-2 border border-gray-300 rounded-md bg-gray-50">
-                      {user?.createdAt ? new Date(user.createdAt).toLocaleString() : '-'}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Updated At</label>
-                    <div className="p-2 border border-gray-300 rounded-md bg-gray-50">
-                      {user?.updatedAt ? new Date(user.updatedAt).toLocaleString() : '-'}
+                    
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <span className="text-sm font-medium text-gray-700">User ID</span>
+                      <span className="text-sm text-gray-600 font-mono">
+                        {user?._id ? `...${user._id.slice(-8)}` : '-'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -591,41 +897,88 @@ const Account = () => {
                 <CardTitle>Change Password</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Current Password
-                    </label>
-                    <input
-                      type="password"
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                    />
+                <form onSubmit={handlePasswordUpdate}>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Current Password
+                      </label>
+                      <input
+                        type="password"
+                        name="currentPassword"
+                        value={passwordData.currentPassword}
+                        onChange={handlePasswordChange}
+                        className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent ${
+                          passwordErrors.currentPassword ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="Enter your current password"
+                        required
+                      />
+                      {passwordErrors.currentPassword && (
+                        <p className="text-red-500 text-sm mt-1">{passwordErrors.currentPassword}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        New Password
+                      </label>
+                      <input
+                        type="password"
+                        name="newPassword"
+                        value={passwordData.newPassword}
+                        onChange={handlePasswordChange}
+                        className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent ${
+                          passwordErrors.newPassword ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="Enter your new password"
+                        required
+                      />
+                      {passwordErrors.newPassword && (
+                        <p className="text-red-500 text-sm mt-1">{passwordErrors.newPassword}</p>
+                      )}
+                      <p className="text-gray-500 text-xs mt-1">Password must be at least 6 characters long</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Confirm New Password
+                      </label>
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        value={passwordData.confirmPassword}
+                        onChange={handlePasswordChange}
+                        className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent ${
+                          passwordErrors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="Confirm your new password"
+                        required
+                      />
+                      {passwordErrors.confirmPassword && (
+                        <p className="text-red-500 text-sm mt-1">{passwordErrors.confirmPassword}</p>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      New Password
-                    </label>
-                    <input
-                      type="password"
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Confirm New Password
-                    </label>
-                    <input
-                      type="password"
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                    />
-                  </div>
-                </div>
 
-                <div className="mt-8">
-                  <Button className="bg-[#D92030] hover:bg-[#BC1C2A]">
-                    Update Password
-                  </Button>
-                </div>
+                  <div className="mt-8">
+                    <Button 
+                      type="submit"
+                      className="bg-[#D92030] hover:bg-[#BC1C2A]" 
+                      disabled={passwordLoading}
+                    >
+                      {passwordLoading ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                          </svg>
+                          Updating...
+                        </>
+                      ) : (
+                        'Update Password'
+                      )}
+                    </Button>
+                  </div>
+                </form>
               </CardContent>
             </Card>
           </div>

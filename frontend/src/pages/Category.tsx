@@ -212,47 +212,27 @@ const CategoryPage: React.FC = () => {
     const shouldShowKidsOnly = location.pathname.includes('/category/') && kidsFlag && !menFlag;
     const shouldShowMenOnly = location.pathname.includes('/category/') && menFlag && !kidsFlag;
     
-    console.log('Category filtering debug:', {
-      normalizedCategory,
-      normalizedCategoryC,
-      shouldShowKidsOnly,
-      categoryProductsCount: categoryProducts.length,
-      referrer: document.referrer,
-      kidsContext: sessionStorage.getItem('kidsContext'),
-      allCategories: [...new Set(products.map(p => p.category))].sort(),
-      flowersProducts: products.filter(p => p.category && p.category.toLowerCase().includes('flower'))
-    });
     
     if (shouldShowKidsOnly) {
-      console.log(`Filtering ${normalizedCategory} for kids only. Before filter:`, categoryProducts.length);
       const kidsFiltered = categoryProducts.filter(p => {
         const g = (normalize(p.gender) || '');
         const c = (normalize(p.category) || '');
-        const sc = (normalize(p.subcategory) || '');
-        return /(kid|boy|girl)/.test(g) || /kid/.test(c) || /kid/.test(sc);
+        return g === 'kids' || c === 'kids';
       });
       if (kidsFiltered.length > 0) {
         categoryProducts = kidsFiltered;
-      } else {
-        console.log('Kids filter produced 0 items; keeping unfiltered category results.');
       }
-      console.log(`After kids filter (applied=${kidsFiltered.length > 0}):`, kidsFiltered.length);
     }
     
     if (shouldShowMenOnly) {
-      console.log(`Filtering ${normalizedCategory} for men only. Before filter:`, categoryProducts.length);
       const menFiltered = categoryProducts.filter(p => {
         const g = (normalize(p.gender) || '');
         const c = (normalize(p.category) || '');
-        const sc = (normalize(p.subcategory) || '');
-        return /(men|man|male)/.test(g) || /men/.test(c) || /men/.test(sc);
+        return g === 'men' || c === 'men';
       });
       if (menFiltered.length > 0) {
         categoryProducts = menFiltered;
-      } else {
-        console.log('Men filter produced 0 items; keeping unfiltered category results.');
       }
-      console.log(`After men filter (applied=${menFiltered.length > 0}):`, menFiltered.length);
     }
     
     return categoryProducts;

@@ -29,9 +29,7 @@ const Dashboard = () => {
   const isNonMediumScreens = useMediaQuery("(min-width:1200px)");
 
   const { data, isLoading } = useGetDashboardQuery();
-  // console.log("Dashboard:", data);
   
-
   const ellipsisCell = (value) => (
     <Box sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
       {String(value ?? '')}

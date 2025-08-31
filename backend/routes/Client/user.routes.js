@@ -13,9 +13,11 @@ const {
   refreshAccessToken,
   logoutUser,
   logoutRedirect,
-  updateUser
+  updateUser,
+  changePassword,
+  verifyEmail
 } = require("../../controllers/user.controler");
-const { sendEmailOtp, verifyEmailOtp, sendPhoneOtp, verifyPhoneOtp } = require("../../controllers/otp.controller");
+const { sendEmailOtp, verifyEmailOtp, sendPhoneOtp, verifyPhoneOtp, resendEmailVerificationForUser } = require("../../controllers/otp.controller");
 const { authenticator } = require("../../middlewares/authenticator.middleware");
 const { cloudinaryUploadMiddleware, upload } = require("../../middlewares/cloudinaryUpload");
 const { UserModel } = require("../../models/users.model");
@@ -51,6 +53,12 @@ UserRouter.post('/otp/email/verify', verifyEmailOtp);
 UserRouter.post('/otp/phone/send', sendPhoneOtp);
 UserRouter.post('/otp/phone/verify', verifyPhoneOtp);
 
+// Resend email verification for the authenticated user
+UserRouter.post('/user/resend-verification', authenticator, resendEmailVerificationForUser);
+
+// Verify email after OTP validation
+UserRouter.post('/user/verify-email', authenticator, verifyEmail);
+
 UserRouter.get("/user/me", authenticator, getCurrentUserInfo);
 
 UserRouter.get("/users/:id", authenticator, getUserById);
@@ -60,6 +68,8 @@ UserRouter.patch("/user/me", authenticator,
   cloudinaryUploadMiddleware,
   updateUser
 );
+
+UserRouter.patch("/user/change-password", authenticator, changePassword);
 
 UserRouter.get("/validatetoken", authenticator, validateToken);
 // Allow refresh without access-token authenticator; it validates refresh token itself
@@ -102,7 +112,6 @@ UserRouter.get(
   (req, res, next) => {
     try {
       // Log the original URL for debugging
-      if (isDebug) console.log('Google OAuth callback hit with URL:', req.originalUrl);
       
       // Always redirect to production frontend after Google auth
       const productionFrontend = 'https://zixx.in';
@@ -122,14 +131,11 @@ UserRouter.get(
             req.session.returnTo = `${productionFrontend}/auth?next=${encodeURIComponent(returnTo)}`;
           }
         } catch (e) {
-          if (isDebug) console.warn('Invalid returnTo URL:', req.query.returnTo, e);
         }
       }
       
-      if (isDebug) console.log('Set returnTo:', req.session.returnTo);
       next();
     } catch (error) {
-      console.error('Error in Google OAuth callback setup:', error);
       // Redirect to a safe URL on error based on environment
       const fallbackUrl = getFrontendBase();
       res.redirect(fallbackUrl);
@@ -143,14 +149,11 @@ UserRouter.get(
       scope: ['profile', 'email']
     }, (err, user, info) => {
       if (err) {
-        console.error('Google OAuth error:', err);
         return next(err);
       }
       if (!user) {
-        if (isDebug) console.log('Google OAuth failed - no user returned');
         return res.redirect(`/api/clients/auth/google/failed?error=no_user`);
       }
-      if (isDebug) console.log('Google OAuth success - user returned:', user);
       // Attach user to request for the next middleware
       req.user = user;
       next();
@@ -165,7 +168,6 @@ UserRouter.get(
       const avatar = (profile.photos && profile.photos[0] && profile.photos[0].value) || '';
       
       if (!email) {
-        console.error('No email provided by Google OAuth');
         const FRONTEND = getFrontendBase();
         return res.redirect(`${FRONTEND}/auth?error=no_email`);
       }
@@ -210,10 +212,49 @@ UserRouter.get(
         
         try {
           await user.save();
-          if (isDebug) console.log('Created new user from Google OAuth:', user.email);
         } catch (error) {
-          console.error('Error saving new user from Google OAuth:', error);
           throw new Error('Failed to create user account');
+        }
+      } else {
+        // Update existing user with Google data if they don't have it
+        let shouldUpdate = false;
+        
+        // Update profile picture if user doesn't have one or if Google has a newer one
+        if (avatar && (!user.profile_pic || user.profile_pic === '' || user.profile_pic === '/placeholder.svg')) {
+          user.profile_pic = avatar;
+          shouldUpdate = true;
+        }
+        
+        // Update name fields if they are empty or default values
+        if (given && (!user.first_name || user.first_name === 'N/A' || user.first_name === '')) {
+          user.first_name = given;
+          shouldUpdate = true;
+        }
+        
+        if (family && (!user.last_name || user.last_name === 'N/A' || user.last_name === '')) {
+          user.last_name = family;
+          shouldUpdate = true;
+        }
+        
+        // Update auth provider info
+        if (!user.authProvider || user.authProvider !== 'google') {
+          user.authProvider = 'google';
+          user.authProviderId = profile.id;
+          shouldUpdate = true;
+        }
+        
+        // Ensure email is verified for Google users
+        if (!user.emailVerified) {
+          user.emailVerified = true;
+          shouldUpdate = true;
+        }
+        
+        if (shouldUpdate) {
+          try {
+            await user.save();
+          } catch (error) {
+            console.error('Failed to update existing user with Google data:', error);
+          }
         }
       }
 
@@ -268,7 +309,6 @@ UserRouter.get(
             returnTo = req.session.returnTo;
           }
         } catch (e) {
-          if (isDebug) console.warn('Invalid returnTo URL in session:', req.session.returnTo);
         }
       }
       
@@ -294,7 +334,6 @@ UserRouter.get(
       }
       
       // Log the redirect (without the token for security)
-      if (isDebug) console.log('Redirecting to:', `${url.origin}${url.pathname}?token=[REDACTED]&${url.searchParams.toString().replace(/token=[^&]*&?/, '')}`);
       
       // Redirect with security headers
       return res
@@ -309,7 +348,6 @@ UserRouter.get(
         })
         .redirect(url.toString());
     } catch (e) {
-      console.error('[google-callback] error:', e);
       const FRONTEND = getFrontendBase();
       return res.redirect(`${FRONTEND}/auth?error=google_oauth_failed`);
     }

@@ -171,15 +171,74 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
             </IconButton>
           )}
           <IconButton
-            onClick={() => dispatch(setMode())}
-            sx={{ zIndex: (t) => t.zIndex.modal + 3 }}
+            onClick={(e) => {
+              try {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Get current mode from multiple sources for reliability
+                const currentReduxMode = theme.palette.mode;
+                const currentStoredMode = localStorage.getItem('admin_theme_mode') || 'dark';
+                const currentDOMMode = document.documentElement.getAttribute('data-theme') || 'dark';
+                
+                // Determine the actual current mode
+                const actualCurrentMode = currentReduxMode || currentStoredMode || currentDOMMode;
+                const newMode = actualCurrentMode === 'dark' ? 'light' : 'dark';
+                
+                // Dispatch Redux action
+                dispatch(setMode());
+                
+                // Immediately update DOM for instant visual feedback
+                document.documentElement.setAttribute('data-theme', newMode);
+                document.documentElement.className = document.documentElement.className
+                  .replace(/theme-(light|dark)/g, '') + ` theme-${newMode}`;
+                
+                // Force update localStorage
+                localStorage.setItem('admin_theme_mode', newMode);
+                sessionStorage.setItem('admin_theme_mode', newMode);
+                
+                // Trigger custom event for other components
+                window.dispatchEvent(new CustomEvent('themeChanged', { 
+                  detail: { mode: newMode, source: 'navbar-toggle' } 
+                }));
+                
+                // Force React re-render after a short delay
+                setTimeout(() => {
+                  window.dispatchEvent(new Event('resize'));
+                }, 50);
+                
+              } catch (error) {
+                console.warn('Theme toggle failed:', error);
+                // Emergency fallback
+                const fallbackMode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', fallbackMode);
+                localStorage.setItem('admin_theme_mode', fallbackMode);
+              }
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            sx={{ 
+              zIndex: (t) => t.zIndex.modal + 3,
+              minWidth: { xs: '44px', sm: 'auto' },
+              minHeight: { xs: '44px', sm: 'auto' },
+              padding: { xs: '12px', sm: '8px' },
+              '&:hover': {
+                backgroundColor: theme.palette.action.hover,
+              },
+              '&:active': {
+                backgroundColor: theme.palette.action.selected,
+              }
+            }}
             aria-label="Toggle theme"
-            size="small"
+            size={isSmall ? "medium" : "small"}
+            disableRipple={false}
           >
             {theme.palette.mode === "dark" ? (
-              <LightModeOutlined sx={{ fontSize: { xs: "20px", sm: "24px" } }} />
+              <LightModeOutlined sx={{ fontSize: { xs: "22px", sm: "24px" } }} />
             ) : (
-              <DarkModeOutlined sx={{ fontSize: { xs: "20px", sm: "24px" } }} />
+              <DarkModeOutlined sx={{ fontSize: { xs: "22px", sm: "24px" } }} />
             )}
           </IconButton>
           <IconButton 
@@ -412,7 +471,49 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
         }}
       >
         <MenuItem 
-          onClick={() => { dispatch(setMode()); closeSettings(); }}
+          onClick={() => { 
+            try {
+              // Get current mode from multiple sources for reliability
+              const currentReduxMode = theme.palette.mode;
+              const currentStoredMode = localStorage.getItem('admin_theme_mode') || 'dark';
+              const currentDOMMode = document.documentElement.getAttribute('data-theme') || 'dark';
+              
+              // Determine the actual current mode
+              const actualCurrentMode = currentReduxMode || currentStoredMode || currentDOMMode;
+              const newMode = actualCurrentMode === 'dark' ? 'light' : 'dark';
+              
+              // Dispatch Redux action
+              dispatch(setMode()); 
+              
+              // Immediately update DOM for instant visual feedback
+              document.documentElement.setAttribute('data-theme', newMode);
+              document.documentElement.className = document.documentElement.className
+                .replace(/theme-(light|dark)/g, '') + ` theme-${newMode}`;
+              
+              // Force update localStorage
+              localStorage.setItem('admin_theme_mode', newMode);
+              sessionStorage.setItem('admin_theme_mode', newMode);
+              
+              // Trigger custom event for other components
+              window.dispatchEvent(new CustomEvent('themeChanged', { 
+                detail: { mode: newMode, source: 'settings-menu' } 
+              }));
+              
+              closeSettings();
+              
+              // Force React re-render after a short delay
+              setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+              }, 50);
+            } catch (error) {
+              console.warn('Theme toggle failed:', error);
+              // Emergency fallback
+              const fallbackMode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+              document.documentElement.setAttribute('data-theme', fallbackMode);
+              localStorage.setItem('admin_theme_mode', fallbackMode);
+              closeSettings();
+            }
+          }}
           sx={{ 
             py: 1.5,
             display: 'flex',

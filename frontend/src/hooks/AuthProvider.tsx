@@ -95,13 +95,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      setUser(data.user);
-      setRole(data.user?.role ?? null);
+      // Only update user state if we actually got valid user data
+      if (data.user && data.user._id) {
+        setUser(data.user);
+        setRole(data.user?.role ?? null);
+        // Cache user data in localStorage for persistence
+        try {
+          localStorage.setItem('cachedUserData', JSON.stringify(data.user));
+        } catch {}
+      }
     } catch (err) {
       console.error('[AuthProvider] fetchUser failed:', err);
-      setUser(null);
-      setToken(null);
-      setRole(null);
+      // Don't clear user state on network errors, try to use cached data
+      try {
+        const cachedUser = localStorage.getItem('cachedUserData');
+        if (cachedUser && !user) {
+          const parsedUser = JSON.parse(cachedUser);
+          setUser(parsedUser);
+          setRole(parsedUser?.role ?? null);
+        }
+      } catch {}
     }
   };
 
@@ -117,6 +130,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setToken(storedToken);
           // If a token exists, attempt to fetch user (mobile fallback when cookies are blocked)
           shouldFetch = true;
+        }
+        
+        // Try to load cached user data immediately for better UX
+        const cachedUser = localStorage.getItem('cachedUserData');
+        if (cachedUser && shouldFetch) {
+          try {
+            const parsedUser = JSON.parse(cachedUser);
+            setUser(parsedUser);
+            setRole(parsedUser?.role ?? null);
+          } catch {}
         }
       } catch {}
 
@@ -271,6 +294,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try { localStorage.removeItem('token'); } catch {}
     try { localStorage.removeItem('isLoggedIn'); } catch {}
+    try { localStorage.removeItem('cachedUserData'); } catch {}
 
     try {
       const bc = new BroadcastChannel('auth');

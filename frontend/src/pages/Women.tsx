@@ -41,7 +41,6 @@ const Women = () => {
       try {
         const res = await fetch(apiUrl('/clients/products/women'), { credentials: 'include' });
         const result = await res.json();
-        // console.log("Fetched products:", result.data);
         if (!result.ok) throw new Error("API returned not ok");
 
         const grouped: { [category: string]: { [subcategory: string]: Product[] } } = {};
@@ -56,7 +55,6 @@ const Women = () => {
         setGroupedProducts(grouped);
         setAllData(result.data);
 
-        // Prepare unique category + subcategory list
         const imageMap: { [key: string]: string } = {
           tops: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/a3778de0b6fa7c76cfd3fcebbe3550413b4e6770?placeholderIfAbsent=true',
           bottoms: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/195176e2222a7c41d44bd7662e7402d74c61a9a0?placeholderIfAbsent=true',
@@ -78,7 +76,6 @@ const Women = () => {
         setCategories(catList);
         setLoading(false);
       } catch (err: any) {
-        // console.log("err", err);
         console.error("Error fetching products:", err);
         setError("Failed to load products");
         setLoading(false);

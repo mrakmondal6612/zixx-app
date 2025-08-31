@@ -6,7 +6,6 @@ export default function Newsletter() {
     
       const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Newsletter subscription:', email);
       };
   return (
     <div className='lg:px-16  '>

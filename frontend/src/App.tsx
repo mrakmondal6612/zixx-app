@@ -43,6 +43,7 @@ const Auth = lazy(() => import('./pages/Auth'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Account = lazy(() => import('./pages/Account'));
 const Category = lazy(() => import('./pages/Category'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
 
 const queryClient = new QueryClient();
 
@@ -95,6 +96,8 @@ const App = () => (
         <Route path="/auth" element={<Auth />} />
         <Route path="/product/:id" element={<Product />} />
         <Route path="/product" element={<Product />} />
+        {/* Email verification */}
+        <Route path="/verify-email" element={<VerifyEmail />} />
         {/* Category routes */}
         <Route path="/category/:category" element={<Category />} />
         <Route path="/category/:category/:subcategory" element={<Category />} />

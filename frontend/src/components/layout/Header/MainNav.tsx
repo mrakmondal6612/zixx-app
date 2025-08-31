@@ -30,7 +30,7 @@ export const MainNav = () => {
   const { user, token } = useAuth();
   // Admin panel base URL: prefer env var with safe fallbacks
   const adminUrl = (() => {
-    const raw = (import.meta as any).env?.VITE_ADMIN_CLIENT_URL;
+    const raw = (import.meta as any).env?.VITE_ADMIN_PANEL_URL;
     try {
       const parsed = new URL(raw);
       return parsed.origin;

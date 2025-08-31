@@ -56,9 +56,7 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
             userId: userObj?._id || (typeof r?.userId === 'string' ? r.userId : undefined),
           } as Review;
         }));
-      } catch (err) {
-        console.error('Fetch reviews failed', err);
-      }
+      } catch (err) {}
     })();
   }, [productId]);
 
@@ -100,7 +98,6 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
       const contentType = res.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         const text = await res.text();
-        console.error('Non-JSON response:', text);
         throw new Error('Server error: ' + text.slice(0, 200));
       }
       const json = await res.json();
@@ -115,8 +112,7 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
       setNewReview({ name: '', rating: 0, comment: '' });
       alert('Review deleted successfully');
     } catch (err) {
-      console.error(err);
-      alert(err.message || 'Failed to delete review');
+      alert((err as any).message || 'Failed to delete review');
     }
   };
 
@@ -135,14 +131,8 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
       navigate('/auth');
       return;
     }
-
-    console.log("myReview", myReview);
-    console.log("product id", productId);
-    if (editing && !myReview) {
-      console.warn('Edit mode but myReview missing; will try to resolve from server');
-    }
+    if (editing && !myReview) {}
     try {
-      console.log("myReview", myReview);
       const method = editing ? 'PUT' : 'POST';
       // Ensure we have a valid review ID when editing
       let reviewIdForEdit: string | undefined = myReview?.id;
@@ -157,7 +147,6 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
             return;
           }
         } catch (e) {
-          console.error('Failed to resolve review ID from server', e);
           alert('Failed to locate your review. Please reload the page and try again.');
           return;
         }
@@ -165,7 +154,6 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
       const url = editing
         ? apiUrl(`/clients/reviews/${reviewIdForEdit!}`)
         : apiUrl(`/clients/reviews/product/${productId}`);
-
 
       const res = await fetch(url, {
         method,
@@ -182,7 +170,6 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
       const contentType = res.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         const text = await res.text();
-        console.error('Non-JSON response:', text);
         throw new Error('Server error: ' + text.slice(0, 200));
       }
 
@@ -214,8 +201,7 @@ export const ReviewSection = ({ productId }: ReviewSectionProps) => {
       setEditing(false);
       setNewReview({ name: '', rating: 0, comment: '' });
     } catch (err) {
-      console.error(err);
-      alert(err.message || 'Review submission failed');
+      alert((err as any).message || 'Review submission failed');
     }
   };
 
