@@ -327,7 +327,7 @@ const Auth = () => {
           gender,
           dob,
           emailVerifyToken,
-          phoneVerifyToken,
+          // phoneVerifyToken is temporarily not required; omit for now
         };
           const res = await fetch(apiUrl('/clients/register'), {
           credentials: 'include', 
@@ -425,20 +425,11 @@ const Auth = () => {
                     inputMode="numeric"
                     required
                   />
-                  {/* Phone with OTP controls */}
+                  {/* Phone (OTP temporarily disabled) */}
                   <div className="space-y-2">
                     <div className="flex gap-2">
                       <Input type="tel" placeholder="+91 Mobile Number *" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-                      <Button type="button" onClick={sendPhoneOtp} disabled={!phone || !!phoneVerifyToken || phoneCooldown > 0}>
-                        {phoneVerifyToken ? 'Verified' : phoneCooldown > 0 ? `Resend (${phoneCooldown}s)` : 'Send OTP'}
-                      </Button>
                     </div>
-                    {phoneRequestId && !phoneVerifyToken && (
-                      <div className="flex gap-2">
-                        <Input type="text" placeholder="Phone OTP" value={phoneOtpCode} onChange={(e) => setPhoneOtpCode(e.target.value)} />
-                        <Button type="button" onClick={verifyPhoneOtp} disabled={!phoneOtpCode}>Verify</Button>
-                      </div>
-                    )}
                   </div>
                   <div className="flex items-center gap-4 mt-2">
                     <span className="font-medium">Gender</span>
@@ -462,9 +453,9 @@ const Auth = () => {
               <Button
                 type="submit"
                 className="w-full bg-[#D92030] hover:bg-[#b81a27] text-white text-lg font-semibold rounded-md py-2 mt-2"
-                disabled={loading || (!isLogin && (!emailVerifyToken || !phoneVerifyToken || password !== confirmPassword))}
+                disabled={loading || (!isLogin && (!emailVerifyToken || password !== confirmPassword))}
               >
-                {loading ? 'Loading...' : isLogin ? 'Sign in' : (!emailVerifyToken || !phoneVerifyToken ? 'Verify email & phone to Register' : 'REGISTER')}
+                {loading ? 'Loading...' : isLogin ? 'Sign in' : (!emailVerifyToken ? 'Verify email to Register' : 'REGISTER')}
               </Button>
               <div className="flex items-center my-4">
                 <div className="flex-grow border-t border-gray-300"></div>
@@ -479,13 +470,6 @@ const Auth = () => {
               >
                 <FaGoogle className="w-5 h-5" /> Sign in with Google
               </Button>
-              {/* <Button
-                type="button"
-                variant="outline"
-                className="w-full flex items-center justify-center gap-2 bg-[#f5f6fa] hover:bg-gray-200 border border-gray-200 text-gray-700 font-medium rounded-md py-2"
-              >
-                <FaFacebook className="w-5 h-5" /> Sign in with Facebook
-              </Button> */}
               <div className="text-center text-sm mt-4">
                 {isLogin ? (
                   <>
