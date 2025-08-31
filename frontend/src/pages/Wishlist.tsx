@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 import { Card } from '@/components/ui/card';
@@ -9,6 +9,8 @@ import { ScrollToTop } from '@/components/ui/scroll-to-top';
 import { toast } from 'sonner';
 import { useAuthContext } from '@/hooks/AuthProvider';
 import { apiUrl, getAuthHeaders } from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
+import axios from 'axios';
 
 type WishlistItem = {
   id: string;
@@ -27,7 +29,10 @@ type WishlistItem = {
 
 const Wishlist = () => {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
+  const [topSellingProducts, setTopSellingProducts] = useState<any[]>([]);
+  const [newArrivals, setNewArrivals] = useState<any[]>([]);
   const { user } = useAuthContext();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -75,6 +80,28 @@ const Wishlist = () => {
 
     fetchWishlist();
   }, [user]);
+
+  // Fetch products for TOP SELLING and NEW ARRIVALS sections
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await axios.get(apiUrl('/clients/products'), {
+          withCredentials: true,
+        });
+        if (res.data?.data && Array.isArray(res.data.data)) {
+          const products = res.data.data;
+          // Get random products for top selling (first 4)
+          const shuffled = [...products].sort(() => 0.5 - Math.random());
+          setTopSellingProducts(shuffled.slice(0, 4));
+          setNewArrivals(shuffled.slice(4, 8));
+        }
+      } catch (err) {
+        console.error('Failed to fetch products for recommendations:', err);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const ensureLoggedIn = () => {
     if (!user) {
@@ -179,7 +206,7 @@ const Wishlist = () => {
         {wishlistItems.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {wishlistItems.map((item) => (
-              <Card key={item.id} className="overflow-hidden">
+              <Card key={item.id} onClick={() => navigate(`/product/${item.id}`)} className="overflow-hidden">
                 <div className="aspect-square relative bg-gray-100 overflow-hidden">
                   <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
                   {!item.inStock && (
@@ -236,6 +263,72 @@ const Wishlist = () => {
             </Button>
           </div>
         )}
+        
+        {/* Top Selling Products Section */}
+        <section className="mt-12 sm:mt-16">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12">{t('product.topSelling')}</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {topSellingProducts.map((product, index) => (
+              <div key={product._id || index} className="bg-white rounded-lg shadow-sm p-4 hover:shadow-lg transition-shadow">
+                <Link to={`/product/${product._id}`} className="block">
+                  <div className="aspect-square bg-gray-100 mb-3 sm:mb-4 rounded-lg overflow-hidden">
+                    <img
+                      src={Array.isArray(product.image) ? product.image[0] : product.image}
+                      alt={product.title}
+                      className="w-full h-full object-contain hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                    />
+                  </div>
+                  <h3 className="font-medium text-sm sm:text-base mb-2 line-clamp-2">{product.title}</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-lg">₹{product.price}</span>
+                    {product.oldPrice && (
+                      <>
+                        <span className="text-gray-500 line-through text-sm">₹{product.oldPrice}</span>
+                        <span className="text-[#D92030] text-sm font-medium">
+                          {Math.round((1 - product.price / product.oldPrice) * 100)}% OFF
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </Link>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* NEW ARRIVALS Section */}
+        <section className="mt-12 sm:mt-16">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12">{t('product.newArrivals')}</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {newArrivals.map((product, index) => (
+              <div key={product._id || index} className="bg-white rounded-lg shadow-sm p-4 hover:shadow-lg transition-shadow">
+                <Link to={`/product/${product._id}`} className="block">
+                  <div className="aspect-square bg-gray-100 mb-3 sm:mb-4 rounded-lg overflow-hidden">
+                    <img
+                      src={Array.isArray(product.image) ? product.image[0] : product.image}
+                      alt={product.title}
+                      className="w-full h-full object-contain hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                    />
+                  </div>
+                  <h3 className="font-medium text-sm sm:text-base mb-2 line-clamp-2">{product.title}</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-lg">₹{product.price}</span>
+                    {product.oldPrice && (
+                      <>
+                        <span className="text-gray-500 line-through text-sm">₹{product.oldPrice}</span>
+                        <span className="text-[#D92030] text-sm font-medium">
+                          {Math.round((1 - product.price / product.oldPrice) * 100)}% OFF
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </Link>
+              </div>
+            ))}
+          </div>
+        </section>
       </main>
       <Footer />
       <ScrollToTop />

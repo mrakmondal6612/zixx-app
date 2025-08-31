@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ChevronDown, User, LogOut } from 'lucide-react';
 import { useAuthContext } from '@/hooks/AuthProvider';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +23,7 @@ export const TopBar = () => {
   });
 
   const isMobile = useIsMobile();
-  const [selectedCountry, setSelectedCountry] = useState('India');
+  const { currentLanguage, setLanguage, t } = useLanguage();
   const { user, logout, loading } = useAuthContext();
 
   const isProfileComplete = useMemo(() => {
@@ -48,11 +49,7 @@ export const TopBar = () => {
   // Allow dismissing the banner until next refresh (no persistence)
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(false);
 
-  const countries = [
-    'India', 'United States', 'United Kingdom', 'Canada', 'Australia', 
-    'Germany', 'France', 'Japan', 'South Korea', 'Singapore', 'UAE', 
-    'Brazil', 'Mexico', 'Italy', 'Spain', 'Netherlands', 'Sweden', 'Norway'
-  ];
+  const { languages } = useLanguage();
 
   return (
     <div className="bg-[rgba(34,40,40,1)] w-full flex flex-col items-stretch justify-center px-3 md:px-6 lg:px-80">
@@ -76,7 +73,7 @@ export const TopBar = () => {
                 setActiveTab(tab);
               }}
             >
-              <div className="font-bold leading-[21px] py-3">{tab.toUpperCase()}</div>
+              <div className="font-bold leading-[21px] py-3">{t(`header.${tab}`)}</div>
             </Link>
           ))}
 
@@ -85,21 +82,24 @@ export const TopBar = () => {
 
         {/* Account + Location + Actions — Always Visible */}
         <div className="z-10 ml-auto flex items-center gap-1 md:gap-2.5 text-white">
-          {/* Country Selector (always visible) */}
+          {/* Language Selector (always visible) */}
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-1 md:gap-[5px] text-xs md:text-sm font-bold whitespace-nowrap leading-[1.1] hover:opacity-80 transition-opacity">
-              <img src="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/c20d732439d086a64aed116707cf0bd74a991145?placeholderIfAbsent=true" className="w-2.5" alt="Location" />
-              <div>{selectedCountry}</div>
+              <span className="text-base">{currentLanguage.flag}</span>
+              <div>{currentLanguage.name}</div>
               <ChevronDown className="w-3 h-3" />
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-48 bg-white border border-gray-200 shadow-lg z-50">
-              {countries.map(country => (
+              {languages.map(language => (
                 <DropdownMenuItem
-                  key={country}
-                  onClick={() => setSelectedCountry(country)}
-                  className={`cursor-pointer px-3 py-2 text-sm hover:bg-gray-100 ${selectedCountry === country ? 'bg-gray-50 font-medium' : ''}`}
+                  key={language.code}
+                  onClick={() => setLanguage(language)}
+                  className={`cursor-pointer px-3 py-2 text-sm hover:bg-gray-100 ${currentLanguage.code === language.code ? 'bg-gray-50 font-medium' : ''}`}
                 >
-                  {country}
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{language.flag}</span>
+                    <span>{language.name}</span>
+                  </div>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -108,16 +108,16 @@ export const TopBar = () => {
           {/* Track Order + Contact (visible for all) */}
           <>
             <Link to="/track-order" className="text-white text-xs md:text-sm font-normal leading-[19.5px] hover:underline ml-2">
-              Track Order
+              {t('header.trackOrder')}
             </Link>
             <Link to="/contact" className="text-white text-xs md:text-sm font-normal leading-[19.5px] hover:underline ml-2">
-              Contact Us
+              {t('header.contactUs')}
             </Link>
           </>
 
           {/* User Dropdown */}
           {loading ? (
-            <div className="text-xs md:text-sm font-normal leading-[19.5px] ml-2">Loading...</div>
+            <div className="text-xs md:text-sm font-normal leading-[19.5px] ml-2">{t('common.loading')}</div>
           ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-2 text-xs md:text-sm font-normal leading-[19.5px] hover:opacity-80 transition-opacity ml-2">
@@ -141,27 +141,27 @@ export const TopBar = () => {
                 <DropdownMenuItem asChild>
                   <Link to="/account" className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer">
                     <User className="w-4 h-4" />
-                    My Account
+                    {t('header.myAccount')}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/wishlist" className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer">
                     <User className="w-4 h-4" />
-                    Wishlist
+                    {t('header.wishlist')}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/logout" className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer text-red-600">
                     <LogOut className="w-4 h-4" />
-                    Sign Out
+                    {t('header.signOut')}
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <Link to="/auth" className="text-white text-xs md:text-sm font-normal leading-[19.5px] hover:underline ml-2">
-              Login
+              {t('header.login')}
             </Link>
           )}
         </div>
@@ -171,20 +171,20 @@ export const TopBar = () => {
         <div className="w-full bg-yellow-50 text-yellow-800 border border-yellow-200 rounded-sm mt-1 mb-2 px-3 py-2">
           <div className="flex items-center justify-between gap-3">
             <div className="text-xs md:text-sm">
-              <strong>Complete your profile</strong> to shop and checkout smoothly (personal details and address required).
+              <strong>{t('header.completeProfile')}</strong> {t('header.completeProfileDesc')}
             </div>
             <Link
               to="/account#profile-form"
               className="text-xs md:text-sm font-semibold text-yellow-900 underline hover:no-underline whitespace-nowrap"
             >
-              Update now
+              {t('header.updateNow')}
             </Link>
             <button
               onClick={() => setBannerDismissed(true)}
               className="ml-2 text-xs md:text-sm text-yellow-900 hover:underline"
               aria-label="Dismiss"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </div>

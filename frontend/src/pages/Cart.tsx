@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
 import { toast } from 'sonner';
 import { useAuthContext } from '@/hooks/AuthProvider';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { apiUrl, getAuthHeaders } from '@/lib/api';
 import axios from 'axios';
 
@@ -29,6 +30,7 @@ type CartItem = {
 const Cart = () => {
   const navigate = useNavigate();
   const { user, setUser } = useAuthContext();
+  const { t } = useLanguage();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [promoCode, setPromoCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -193,27 +195,28 @@ const Cart = () => {
   // Auto-focus the first missing field when modal opens
   useEffect(() => {
     if (!showAddrModal) return;
-    // Determine order of importance for completion
-    const order: Array<{ key: keyof typeof addrForm; ref: React.RefObject<any> }> = [
-      { key: 'personal_address', ref: refPersonal },
-      { key: 'address_village', ref: refVillage },
-      { key: 'city', ref: refCity },
-      { key: 'state', ref: refState },
-      { key: 'zip', ref: refZip },
-      { key: 'country', ref: refCountry },
-      { key: 'landmark', ref: refLandmark },
-    ];
-    const firstMissing = order.find(({ key }) => !String((addrForm as any)[key] || '').trim());
-    const targetRef = firstMissing?.ref || refPersonal;
-    // Delay to ensure modal inputs are mounted
-    setTimeout(() => targetRef.current?.focus(), 0);
-  }, [showAddrModal, addrForm]);
+    // Delay to ensure modal inputs are mounted, then focus first empty field
+    setTimeout(() => {
+      const order: Array<{ key: keyof typeof addrForm; ref: React.RefObject<any> }> = [
+        { key: 'personal_address', ref: refPersonal },
+        { key: 'address_village', ref: refVillage },
+        { key: 'city', ref: refCity },
+        { key: 'state', ref: refState },
+        { key: 'zip', ref: refZip },
+        { key: 'country', ref: refCountry },
+        { key: 'landmark', ref: refLandmark },
+      ];
+      const firstMissing = order.find(({ key }) => !String((addrForm as any)[key] || '').trim());
+      const targetRef = firstMissing?.ref || refPersonal;
+      if (targetRef.current) {
+        targetRef.current.focus();
+      }
+    }, 100);
+  }, [showAddrModal]);
 
   const onAddrChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    e.preventDefault();
-    e.stopPropagation();
     const { name, value } = e.target;
     setAddrForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -234,17 +237,30 @@ const Cart = () => {
       if (addrForm.country) form.append('country', addrForm.country);
       if (addrForm.zip) form.append('zip', addrForm.zip);
 
-      const res = await fetch(apiUrl('/clients/user/me'), { method: 'PATCH', body: form, credentials: 'include' });
+      const res = await fetch(apiUrl('/clients/user/me'), { 
+        method: 'PATCH', 
+        body: form, 
+        credentials: 'include',
+        headers: {
+          ...getAuthHeaders(),
+        }
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.user) {
+        if (res.status === 401) {
+          toast.error('Session expired, please log in again');
+          navigate('/auth');
+          return;
+        }
         toast.error(data?.msg || 'Failed to update address');
         setAddrSaving(false);
         return;
       }
       setUser(data.user);
-      toast.success('Address updated');
+      toast.success('Address updated successfully');
       setShowAddrModal(false);
     } catch (err) {
+      console.error('Address update error:', err);
       toast.error('Address update failed');
     }
     setAddrSaving(false);
@@ -458,16 +474,16 @@ const Cart = () => {
       <Header />
       
       <main className="flex-grow page-container pt-4 sm:pt-6 pb-8 sm:pb-16">
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6">Shopping Cart</h1>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6">{t('cart.title')}</h1>
         {user && !profileComplete && !bannerDismissed && (
           <div className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-md border border-yellow-300 bg-yellow-50 text-yellow-800 flex items-start justify-between gap-3">
             <div>
-              <p className="font-semibold">Complete your profile to checkout</p>
-              <p className="text-xs sm:text-sm">Add your personal and address details to proceed with the payment.</p>
+              <p className="font-semibold">{t('header.completeProfile')}</p>
+              <p className="text-xs sm:text-sm">{t('header.completeProfileDesc')}</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <Link to="/account?completeProfile=1" className="px-3 py-2 rounded-md bg-[#D92030] text-white hover:bg-[#BC1C2A] text-xs sm:text-sm">Update Now</Link>
-              <button onClick={() => setBannerDismissed(true)} className="px-3 py-2 rounded-md border border-yellow-300 text-yellow-800 hover:bg-yellow-100 text-xs sm:text-sm">Dismiss</button>
+              <Link to="/account?completeProfile=1" className="px-3 py-2 rounded-md bg-[#D92030] text-white hover:bg-[#BC1C2A] text-xs sm:text-sm">{t('header.updateNow')}</Link>
+              <button onClick={() => setBannerDismissed(true)} className="px-3 py-2 rounded-md border border-yellow-300 text-yellow-800 hover:bg-yellow-100 text-xs sm:text-sm">{t('common.cancel')}</button>
             </div>
           </div>
         )}
@@ -483,7 +499,7 @@ const Cart = () => {
                       <div
                         key={item.id}
                         className={`flex flex-col sm:flex-row gap-4 p-4 sm:p-6 cursor-pointer hover:bg-gray-100 transition ${index < cartItems.length - 1 ? 'border-b border-gray-200' : ''}`}
-                        onClick={() => navigate(`/product/${item.productId}`)}
+                        onClick={() => navigate(`/cart/product/${item.id}`)}
                       >
                         <div className="w-full sm:w-20 md:w-24 h-32 sm:h-20 md:h-24 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden image-container">
                           <img 
@@ -497,16 +513,16 @@ const Cart = () => {
                             <div className="min-w-0 max-w-full overflow-hidden">
                               <h3 className="font-semibold text-sm sm:text-base lg:text-lg line-clamp-2 break-words">{item.name}</h3>
                               <div className="text-xs sm:text-sm text-gray-600 space-y-1">
-                                <p className="truncate"><span className="font-medium">Brand:</span> {item.brand}</p>
-                                <p className="truncate"><span className="font-medium">Color:</span> {item.color}</p>
-                                <p className="truncate"><span className="font-medium">Size:</span> {item.size}</p>
+                                <p className="truncate"><span className="font-medium">{t('cart.brand')}:</span> {item.brand}</p>
+                                <p className="truncate"><span className="font-medium">{t('cart.color')}:</span> {item.color}</p>
+                                <p className="truncate"><span className="font-medium">{t('cart.size')}:</span> {item.size}</p>
                               </div>
                             </div>
                             <div className="text-left sm:text-right flex-shrink-0">
                               <div className="font-bold text-lg sm:text-xl text-[#D92030]">₹{item.price.toFixed(2)}</div>
                             </div>
                           </div>
-                          <p className="text-xs sm:text-sm text-green-600 font-medium">Delivery by {new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                          <p className="text-xs sm:text-sm text-green-600 font-medium">{t('cart.deliveryBy')} {new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
                             <div className="flex items-center gap-0 border border-gray-300 rounded-lg overflow-hidden w-fit" onClick={e => e.stopPropagation()}>
                               <button 
@@ -531,7 +547,7 @@ const Cart = () => {
                               disabled={loading}
                             >
                               <Trash2 size={12} />
-                              <span className="text-xs sm:text-sm font-medium">Remove</span>
+                              <span className="text-xs sm:text-sm font-medium">{t('common.remove')}</span>
                             </button>
                           </div>
                         </div>
@@ -541,16 +557,16 @@ const Cart = () => {
                 </div>
                 
                 <div className="text-center sm:text-right font-extrabold text-lg sm:text-2xl my-4 sm:my-6 bg-gradient-to-r from-pink-200 via-purple-200 to-indigo-200 rounded-2xl shadow-lg p-4 border-2 border-white/60 animate-gradient-x">
-                  <span className="uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 drop-shadow">Subtotal</span>
-                  <span className="ml-2 text-pink-600 animate-pulse">({cartItems.length} items): ₹{subtotal.toFixed(2)}</span>
+                  <span className="uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 drop-shadow">{t('cart.subtotal')}</span>
+                  <span className="ml-2 text-pink-600 animate-pulse">({cartItems.length} {t('cart.items')}): ₹{subtotal.toFixed(2)}</span>
                 </div>
               </>
             ) : (
               <div className="text-center py-12 sm:py-16 bg-white rounded-lg shadow-sm spacing-md">
-                <h2 className="text-xl sm:text-2xl font-bold mb-4">Your cart is empty</h2>
-                <p className="mb-6 sm:mb-8 text-gray-600 text-sm sm:text-base">It looks like you haven't added anything to your cart yet.</p>
+                <h2 className="text-xl sm:text-2xl font-bold mb-4">{t('cart.empty')}</h2>
+                <p className="mb-6 sm:mb-8 text-gray-600 text-sm sm:text-base">{t('cart.emptyDesc')}</p>
                 <Link to="/">
-                  <Button className="bg-[#D92030] hover:bg-[#BC1C2A] px-6 py-3">Continue Shopping</Button>
+                  <Button className="bg-[#D92030] hover:bg-[#BC1C2A] px-6 py-3">{t('cart.continueShopping')}</Button>
                 </Link>
               </div>
             )}
@@ -560,11 +576,11 @@ const Cart = () => {
           {cartItems.length > 0 && (
             <div className="w-full lg:w-[300px] xl:w-[350px] flex-shrink-0">
               <div className="bg-gradient-to-br from-pink-100 via-purple-100 to-indigo-100 rounded-3xl shadow-xl p-6 sticky top-28 border-2 border-white/60">
-                <h2 className="font-black text-xl mb-4 sm:mb-6 text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 drop-shadow">Order Summary</h2>
+                <h2 className="font-black text-xl mb-4 sm:mb-6 text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 drop-shadow">{t('cart.orderSummary')}</h2>
                 {/* Shipping Address Summary */}
                 {user && profileComplete ? (
                   <div className="mb-4 sm:mb-6 bg-white/60 rounded-xl p-4 border border-white/80">
-                    <div className="font-semibold mb-1">Shipping Address</div>
+                    <div className="font-semibold mb-1">{t('cart.shippingAddress')}</div>
                     <div className="text-sm text-gray-700 space-y-0.5">
                       <div>{[user.first_name, user.last_name].filter(Boolean).join(' ')}</div>
                       {user.phone && <div>+{String(user.phone)}</div>}
@@ -574,29 +590,29 @@ const Cart = () => {
                       <div>{addressObj.country}</div>
                     </div>
                     <div className="mt-2">
-                      <button onClick={() => setShowAddrModal(true)} className="text-xs text-[#D92030] hover:underline">Edit address</button>
+                      <button onClick={() => setShowAddrModal(true)} className="text-xs text-[#D92030] hover:underline">{t('cart.editAddress')}</button>
                     </div>
                   </div>
                 ) : (
                   <div className="mb-4 sm:mb-6 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl p-3 text-sm">
-                    Add your shipping address in <button onClick={() => setShowAddrModal(true)} className="underline font-medium">Cart</button> or update in <Link to="/account" className="underline font-medium">Account</Link> to place your order.
+                    {t('cart.addShippingAddress')} <button onClick={() => setShowAddrModal(true)} className="underline font-medium">{t('cart.title')}</button> or update in <Link to="/account" className="underline font-medium">{t('header.myAccount')}</Link> to place your order.
                   </div>
                 )}
                 <div className="space-y-3 mb-4 sm:mb-6">
                   <div className="flex justify-between text-base font-semibold">
-                    <span className="text-pink-500">Subtotal</span>
+                    <span className="text-pink-500">{t('cart.subtotal')}</span>
                     <span className="font-bold text-indigo-600">₹{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-base font-semibold">
-                    <span className="text-purple-500">Shipping</span>
+                    <span className="text-purple-500">{t('cart.shipping')}</span>
                     <span className="font-bold text-pink-600">₹{shipping.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-base font-semibold">
-                    <span className="text-indigo-500">Tax</span>
+                    <span className="text-indigo-500">{t('cart.tax')}</span>
                     <span className="font-bold text-purple-600">₹{tax.toFixed(2)}</span>
                   </div>
                   <div className="border-t-2 border-dashed border-pink-300 pt-3 flex justify-between font-black text-lg sm:text-xl">
-                    <span className="uppercase tracking-widest text-indigo-700">Total</span>
+                    <span className="uppercase tracking-widest text-indigo-700">{t('cart.total')}</span>
                     <span className="text-pink-600 animate-pulse">₹{total.toFixed(2)}</span>
                   </div>
                 </div>
@@ -605,7 +621,7 @@ const Cart = () => {
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="Enter promo code"
+                      placeholder={t('cart.promoCode')}
                       value={promoCode}
                       onChange={(e) => setPromoCode(e.target.value)}
                       className="flex-grow px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#D92030] text-sm"
@@ -614,7 +630,7 @@ const Cart = () => {
                       type="submit"
                       className="bg-gray-800 text-white px-2 sm:px-4 py-2 rounded-lg hover:bg-gray-900 transition-colors font-medium text-sm"
                     >
-                      Apply
+                      {t('cart.apply')}
                     </button>
                   </div>
                 </form>
@@ -629,12 +645,12 @@ const Cart = () => {
                     <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-white animate-wiggle">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1.35 2.7A2 2 0 007.5 19h9a2 2 0 001.85-1.3L17 13M7 13V6h13" />
                     </svg>
-                    <span className="bg-white/20 px-3 py-1 rounded-xl text-white font-black text-lg drop-shadow-sm">{paying ? 'Processing...' : (profileComplete ? 'Buy Products' : 'Complete Profile to Checkout')}</span>
+                    <span className="bg-white/20 px-3 py-1 rounded-xl text-white font-black text-lg drop-shadow-sm">{paying ? t('cart.processing') : (profileComplete ? t('cart.buyProducts') : t('cart.completeProfileToCheckout'))}</span>
                   </span>
                 </Button>
                 {!profileComplete && (
                   <div className="text-xs text-yellow-900 bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-4">
-                    To place your order, please complete your profile details first.
+                    {t('messages.addShippingAddressToContinue')}
                   </div>
                 )}
                 
@@ -677,7 +693,7 @@ const Cart = () => {
                           <path d="M5 12h14M12 5v14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       </div>
-                      <p className="text-xs font-medium">FREE FAST DELIVERY</p>
+                      <p className="text-xs font-medium">{t('cart.freeDelivery')}</p>
                     </div>
                     <div>
                       <div className="mx-auto mb-2 w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center">
@@ -686,7 +702,7 @@ const Cart = () => {
                           <path d="M9 9.35v5.3a.5.5 0 00.78.42l4.5-2.65a.5.5 0 000-.84l-4.5-2.65a.5.5 0 00-.78.42z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       </div>
-                      <p className="text-xs font-medium">24/7 CUSTOMER SERVICE</p>
+                      <p className="text-xs font-medium">{t('cart.customerService')}</p>
                     </div>
                     <div>
                       <div className="mx-auto mb-2 w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center">
@@ -695,7 +711,7 @@ const Cart = () => {
                           <path d="M12 16v-4M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       </div>
-                      <p className="text-xs font-medium">MONEY BACK GUARANTEE</p>
+                      <p className="text-xs font-medium">{t('cart.moneyBack')}</p>
                     </div>
                   </div>
                 </div>
@@ -706,7 +722,7 @@ const Cart = () => {
         
         {/* Top Selling Products Section */}
         <section className="mt-12 sm:mt-16">
-          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12">TOP SELLING</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12">{t('product.topSelling')}</h2>
           <div className="responsive-grid-4">
             {topSellingProducts.map((product, index) => (
               <div key={product._id || index} className="bg-white rounded-lg shadow-sm spacing-sm hover:shadow-lg transition-shadow">
@@ -733,7 +749,7 @@ const Cart = () => {
 
         {/* NEW ARRIVALS Section */}
         <section className="mt-12 sm:mt-16">
-          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12">NEW ARRIVALS</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12">{t('product.newArrivals')}</h2>
           <div className="responsive-grid-4">
             {newArrivals.map((product, index) => (
               <div key={product._id || index} className="bg-white rounded-lg shadow-sm spacing-sm hover:shadow-lg transition-shadow">
@@ -763,43 +779,133 @@ const Cart = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold">Edit Shipping Address</h3>
+              <h3 className="text-lg font-semibold">{t('address.editShippingAddress')}</h3>
               <button onClick={() => setShowAddrModal(false)} className="text-gray-500 hover:text-gray-800">✕</button>
             </div>
-            <form onSubmit={saveAddress} className="space-y-3">
+            <form onSubmit={saveAddress} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Personal Address</label>
-                <textarea ref={refPersonal} name="personal_address" rows={2} className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent" value={addrForm.personal_address} onChange={onAddrChange} onKeyDown={(e) => e.stopPropagation()} />
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('address.personalAddress')} *</label>
+                <textarea 
+                  ref={refPersonal} 
+                  name="personal_address" 
+                  rows={4} 
+                  placeholder={t('address.personalAddressPlaceholder')}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent transition-all" 
+                  value={addrForm.personal_address} 
+                  onChange={onAddrChange}
+                  required
+                />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Village / Locality</label>
-                  <input ref={refVillage} name="address_village" className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent" value={addrForm.address_village} onChange={onAddrChange} onKeyDown={(e) => e.stopPropagation()} />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('address.village')} *</label>
+                  <input 
+                    ref={refVillage} 
+                    name="address_village" 
+                    type="text"
+                    placeholder={t('address.villagePlaceholder')}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent transition-all" 
+                    value={addrForm.address_village} 
+                    onChange={onAddrChange}
+                    required
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Landmark</label>
-                  <input ref={refLandmark} name="landmark" className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent" value={addrForm.landmark} onChange={onAddrChange} onKeyDown={(e) => e.stopPropagation()} />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('address.landmark')}</label>
+                  <input 
+                    ref={refLandmark} 
+                    name="landmark" 
+                    type="text"
+                    placeholder={t('address.landmarkPlaceholder')}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent transition-all" 
+                    value={addrForm.landmark} 
+                    onChange={onAddrChange}
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                  <input ref={refCity} name="city" className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent" value={addrForm.city} onChange={onAddrChange} onKeyDown={(e) => e.stopPropagation()} />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('address.city')} *</label>
+                  <input 
+                    ref={refCity} 
+                    name="city" 
+                    type="text"
+                    placeholder={t('address.cityPlaceholder')}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent transition-all" 
+                    value={addrForm.city} 
+                    onChange={onAddrChange}
+                    required
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                  <input ref={refState} name="state" className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent" value={addrForm.state} onChange={onAddrChange} onKeyDown={(e) => e.stopPropagation()} />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('address.state')} *</label>
+                  <input 
+                    ref={refState} 
+                    name="state" 
+                    type="text"
+                    placeholder={t('address.statePlaceholder')}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent transition-all" 
+                    value={addrForm.state} 
+                    onChange={onAddrChange}
+                    required
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-                  <input ref={refCountry} name="country" className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent" value={addrForm.country} onChange={onAddrChange} onKeyDown={(e) => e.stopPropagation()} />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('address.country')} *</label>
+                  <input 
+                    ref={refCountry} 
+                    name="country" 
+                    type="text"
+                    placeholder={t('address.countryPlaceholder')}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent transition-all" 
+                    value={addrForm.country} 
+                    onChange={onAddrChange}
+                    required
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ZIP</label>
-                  <input ref={refZip} name="zip" className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent" value={addrForm.zip} onChange={onAddrChange} onKeyDown={(e) => e.stopPropagation()} />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('address.zipCode')} *</label>
+                  <input 
+                    ref={refZip} 
+                    name="zip" 
+                    type="text"
+                    placeholder={t('address.zipPlaceholder')}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D92030] focus:border-transparent transition-all" 
+                    value={addrForm.zip} 
+                    onChange={onAddrChange}
+                    required
+                  />
                 </div>
               </div>
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setShowAddrModal(false)} className="px-4 py-2 rounded-md border">Cancel</button>
-                <Button type="submit" className="bg-[#D92030] hover:bg-[#BC1C2A]" disabled={addrSaving}>{addrSaving ? 'Saving...' : 'Save Address'}</Button>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  <span className="font-medium">{t('common.note')}:</span> {t('address.requiredNote')}
+                </p>
+              </div>
+              
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button 
+                  type="button" 
+                  onClick={() => setShowAddrModal(false)} 
+                  className="px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50 transition-colors"
+                  disabled={addrSaving}
+                >
+                  {t('common.cancel')}
+                </button>
+                <Button 
+                  type="submit" 
+                  className="bg-[#D92030] hover:bg-[#BC1C2A] px-6 py-2" 
+                  disabled={addrSaving}
+                >
+                  {addrSaving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      {t('address.saving')}
+                    </>
+                  ) : (
+                    t('address.saveAddress')
+                  )}
+                </Button>
               </div>
             </form>
           </div>

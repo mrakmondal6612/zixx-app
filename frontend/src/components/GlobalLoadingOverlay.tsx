@@ -1,6 +1,6 @@
 import React from "react";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
-import { useNavigation, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { FullScreenLoader } from "@/components/ui/loader";
 import { useGlobalLoading } from "@/hooks/GlobalLoading";
 
@@ -8,16 +8,13 @@ import { useGlobalLoading } from "@/hooks/GlobalLoading";
 export default function GlobalLoadingOverlay() {
   const isFetching = useIsFetching();
   const isMutating = useIsMutating();
-  const navigation = useNavigation();
   const location = useLocation();
   const { active: fetchActive } = useGlobalLoading();
 
   const inFlight =
     isFetching > 0 ||
     isMutating > 0 ||
-    fetchActive > 0 ||
-    navigation.state === "loading" ||
-    navigation.state === "submitting";
+    fetchActive > 0;
 
   // Debounce to avoid flicker on very fast requests
   const [visible, setVisible] = React.useState(false);

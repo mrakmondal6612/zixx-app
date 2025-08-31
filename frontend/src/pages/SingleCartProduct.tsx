@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { useAuthContext } from '@/hooks/AuthProvider';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { apiUrl, getAuthHeaders } from '@/lib/api';
 
 interface CartProduct {
@@ -31,6 +32,7 @@ const SingleCartProduct = () => {
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(false);
   const { user } = useAuthContext();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -44,7 +46,7 @@ const SingleCartProduct = () => {
           },
         });
         if (res.status === 401) {
-          toast.error('Please log in to view product');
+          toast.error(t('auth.pleaseLogin'));
           navigate('/auth');
           return;
         }
@@ -66,11 +68,11 @@ const SingleCartProduct = () => {
             brand: data.data.brand || '',
           });
         } else {
-          toast.error('Product not found');
+          toast.error(t('messages.productNotFound'));
           navigate('/cart');
         }
       } catch (err) {
-        toast.error('Failed to load product');
+        toast.error(t('messages.failedToLoadProduct'));
         navigate('/cart');
       }
       setLoading(false);
@@ -81,7 +83,7 @@ const SingleCartProduct = () => {
   const handleBuy = async () => {
     if (!product) return;
     if (!user) {
-      toast.error('Please log in to continue');
+      toast.error(t('auth.pleaseLoginToContinue'));
       navigate('/auth');
       return;
     }
@@ -99,14 +101,14 @@ const SingleCartProduct = () => {
       setPaying(true);
       const ok = await loadRazorpay();
       if (!ok) {
-        toast.error('Razorpay SDK failed to load.');
+        toast.error(t('payment.razorpayFailed'));
         setPaying(false);
         return;
       }
 
       const amountInPaise = Math.round((product.price * product.quantity) * 100);
       if (amountInPaise <= 0) {
-        toast.error('Invalid amount');
+        toast.error(t('payment.invalidAmount'));
         setPaying(false);
         return;
       }
@@ -115,7 +117,7 @@ const SingleCartProduct = () => {
       const keyRes = await fetch(apiUrl('/clients/payments/razorpay/key'), { credentials: 'include', headers: { ...getAuthHeaders() } });
       const keyData = await keyRes.json().catch(() => ({}));
       if (!keyRes.ok || !keyData?.key) {
-        toast.error(keyData?.msg || 'Failed to get payment key');
+        toast.error(keyData?.msg || t('payment.failedToGetKey'));
         setPaying(false);
         return;
       }
@@ -129,7 +131,7 @@ const SingleCartProduct = () => {
       });
       const orderData = await orderRes.json().catch(() => ({}));
       if (!orderRes.ok || !orderData?.order?.id) {
-        toast.error(orderData?.msg || 'Failed to initiate payment');
+        toast.error(orderData?.msg || t('payment.failedToInitiate'));
         setPaying(false);
         return;
       }
@@ -158,7 +160,7 @@ const SingleCartProduct = () => {
             });
             const verifyData = await verifyRes.json().catch(() => ({}));
             if (!verifyRes.ok || verifyData?.ok !== true) {
-              toast.error(verifyData?.msg || 'Payment verification failed');
+              toast.error(verifyData?.msg || t('payment.verificationFailed'));
               setPaying(false);
               return;
             }
@@ -172,31 +174,31 @@ const SingleCartProduct = () => {
             });
             const placeData = await placeRes.json().catch(() => ({}));
             if (!placeRes.ok || placeData?.ok === false) {
-              toast.error(placeData?.msg || 'Order failed');
+              toast.error(placeData?.msg || t('orders.orderFailed'));
               setPaying(false);
               return;
             }
 
-            toast.success('Payment successful! Order placed.');
+            toast.success(t('payment.paymentSuccessful'));
             navigate('/orders');
           } catch (err) {
-            toast.error('Unexpected error after payment');
+            toast.error(t('payment.unexpectedError'));
           }
           setPaying(false);
         },
-        modal: { ondismiss: () => { setPaying(false); toast.info('Payment cancelled'); } }
+        modal: { ondismiss: () => { setPaying(false); toast.info(t('payment.paymentCancelled')); } }
       };
 
       const rzp = new (window as any).Razorpay(options);
       rzp.open();
     } catch (e) {
       console.error(e);
-      toast.error('Payment initialization failed');
+      toast.error(t('payment.initializationFailed'));
       setPaying(false);
     }
   };
 
-  if (loading) return <div className="flex justify-center items-center h-40 text-lg font-semibold text-gray-600 animate-pulse">Loading...</div>;
+  if (loading) return <div className="flex justify-center items-center h-40 text-lg font-semibold text-gray-600 animate-pulse">{t('common.loading')}</div>;
   if (!product) return null;
 
   return (
@@ -204,7 +206,7 @@ const SingleCartProduct = () => {
       <Header />
       <main className="flex-grow w-full max-w-2xl mx-auto px-2 md:px-6 py-10">
         <Card className="p-0 rounded-2xl shadow-2xl border border-purple-200 bg-white overflow-hidden">
-          <div className="flex flex-col md:flex-row gap-0 md:gap-8 items-stretch">
+          <div onClick={() => navigate(`/product/${product.productId}`)} className="flex flex-col md:flex-row gap-0 md:gap-8 items-stretch">
             <div className="flex-shrink-0 w-full md:w-1/2 flex items-center justify-center bg-gradient-to-br from-purple-100 to-blue-100 p-6 md:p-8">
               <img
                 src={product.image || '/public/placeholder.svg'}
@@ -215,17 +217,17 @@ const SingleCartProduct = () => {
             <div className="flex-1 flex flex-col justify-center p-6 md:p-8">
               <h2 className="text-3xl font-extrabold mb-2 text-purple-800 break-words">{product.name}</h2>
               <div className="flex flex-wrap gap-2 mb-2">
-                <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-semibold">Brand: {product.brand}</span>
-                <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">Color: {product.color}</span>
-                <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">Size: {product.size}</span>
-                <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-semibold">Category: {product.category}</span>
-                <span className="bg-pink-100 text-pink-700 px-2 py-1 rounded text-xs font-semibold">Theme: {product.theme}</span>
-                <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-semibold">Gender: {product.gender}</span>
+                <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-semibold">{t('cart.brand')}: {product.brand}</span>
+                <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">{t('cart.color')}: {product.color}</span>
+                <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">{t('cart.size')}: {product.size}</span>
+                <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-semibold">{t('product.category')}: {product.category}</span>
+                <span className="bg-pink-100 text-pink-700 px-2 py-1 rounded text-xs font-semibold">{t('product.theme')}: {product.theme}</span>
+                <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-semibold">{t('product.gender')}: {product.gender}</span>
               </div>
-              <div className="text-gray-800 font-bold text-2xl mb-2">Price: <span className="text-purple-700">₹{product.price.toFixed(2)}</span></div>
+              <div className="text-gray-800 font-bold text-2xl mb-2">{t('product.price')}: <span className="text-purple-700">₹{product.price.toFixed(2)}</span></div>
               <div className="text-gray-700 text-base mb-4 whitespace-pre-line break-words">{product.description}</div>
               <Button className="w-full md:w-auto mt-2 bg-[#D92030] hover:bg-[#BC1C2A] px-8 py-3 text-white font-bold rounded-lg text-lg shadow-md" onClick={handleBuy} disabled={loading || paying}>
-                {paying ? 'Processing...' : (loading ? 'Loading...' : 'Buy Now')}
+                {paying ? t('cart.processing') : (loading ? t('common.loading') : t('cart.buyNow'))}
               </Button>
             </div>
           </div>

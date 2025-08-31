@@ -1,12 +1,14 @@
-import { Suspense, lazy } from 'react';
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import React, { Suspense, lazy } from 'react';
+import { Routes, Route } from 'react-router-dom';
+import { Toaster } from 'sonner';
+import { AuthProvider } from '@/hooks/AuthProvider';
+import { LanguageProvider } from '@/contexts/LanguageContext';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import './App.css';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Routes, Route } from "react-router-dom";
-import ProtectedRoute from "./components/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
 import GlobalLoadingOverlay from "@/components/GlobalLoadingOverlay";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Route-level code splitting
 const Home = lazy(() => import('./pages/Home'));
@@ -50,12 +52,13 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <ScrollToTop />
-      <GlobalLoadingOverlay />
-      <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
-        <Routes>
+      <LanguageProvider>
+        <AuthProvider>
+            <Toaster />
+            <ScrollToTop />
+            <GlobalLoadingOverlay />
+            <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+              <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
         <Route path="/cart/product/:id" element={<ProtectedRoute><SingleCartProduct /></ProtectedRoute>} />
@@ -103,8 +106,10 @@ const App = () => (
         <Route path="/category/:category/:subcategory" element={<Category />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
-      </Routes>
-      </Suspense>
+              </Routes>
+            </Suspense>
+        </AuthProvider>
+      </LanguageProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 import { ReviewSection } from '@/components/ReviewSection';
@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { useAuthContext } from '@/hooks/AuthProvider';
 import { apiUrl, getAuthHeaders } from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // Setup axios
 axios.defaults.withCredentials = true;
@@ -57,8 +58,10 @@ const Product = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuthContext();
+  const { t } = useLanguage();
 
   const [product, setProduct] = useState<ProductType | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<ProductType[]>([]);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -154,6 +157,41 @@ const Product = () => {
     };
     fetchProduct();
   }, [id, location.search]);
+
+  // Fetch related products based on current product
+  useEffect(() => {
+    if (!product) return;
+    
+    const fetchRelatedProducts = async () => {
+      try {
+        const res = await axios.get(apiUrl('/clients/products'), {
+          withCredentials: true,
+        });
+        
+        if (res.data?.data && Array.isArray(res.data.data)) {
+          const allProducts = res.data.data;
+          
+          // Filter related products based on category, theme, brand, or gender
+          const related = allProducts.filter((p: ProductType) => 
+            p._id !== product._id && (
+              p.category === product.category ||
+              p.theme === product.theme ||
+              p.brand === product.brand ||
+              p.gender === product.gender
+            )
+          );
+          
+          // Shuffle and take first 4-8 products
+          const shuffled = related.sort(() => 0.5 - Math.random());
+          setRelatedProducts(shuffled.slice(0, 8));
+        }
+      } catch (err) {
+        console.error('Failed to fetch related products:', err);
+      }
+    };
+
+    fetchRelatedProducts();
+  }, [product]);
   const ensureLoggedIn = () => {
     if (!user) {
       toast.error('You must be logged in.');
@@ -443,6 +481,44 @@ const Product = () => {
         <div className="border-t pt-16">
           <ReviewSection productId={product._id} />
         </div>
+
+        {/* Related Products Section */}
+        {relatedProducts.length > 0 && (
+          <section className="mt-12 sm:mt-16">
+            <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12">Related Products</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {relatedProducts.map((relatedProduct, index) => (
+                <div key={relatedProduct._id || index} className="bg-white rounded-lg shadow-sm p-4 hover:shadow-lg transition-shadow">
+                  <Link to={`/product/${relatedProduct._id}`} className="block">
+                    <div className="aspect-square bg-gray-100 mb-3 sm:mb-4 rounded-lg overflow-hidden">
+                      <img
+                        src={Array.isArray(relatedProduct.image) ? relatedProduct.image[0] : relatedProduct.image || `https://source.unsplash.com/featured/400x400/${(relatedProduct.category || 'fashion').replace(/\s+/g, '+')}`}
+                        alt={relatedProduct.title}
+                        className="w-full h-full object-contain hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                    </div>
+                    <h3 className="font-medium text-sm sm:text-base mb-2 line-clamp-2">{relatedProduct.title}</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-lg">₹{relatedProduct.price}</span>
+                      {relatedProduct.oldPrice && (
+                        <>
+                          <span className="text-gray-500 line-through text-sm">₹{relatedProduct.oldPrice}</span>
+                          <span className="text-[#D92030] text-sm font-medium">
+                            {Math.round((1 - relatedProduct.price / relatedProduct.oldPrice) * 100)}% OFF
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    {relatedProduct.brand && (
+                      <p className="text-xs text-gray-500 mt-1">{relatedProduct.brand}</p>
+                    )}
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
       <Footer />
       <ScrollToTop />
