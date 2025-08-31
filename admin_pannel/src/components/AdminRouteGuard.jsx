@@ -10,7 +10,7 @@ export default function AdminRouteGuard({ children }) {
   const adminBase = (() => {
     let a = import.meta.env.VITE_ADMIN_PANEL_URL;
     if (!a || typeof a !== 'string' || !/^https?:\/\//i.test(a)) {
-      a = 'https://zixx-admin.vercel.app';
+      a = 'https://admin.zixx.in';
     }
     try { const u = new URL(a); return u.origin; } catch { return a; }
   })().replace(/\/$/, '');

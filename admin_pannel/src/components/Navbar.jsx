@@ -258,7 +258,7 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                       let adminUrl = import.meta.env.VITE_ADMIN_PANEL_URL;
                       // Fallback to safe defaults if env is missing or malformed
                       if (!adminUrl || typeof adminUrl !== 'string' || !/^https?:\/\//i.test(adminUrl)) {
-                        adminUrl = isProd ? 'https://zixx-admin.vercel.app' : `http://${window.location.hostname}:8000`;
+                        adminUrl = isProd ? 'https://admin.zixx.in' : `http://${window.location.hostname}:8000`;
                       }
                       try { const u = new URL(adminUrl); adminUrl = u.origin; } catch (err) { /* keep as-is if parsing fails */ }
                       const returnTo = encodeURIComponent(`${adminUrl}`);
