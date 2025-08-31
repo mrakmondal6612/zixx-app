@@ -17,6 +17,26 @@ export default defineConfig(({ mode }) => {
       'process.env.NODE_ENV': JSON.stringify(mode),
       global: 'globalThis',
     },
+    build: {
+      chunkSizeWarningLimit: 1024,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            react: ['react', 'react-dom'],
+            router: ['react-router', 'react-router-dom'],
+            tanstack: ['@tanstack/react-query'],
+            ui: [
+              '@radix-ui/react-dropdown-menu',
+              '@radix-ui/react-dialog',
+              '@radix-ui/react-tooltip',
+              '@radix-ui/react-slot'
+            ],
+            charts: ['recharts'],
+            supabase: ['@supabase/supabase-js']
+          }
+        }
+      }
+    },
     server: {
       port: parseInt(env.VITE_PORT),
       host: "localhost",

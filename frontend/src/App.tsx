@@ -1,46 +1,48 @@
-
-import Buy from './pages/Buy';
+import { Suspense, lazy } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import Cart from "./pages/Cart";
-import Wishlist from "./pages/Wishlist";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Brands from "./pages/Brands";
-import Login from "./pages/Login";
-import Logout from "./pages/Logout";
-import Women from "./pages/Women";
-import Home from "./pages/Home";
-import Men from "./pages/Men";
-import Kids from "./pages/Kids";
-import Signup from "./pages/Signup";
-import Shop from "./pages/Shop";
-import OnSale from "./pages/OnSale";
-import NewArrivals from "./pages/NewArrivals";
-import Contact from "./pages/Contact";
-import TrackOrder from "./pages/TrackOrder";
-import Orders from "./pages/Orders";
-import OrderDetails from "./pages/OrderDetails";
-import Search from "./pages/Search";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfUse from "./pages/TermsOfUse";
-import FAQ from "./pages/FAQ";
-import Clothes from "./pages/Clothes";
-import Accessories from "./pages/Accessories";
-import Collections from "./pages/Collections";
-import FeaturedCollection from "./pages/FeaturedCollection";
-import Product from "./pages/Product";
-import SingleCartProduct from "./pages/SingleCartProduct";
-import Admin from "./pages/Admin";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
 import { ScrollToTop } from "./components/ScrollToTop";
-import Account from './pages/Account';
-import Category from './pages/Category';
 import GlobalLoadingOverlay from "@/components/GlobalLoadingOverlay";
+
+// Route-level code splitting
+const Home = lazy(() => import('./pages/Home'));
+const Buy = lazy(() => import('./pages/Buy'));
+const Index = lazy(() => import('./pages/Index'));
+const Cart = lazy(() => import('./pages/Cart'));
+const Wishlist = lazy(() => import('./pages/Wishlist'));
+const Brands = lazy(() => import('./pages/Brands'));
+const Login = lazy(() => import('./pages/Login'));
+const Logout = lazy(() => import('./pages/Logout'));
+const Women = lazy(() => import('./pages/Women'));
+const Men = lazy(() => import('./pages/Men'));
+const Kids = lazy(() => import('./pages/Kids'));
+const Signup = lazy(() => import('./pages/Signup'));
+const Shop = lazy(() => import('./pages/Shop'));
+const OnSale = lazy(() => import('./pages/OnSale'));
+const NewArrivals = lazy(() => import('./pages/NewArrivals'));
+const Contact = lazy(() => import('./pages/Contact'));
+const TrackOrder = lazy(() => import('./pages/TrackOrder'));
+const Orders = lazy(() => import('./pages/Orders'));
+const OrderDetails = lazy(() => import('./pages/OrderDetails'));
+const Search = lazy(() => import('./pages/Search'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfUse = lazy(() => import('./pages/TermsOfUse'));
+const FAQ = lazy(() => import('./pages/FAQ'));
+const Clothes = lazy(() => import('./pages/Clothes'));
+const Accessories = lazy(() => import('./pages/Accessories'));
+const Collections = lazy(() => import('./pages/Collections'));
+const FeaturedCollection = lazy(() => import('./pages/FeaturedCollection'));
+const Product = lazy(() => import('./pages/Product'));
+const SingleCartProduct = lazy(() => import('./pages/SingleCartProduct'));
+const Admin = lazy(() => import('./pages/Admin'));
+const Auth = lazy(() => import('./pages/Auth'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const Account = lazy(() => import('./pages/Account'));
+const Category = lazy(() => import('./pages/Category'));
 
 const queryClient = new QueryClient();
 
@@ -51,7 +53,8 @@ const App = () => (
       <Sonner />
       <ScrollToTop />
       <GlobalLoadingOverlay />
-      <Routes>
+      <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+        <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
         <Route path="/cart/product/:id" element={<ProtectedRoute><SingleCartProduct /></ProtectedRoute>} />
@@ -98,6 +101,7 @@ const App = () => (
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </Suspense>
     </TooltipProvider>
   </QueryClientProvider>
 );

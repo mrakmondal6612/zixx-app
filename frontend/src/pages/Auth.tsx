@@ -258,9 +258,9 @@ const Auth = () => {
       // Get the current path to return to after login
       const from = (location.state as any)?.from?.pathname || '/';
       
-      // Always use production frontend URL for OAuth flow to avoid localhost redirects
-      const productionFrontend = 'https://zixx.vercel.app';
-      const returnTo = `${productionFrontend}${from}`;
+      // Use current origin so OAuth always returns to the active domain (e.g., https://zixx.in)
+      const frontendBase = window.location.origin;
+      const returnTo = `${frontendBase}${from}`;
       
       // Build the OAuth URL with the correct returnTo parameter
       const oauthUrl = `${apiUrl('/clients/auth/google')}?returnTo=${encodeURIComponent(returnTo)}`;

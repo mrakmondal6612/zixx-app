@@ -4,7 +4,7 @@ const AuthFallback = () => {
   const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
   let frontend = import.meta.env.VITE_FRONTEND_URL;
   if (!frontend) {
-    frontend = isProd ? 'https://zixx.vercel.app' : `http://${window.location.hostname}`;
+    frontend = isProd ? 'https://zixx.in' : `http://${window.location.hostname}`;
   }
   try { const u = new URL(frontend); frontend = u.origin; } catch (e) {}
   const token = localStorage.getItem('token');

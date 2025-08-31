@@ -98,7 +98,7 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
         let frontend = import.meta.env.VITE_FRONTEND_URL;
         if (!frontend) {
           frontend = isProd
-            ? "https://zixx.vercel.app"
+            ? "https://zixx.in"
             : `http://${window.location.hostname}:8282`;
         }
         try {

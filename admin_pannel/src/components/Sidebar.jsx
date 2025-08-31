@@ -170,7 +170,7 @@ const Sidebar = ({
                   onClick={() => {
                     let frontend = import.meta.env.VITE_FRONTEND_URL;
                     if (!frontend || typeof frontend !== 'string' || !/^https?:\/\//i.test(frontend)) {
-                      frontend = 'https://zixx.vercel.app';
+                      frontend = 'https://zixx.in';
                     }
                     try { const u = new URL(frontend); frontend = u.origin; } catch (e) {}
                     window.location.href = `${frontend.replace(/\/$/, '')}/`;

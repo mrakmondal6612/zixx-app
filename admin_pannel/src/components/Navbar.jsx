@@ -283,11 +283,11 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                   } catch (e) {}
 
                   // Also notify main site origin instantly via hidden iframe to /logout-sync.html
-                  // This makes zixx.vercel.app tabs receive storage/BroadcastChannel events on their origin
+                  // This makes zixx.in tabs receive storage/BroadcastChannel events on their origin
                   try {
                     let frontendOrigin = import.meta.env.VITE_FRONTEND_URL;
                     if (!frontendOrigin || typeof frontendOrigin !== 'string' || !/^https?:\/\//i.test(frontendOrigin)) {
-                      frontendOrigin = 'https://zixx.vercel.app';
+                      frontendOrigin = 'https://zixx.in';
                     }
                     try { const u = new URL(frontendOrigin); frontendOrigin = u.origin; } catch (e) {}
                     const iframe = document.createElement('iframe');
