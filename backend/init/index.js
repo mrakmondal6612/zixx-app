@@ -139,17 +139,17 @@ const initializeDatabase = async () => {
     
     // Connect to database
     await connection;
-
+    console.log("Connected to MongoDB");
     // Clear all existing data
     await clearAllData();
-
+    console.log("Cleared all existing data");
     // Create default admin
     const adminId = await createDefaultAdmin();
-
+    console.log("Created default admin user");
     // Import fresh data
     await importFreshData(adminId);
 
-    
+    console.log("Imported fresh data");
     process.exit(0);
   } catch (error) {
     process.exit(1);

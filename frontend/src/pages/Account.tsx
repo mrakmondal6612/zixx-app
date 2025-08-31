@@ -162,6 +162,7 @@ const Account = () => {
       form.append('profile_pic', file);
   const res = await fetch(apiUrl('/clients/user/me'), {
         method: 'PATCH',
+        headers: getAuthHeaders(),
         body: form,
         credentials: 'include',
       });
@@ -206,6 +207,7 @@ const Account = () => {
       }
       const res = await fetch(apiUrl('/clients/user/me'), {
         method: 'PATCH',
+        headers: getAuthHeaders(),
         body: form,
         credentials: 'include',
       });
@@ -391,6 +393,7 @@ const Account = () => {
       const response = await fetch(apiUrl('/clients/user/change-password'), {
         method: 'PATCH',
         headers: {
+          ...getAuthHeaders(),
           'Content-Type': 'application/json',
         },
         credentials: 'include',
