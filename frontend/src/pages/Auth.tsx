@@ -24,11 +24,32 @@ const Auth = () => {
   const [dobInputType, setDobInputType] = useState<'text' | 'date'>('text');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  // OTP state
+  const [emailOtpCode, setEmailOtpCode] = useState('');
+  const [emailRequestId, setEmailRequestId] = useState('');
+  const [emailVerifyToken, setEmailVerifyToken] = useState('');
+  const [emailCooldown, setEmailCooldown] = useState(0);
+  const [phoneOtpCode, setPhoneOtpCode] = useState('');
+  const [phoneRequestId, setPhoneRequestId] = useState('');
+  const [phoneVerifyToken, setPhoneVerifyToken] = useState('');
+  const [phoneCooldown, setPhoneCooldown] = useState(0);
   const { user, login, setRole, setUser } = useAuthContext();
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
+  // cooldown tickers
+  React.useEffect(() => {
+    if (emailCooldown <= 0) return;
+    const t = setInterval(() => setEmailCooldown((c) => (c > 0 ? c - 1 : 0)), 1000);
+    return () => clearInterval(t);
+  }, [emailCooldown]);
+  React.useEffect(() => {
+    if (phoneCooldown <= 0) return;
+    const t = setInterval(() => setPhoneCooldown((c) => (c > 0 ? c - 1 : 0)), 1000);
+    return () => clearInterval(t);
+  }, [phoneCooldown]);
+
   const isProfileComplete = (u: any): boolean => {
     if (!u) return false;
     const address = typeof u.address === 'string' ? (() => { try { return JSON.parse(u.address); } catch { return {}; } })() : (u.address || {});
@@ -47,7 +68,7 @@ const Auth = () => {
     ];
     return required.every((v) => v !== undefined && v !== null && String(v).trim() !== '' && String(v).toLowerCase() !== 'n/a');
   };
-  
+
   // Use a ref to track if the OAuth effect has already run
   const effectRun = React.useRef(false);
 
@@ -63,6 +84,75 @@ const Auth = () => {
     setGender('');
     setDob('');
     setDobInputType('text');
+    // reset otp states
+    setEmailOtpCode(''); setEmailRequestId(''); setEmailVerifyToken(''); setEmailCooldown(0);
+    setPhoneOtpCode(''); setPhoneRequestId(''); setPhoneVerifyToken(''); setPhoneCooldown(0);
+  };
+
+  // Reset verification if user edits email/phone after verifying
+  React.useEffect(() => { setEmailVerifyToken(''); setEmailOtpCode(''); setEmailRequestId(''); }, [email]);
+  React.useEffect(() => { setPhoneVerifyToken(''); setPhoneOtpCode(''); setPhoneRequestId(''); }, [phone]);
+
+  // OTP handlers
+  const sendEmailOtp = async () => {
+    try {
+      const res = await fetch(apiUrl('/clients/otp/email/send'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data?.msg || 'Failed to send email OTP');
+      setEmailRequestId(data.data.requestId);
+      setEmailCooldown(data.data.cooldownSec || 60);
+      toast({ title: 'OTP sent', description: 'Check your email for the code.' });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    }
+  };
+  const verifyEmailOtp = async () => {
+    try {
+      const res = await fetch(apiUrl('/clients/otp/email/verify'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ requestId: emailRequestId, code: emailOtpCode }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data?.msg || 'Invalid OTP');
+      setEmailVerifyToken(data.data.token);
+      toast({ title: 'Email verified', description: 'Your email has been verified.' });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    }
+  };
+  const sendPhoneOtp = async () => {
+    try {
+      const res = await fetch(apiUrl('/clients/otp/phone/send'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ phone }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data?.msg || 'Failed to send phone OTP');
+      setPhoneRequestId(data.data.requestId);
+      setPhoneCooldown(data.data.cooldownSec || 60);
+      toast({ title: 'OTP sent', description: 'Check your phone for the code.' });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    }
+  };
+  const verifyPhoneOtp = async () => {
+    try {
+      const res = await fetch(apiUrl('/clients/otp/phone/verify'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ requestId: phoneRequestId, code: phoneOtpCode }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data?.msg || 'Invalid OTP');
+      setPhoneVerifyToken(data.data.token);
+      toast({ title: 'Phone verified', description: 'Your phone number has been verified.' });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    }
   };
 
   // Handle token returned from OAuth redirect
@@ -72,10 +162,10 @@ const Auth = () => {
     const provider = params.get('provider');
     const ok = params.get('ok');
     const next = params.get('next');
-    
+
     // Only proceed if we have all required parameters
     if (!token || provider !== 'google' || ok !== '1') return;
-    
+
     if (!effectRun.current) {
       effectRun.current = true;
       
@@ -235,7 +325,9 @@ const Auth = () => {
           password,
           phone: Number(phone),
           gender,
-          dob
+          dob,
+          emailVerifyToken,
+          phoneVerifyToken,
         };
           const res = await fetch(apiUrl('/clients/register'), {
           credentials: 'include', 
@@ -278,7 +370,23 @@ const Auth = () => {
                   <Input placeholder="Last Name *" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
                 </div>
               )}
-              <Input type="email" placeholder="Email ID *" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              {/* Email with OTP controls */}
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input type="email" placeholder="Email ID *" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  {!isLogin && (
+                    <Button type="button" onClick={sendEmailOtp} disabled={!email || !!emailVerifyToken || emailCooldown > 0}>
+                      {emailVerifyToken ? 'Verified' : emailCooldown > 0 ? `Resend (${emailCooldown}s)` : 'Send OTP'}
+                    </Button>
+                  )}
+                </div>
+                {!isLogin && emailRequestId && !emailVerifyToken && (
+                  <div className="flex gap-2">
+                    <Input type="text" placeholder="Email OTP" value={emailOtpCode} onChange={(e) => setEmailOtpCode(e.target.value)} />
+                    <Button type="button" onClick={verifyEmailOtp} disabled={!emailOtpCode}>Verify</Button>
+                  </div>
+                )}
+              </div>
               <div className="relative">
                 <Input
                   type={showPassword ? 'text' : 'password'}
@@ -317,7 +425,21 @@ const Auth = () => {
                     inputMode="numeric"
                     required
                   />
-                  <Input type="tel" placeholder="+91 Mobile Number *" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                  {/* Phone with OTP controls */}
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Input type="tel" placeholder="+91 Mobile Number *" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                      <Button type="button" onClick={sendPhoneOtp} disabled={!phone || !!phoneVerifyToken || phoneCooldown > 0}>
+                        {phoneVerifyToken ? 'Verified' : phoneCooldown > 0 ? `Resend (${phoneCooldown}s)` : 'Send OTP'}
+                      </Button>
+                    </div>
+                    {phoneRequestId && !phoneVerifyToken && (
+                      <div className="flex gap-2">
+                        <Input type="text" placeholder="Phone OTP" value={phoneOtpCode} onChange={(e) => setPhoneOtpCode(e.target.value)} />
+                        <Button type="button" onClick={verifyPhoneOtp} disabled={!phoneOtpCode}>Verify</Button>
+                      </div>
+                    )}
+                  </div>
                   <div className="flex items-center gap-4 mt-2">
                     <span className="font-medium">Gender</span>
                     {['male', 'female', 'other'].map((g) => (
@@ -340,9 +462,9 @@ const Auth = () => {
               <Button
                 type="submit"
                 className="w-full bg-[#D92030] hover:bg-[#b81a27] text-white text-lg font-semibold rounded-md py-2 mt-2"
-                disabled={loading}
+                disabled={loading || (!isLogin && (!emailVerifyToken || !phoneVerifyToken || password !== confirmPassword))}
               >
-                {loading ? 'Loading...' : isLogin ? 'Sign in' : 'REGISTER'}
+                {loading ? 'Loading...' : isLogin ? 'Sign in' : (!emailVerifyToken || !phoneVerifyToken ? 'Verify email & phone to Register' : 'REGISTER')}
               </Button>
               <div className="flex items-center my-4">
                 <div className="flex-grow border-t border-gray-300"></div>
