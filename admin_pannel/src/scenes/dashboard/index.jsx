@@ -68,7 +68,7 @@ const Dashboard = () => {
       field: "cost",
       headerName: "Cost",
       flex: 0.8,
-      renderCell: (params) => ellipsisCell(`$${Number(params.value).toFixed(2)}`),
+      renderCell: (params) => ellipsisCell(`₹${Number(params.value).toFixed(2)}`),
     },
   ];
   return (

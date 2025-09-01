@@ -311,7 +311,12 @@ const Product = ({ product, onDelete, onUpdate }) => {
               variant="h6"
               sx={{ mt: 1, fontWeight: "bold", color: theme.palette.mode === "dark" ? "#A692F6" : "#87068F" }}
             >
-              ${Number(product.price).toFixed(2)}
+                            <Typography
+              variant="h6"
+              sx={{ mt: 1, fontWeight: "bold", color: theme.palette.mode === "dark" ? "#A692F6" : "#87068F" }}
+            >
+              ₹{Number(product.price).toFixed(2)}
+            </Typography>
             </Typography>
             <Typography
               variant="body2"

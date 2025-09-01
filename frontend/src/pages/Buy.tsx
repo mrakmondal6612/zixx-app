@@ -28,6 +28,7 @@ const Buy: React.FC = () => {
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
   const {user} = useAuthContext();
   const navigate = useNavigate();
 
@@ -91,6 +92,50 @@ const Buy: React.FC = () => {
     );
   };
 
+  const handlePlaceOrderCOD = async () => {
+    if (selected.length === 0) {
+      toast.error('Please select at least one product to buy.');
+      return;
+    }
+    if (!user) {
+      toast.error('Please log in to continue');
+      navigate('/auth');
+      return;
+    }
+
+    try {
+      setPaying(true);
+      
+      // Place order with COD payment method
+      const selectedItems = cartItems.filter((item) => selected.includes(item.id));
+      const cartIds = selectedItems.map((it) => it.id);
+      const placeRes = await fetch(apiUrl('/clients/order/buy-selected'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cartIds,
+          paymentDetails: {
+            provider: 'cod',
+            paymentStatus: 'pending'
+          }
+        })
+      });
+      const placeData = await placeRes.json().catch(() => ({}));
+      if (!placeRes.ok || placeData?.ok !== true) {
+        toast.error(placeData?.msg || 'Failed to place order');
+        setPaying(false);
+        return;
+      }
+
+      toast.success('Order placed successfully! You will pay on delivery.');
+      navigate('/orders');
+    } catch (err) {
+      toast.error('Failed to place order');
+    }
+    setPaying(false);
+  };
+
   const handlePlaceOrder = async () => {
     if (selected.length === 0) {
       toast.error('Please select at least one product to buy.');
@@ -100,6 +145,11 @@ const Buy: React.FC = () => {
       toast.error('Please log in to continue');
       navigate('/auth');
       return;
+    }
+
+    // Handle COD payment
+    if (paymentMethod === 'cod') {
+      return handlePlaceOrderCOD();
     }
 
     // Razorpay flow for selected items
@@ -254,12 +304,48 @@ const Buy: React.FC = () => {
                 </div>
               ))}
             </div>
+            
+            {/* Payment Method Selection */}
+            <div className="mb-6 bg-white rounded-lg shadow-sm p-4 border">
+              <h3 className="font-semibold mb-3 text-gray-800">Payment Method</h3>
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="razorpay"
+                    checked={paymentMethod === 'razorpay'}
+                    onChange={(e) => setPaymentMethod(e.target.value as 'razorpay' | 'cod')}
+                    className="w-4 h-4 text-[#D92030] focus:ring-[#D92030]"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Online Payment</span>
+                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Razorpay</span>
+                  </div>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="cod"
+                    checked={paymentMethod === 'cod'}
+                    onChange={(e) => setPaymentMethod(e.target.value as 'razorpay' | 'cod')}
+                    className="w-4 h-4 text-green-600 focus:ring-green-500"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Cash on Delivery</span>
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">COD</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             <Button
               className="w-full bg-[#D92030] hover:bg-[#BC1C2A] py-3 text-base font-semibold rounded-lg"
               onClick={handlePlaceOrder}
               disabled={loading || paying}
             >
-              {paying ? 'Processing...' : (loading ? 'Placing Order...' : 'Place Order')}
+              {paying ? 'Processing...' : (loading ? 'Placing Order...' : (paymentMethod === 'cod' ? 'Place Order (COD)' : 'Place Order'))}
             </Button>
           </>
         )}

@@ -266,7 +266,7 @@ function Admin() {
 
   return (
     <Box m="1.5rem 2.5rem">
-      <Header title="CUSTOMERS" subtitle="List of Customers" />
+      <Header title="ADMIN" subtitle="List of Admins" />
 
       {isError && <p style={{ color: "red" }}>Failed to load admins</p>}
 

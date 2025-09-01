@@ -31,8 +31,21 @@ const SingleCartProduct = () => {
   const [product, setProduct] = useState<CartProduct | null>(null);
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
   const { user } = useAuthContext();
   const { t } = useLanguage();
+
+  // translation helper that falls back to a safe English string when key is missing
+  const tr = (key: string, fallback: string) => {
+    try {
+      const v = t(key);
+      // if translation returns the same key (missing) or falsy, use fallback
+      if (!v || v === key) return fallback;
+      return v;
+    } catch {
+      return fallback;
+    }
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -80,12 +93,50 @@ const SingleCartProduct = () => {
     fetchProduct();
   }, [id, navigate]);
 
+  const handleBuyCOD = async () => {
+    if (!product) return;
+    if (!user) {
+      toast.error(t('auth.pleaseLoginToContinue'));
+      navigate('/auth');
+      return;
+    }
+
+    try {
+      setPaying(true);
+      const placeRes = await fetch(apiUrl(`/clients/order/buy`), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({
+          singleCartId: product.id,
+          paymentDetails: { provider: 'cod', paymentStatus: 'pending' }
+        })
+      });
+      const placeData = await placeRes.json().catch(() => ({}));
+      if (!placeRes.ok || placeData?.ok === false) {
+        toast.error(placeData?.msg || t('orders.orderFailed'));
+        setPaying(false);
+        return;
+      }
+      toast.success(t('orders.orderPlaced') || 'Order placed successfully! You will pay on delivery.');
+      navigate('/orders');
+    } catch (_) {
+      toast.error(t('messages.somethingWentWrong') || 'Failed to place order');
+    }
+    setPaying(false);
+  };
+
   const handleBuy = async () => {
     if (!product) return;
     if (!user) {
       toast.error(t('auth.pleaseLoginToContinue'));
       navigate('/auth');
       return;
+    }
+
+    // COD flow
+    if (paymentMethod === 'cod') {
+      return handleBuyCOD();
     }
 
     const loadRazorpay = () => new Promise<boolean>((resolve) => {
@@ -198,38 +249,227 @@ const SingleCartProduct = () => {
     }
   };
 
-  if (loading) return <div className="flex justify-center items-center h-40 text-lg font-semibold text-gray-600 animate-pulse">{t('common.loading')}</div>;
+  // Update cart item quantity (PATCH /clients/user/updatecart/:id)
+  const [updatingQty, setUpdatingQty] = useState(false);
+  const updateQuantity = async (newQty: number) => {
+    if (!product) return;
+    if (newQty < 1) return;
+    try {
+      setUpdatingQty(true);
+      const res = await fetch(apiUrl(`/clients/user/updatecart/${product.id}`), {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ Qty: newQty }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data?.msg || t('messages.failedToUpdate'));
+        setUpdatingQty(false);
+        return;
+      }
+      // keep UI in sync
+      setProduct((prev) => prev ? { ...prev, quantity: newQty } : prev);
+      toast.success(tr('cart.qtyUpdated', 'Quantity updated'));
+    } catch (err) {
+      console.error(err);
+      toast.error(t('messages.somethingWentWrong'));
+    }
+    setUpdatingQty(false);
+  };
+
+  const [removing, setRemoving] = useState(false);
+  const handleRemove = async () => {
+    if (!product) return;
+    try {
+      // Use translation helper `tr` which falls back to the provided English string when key is missing
+      if (!confirm(tr('cart.confirmRemove', 'Remove this item from cart?'))) return;
+      setRemoving(true);
+      const res = await fetch(apiUrl(`/clients/user/remove/${product.id}`), {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { ...getAuthHeaders() },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data?.msg || t('messages.failedToRemove'));
+        setRemoving(false);
+        return;
+      }
+      toast.success(t('cart.removed') || 'Item removed');
+      navigate('/cart');
+    } catch (err) {
+      console.error(err);
+      toast.error(t('messages.somethingWentWrong'));
+    }
+    setRemoving(false);
+  };
+
+  if (loading) return <div className="flex justify-center items-center h-40 text-lg font-semibold text-gray-600 animate-pulse">{tr('common.loading','Loading...')}</div>;
   if (!product) return null;
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 to-purple-100">
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-yellow-50 via-pink-50 to-purple-100">
       <Header />
-      <main className="flex-grow w-full max-w-2xl mx-auto px-2 md:px-6 py-10">
-        <Card className="p-0 rounded-2xl shadow-2xl border border-purple-200 bg-white overflow-hidden">
-          <div onClick={() => navigate(`/product/${product.productId}`)} className="flex flex-col md:flex-row gap-0 md:gap-8 items-stretch">
-            <div className="flex-shrink-0 w-full md:w-1/2 flex items-center justify-center bg-gradient-to-br from-purple-100 to-blue-100 p-6 md:p-8">
+      <main className="flex-grow w-full max-w-4xl mx-auto px-4 md:px-6 py-12">
+        <Card className="p-0 rounded-3xl shadow-2xl border border-purple-200 bg-white/70 backdrop-blur-sm overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start p-4 md:p-6">
+            {/* Image column */}
+            <div onClick={() => navigate(`/product/${product.productId}`)} className="cursor-pointer md:col-span-1 flex items-center justify-center bg-gradient-to-br from-purple-100 to-blue-100 p-4 rounded-lg">
               <img
                 src={product.image || '/public/placeholder.svg'}
                 alt={product.name}
-                className="w-48 h-48 md:w-64 md:h-64 object-contain rounded-xl shadow-md border border-gray-200 bg-white"
+                className="w-44 h-44 sm:w-52 sm:h-52 md:w-64 md:h-64 object-contain rounded-lg shadow-md border border-gray-200 bg-white"
               />
             </div>
-            <div className="flex-1 flex flex-col justify-center p-6 md:p-8">
-              <h2 className="text-3xl font-extrabold mb-2 text-purple-800 break-words">{product.name}</h2>
-              <div className="flex flex-wrap gap-2 mb-2">
+
+            {/* Details column */}
+            <div className="md:col-span-1 flex flex-col justify-start p-2 md:p-0">
+              <h2 onClick={() => navigate(`/product/${product.productId}`)} className="text-2xl md:text-3xl font-extrabold mb-2 bg-gradient-to-r from-yellow-500 via-pink-500 to-purple-600 bg-clip-text text-transparent break-words cursor-pointer">{product.name}</h2>
+              <div className="flex flex-wrap gap-2 mb-3">
                 <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-semibold">{t('cart.brand')}: {product.brand}</span>
                 <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">{t('cart.color')}: {product.color}</span>
                 <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">{t('cart.size')}: {product.size}</span>
                 <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-semibold">{t('product.category')}: {product.category}</span>
-                <span className="bg-pink-100 text-pink-700 px-2 py-1 rounded text-xs font-semibold">{t('product.theme')}: {product.theme}</span>
-                <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-semibold">{t('product.gender')}: {product.gender}</span>
               </div>
-              <div className="text-gray-800 font-bold text-2xl mb-2">{t('product.price')}: <span className="text-purple-700">₹{product.price.toFixed(2)}</span></div>
-              <div className="text-gray-700 text-base mb-4 whitespace-pre-line break-words">{product.description}</div>
-              <Button className="w-full md:w-auto mt-2 bg-[#D92030] hover:bg-[#BC1C2A] px-8 py-3 text-white font-bold rounded-lg text-lg shadow-md" onClick={handleBuy} disabled={loading || paying}>
-                {paying ? t('cart.processing') : (loading ? t('common.loading') : t('cart.buyNow'))}
-              </Button>
+              <div className="text-gray-800 font-semibold text-lg md:text-2xl mb-2">{t('product.price')}: <span className="text-purple-700">₹{product.price.toFixed(2)}</span></div>
+              <div className="text-gray-700 text-sm md:text-base mb-4 whitespace-pre-line break-words">{product.description}</div>
+
+              {/* Quantity */}
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex items-center bg-gray-50 rounded-md border overflow-hidden">
+                  <button
+                    aria-label="Decrease quantity"
+                    onClick={() => updateQuantity(Math.max(1, product.quantity - 1))}
+                    className="px-3 py-2 text-lg font-semibold disabled:opacity-50"
+                    disabled={updatingQty}
+                  >-
+                  </button>
+                  <div className="px-4 py-2 text-sm font-medium">{product.quantity}</div>
+                  <button
+                    aria-label="Increase quantity"
+                    onClick={() => updateQuantity(product.quantity + 1)}
+                    className="px-3 py-2 text-lg font-semibold disabled:opacity-50"
+                    disabled={updatingQty}
+                  >+
+                  </button>
+                </div>
+              </div>
+
+              {/* Mobile action bar (sticky) with payment method */}
+              <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+                <div className="bg-white border-t border-gray-200 shadow-xl">
+                  {/* Payment methods - Horizontal layout */}
+                  <div className="px-3 py-2 border-b border-gray-100">
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="flex items-center gap-2 flex-1 cursor-pointer p-2 rounded-lg hover:bg-gray-50">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="razorpay"
+                          checked={paymentMethod === 'razorpay'}
+                          onChange={(e) => setPaymentMethod(e.target.value as 'razorpay' | 'cod')}
+                          className="w-4 h-4 text-[#D92030] focus:ring-[#D92030]"
+                        />
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span className="font-medium text-sm whitespace-nowrap">{tr('payment.onlinePayment', 'Online Payment')}</span>
+                          <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full whitespace-nowrap">Razorpay</span>
+                        </div>
+                      </label>
+                      <label className="flex items-center gap-2 flex-1 cursor-pointer p-2 rounded-lg hover:bg-gray-50">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="cod"
+                          checked={paymentMethod === 'cod'}
+                          onChange={(e) => setPaymentMethod(e.target.value as 'razorpay' | 'cod')}
+                          className="w-4 h-4 text-green-600 focus:ring-green-500"
+                        />
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span className="font-medium text-sm whitespace-nowrap">{tr('payment.cod', 'Cash on Delivery')}</span>
+                          <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">COD</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                  {/* Buy button */}
+                  <div className="p-3">
+                    <Button 
+                      className="w-full bg-gradient-to-r from-yellow-500 via-pink-500 to-purple-600 text-white font-semibold transform hover:scale-[1.02] transition shadow-lg py-6 rounded-xl text-lg" 
+                      onClick={handleBuy} 
+                      disabled={loading || paying}
+                    >
+                      {paying ? tr('cart.processing','Processing...') : (paymentMethod === 'cod' ? tr('orders.placeOrderCOD','Place Order (COD)') : tr('product.buyNow','Buy Now'))}
+                    </Button>
+                  </div>
+                </div>
+                {/* Safe area spacing for iOS */}
+                <div className="h-[env(safe-area-inset-bottom)] bg-white" />
+              </div>
             </div>
+
+            {/* Summary column (desktop) */}
+            <aside className="hidden md:block md:col-span-1">
+              <div className="p-4">
+                <div className="bg-white border rounded-xl shadow p-4 sticky top-24">
+                  <div className="mb-4">
+                    <div className="text-sm text-gray-500">{tr('cart.unitPrice','Unit price')}</div>
+                    <div className="text-xl font-semibold">₹{product.price.toFixed(2)}</div>
+                  </div>
+                  <div className="mb-4">
+                    <div className="text-sm text-gray-500">{tr('cart.quantity','Quantity')}</div>
+                    <div className="text-lg font-medium">{product.quantity}</div>
+                  </div>
+                  <div className="mb-4 border-t pt-3">
+                    <div className="text-sm text-gray-500">{tr('cart.subtotal','Subtotal')}</div>
+                    <div className="text-2xl font-bold">₹{(product.price * product.quantity).toFixed(2)}</div>
+                  </div>
+                  <div className="mb-3 text-xs text-gray-500">{tr('cart.shippingNote','Shipping calculated at checkout')}</div>
+                  
+                  {/* Payment methods in desktop summary */}
+                  <div className="mb-2 bg-gray-50 rounded-lg p-3">
+                    <h3 className="font-semibold mb-2 text-gray-800">{tr('cart.paymentMethod', 'Payment Method')}</h3>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="paymentMethod-desktop"
+                          value="razorpay"
+                          checked={paymentMethod === 'razorpay'}
+                          onChange={(e) => setPaymentMethod(e.target.value as 'razorpay' | 'cod')}
+                          className="w-4 h-4 text-[#D92030] focus:ring-[#D92030]"
+                        />
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{tr('payment.onlinePayment', 'Online Payment')}</span>
+                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Razorpay</span>
+                        </div>
+                      </label>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="paymentMethod-desktop"
+                          value="cod"
+                          checked={paymentMethod === 'cod'}
+                          onChange={(e) => setPaymentMethod(e.target.value as 'razorpay' | 'cod')}
+                          className="w-4 h-4 text-green-600 focus:ring-green-500"
+                        />
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{tr('payment.cod', 'Cash on Delivery')}</span>
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">COD</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <Button className="w-full bg-gradient-to-r from-yellow-500 via-pink-500 to-purple-600 text-white font-semibold hover:scale-[1.02] transition" onClick={handleBuy} disabled={loading || paying}>
+                      {paying ? tr('cart.processing','Processing...') : (paymentMethod === 'cod' ? tr('orders.placeOrderCOD','Place Order (COD)') : tr('product.buyNow','Buy Now'))}
+                    </Button>
+                    <Button variant="ghost" className="w-full text-red-600 border" onClick={handleRemove} disabled={removing}>{removing ? tr('common.removing','Removing...') : tr('cart.remove','Remove')}</Button>
+                  </div>
+                </div>
+              </div>
+            </aside>
           </div>
         </Card>
       </main>

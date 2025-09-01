@@ -94,26 +94,61 @@ export const MainNav = () => {
   };
 
   return (
-    <>
-      <div className="self-center flex w-full max-w-[1331px] items-center justify-between responsive-padding-x mt-[13px] relative">
-        {/* Logo Section */}
-        <div className="flex items-center flex-shrink-0">
-          <Link to="/">
-            <img 
-              src="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/7cca860fedc8680dd550e361a158b91fff3bb621?placeholderIfAbsent=true" 
-              className="aspect-[1.02] object-contain w-8 xs:w-10 md:w-14 shrink-0" 
-              alt="Logo" 
-            />
-          </Link>
-          <Link to="/" className="text-[rgba(33,33,33,1)] text-lg xs:text-xl md:text-[32px] font-bold ml-2 md:ml-4">
-            ZIXX
-          </Link>
-        </div>
+    <div className="self-center w-full">
+        <div className="max-w-[1331px] mx-auto flex items-center justify-between responsive-padding-x mt-[13px] relative">
+  {isMobile ? null : (
+          /* Logo Section - Only show in desktop */
+          <div className="flex items-center flex-shrink-0">
+            <Link to="/">
+              <img 
+                src="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/7cca860fedc8680dd550e361a158b91fff3bb621?placeholderIfAbsent=true" 
+                className="aspect-[1.02] object-contain w-8 xs:w-10 md:w-14 shrink-0" 
+                alt="Logo" 
+              />
+            </Link>
+            <Link to="/" className="text-[rgba(33,33,33,1)] text-lg xs:text-xl md:text-[32px] font-bold ml-2 md:ml-4">
+              ZIXX
+            </Link>
+          </div>
+        )}
 
         {isMobile ? (
-          <button onClick={toggleMenu} className="text-[rgba(33,33,33,1)] z-50" aria-label="Menu">
-            <Menu size={24} />
-          </button>
+          <>
+            {/* Logo on the left */}
+            <div className="flex-1">
+              <Link to="/" className="flex items-center gap-2">
+                <img 
+                  src="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/7cca860fedc8680dd550e361a158b91fff3bb621?placeholderIfAbsent=true" 
+                  className="w-8 object-contain" 
+                  alt="Logo" 
+                />
+                <span className="text-lg font-bold">ZIXX</span>
+              </Link>
+            </div>
+            
+            {/* Search Bar in Center */}
+            <form onSubmit={handleSearch} className="bg-[rgba(240,240,240,1)] flex w-[140px] max-w-[60%] gap-2 overflow-hidden rounded-[62px] px-3 py-2">
+              <img 
+                src="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/6b478e42f8403dc6f5eae99c7cf3bb374642f221?placeholderIfAbsent=true"
+                className="aspect-[1] object-contain w-4 shrink-0" 
+                alt="Search" 
+              />
+              <input 
+                type="text"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Search..."
+                className="bg-transparent outline-none w-full text-sm text-black placeholder:text-gray-500"
+              />
+            </form>
+
+            {/* Menu button on the right */}
+              <div className="flex-1 flex justify-end">
+              <button onClick={toggleMenu} className="text-[rgba(33,33,33,1)] z-50" aria-label="Menu">
+                <Menu size={24} />
+              </button>
+            </div>
+          </>
         ) : (
           <div className="flex items-center gap-2 sm:gap-4 lg:gap-6 xl:gap-8 justify-center flex-1 max-w-none">
             
@@ -191,7 +226,7 @@ export const MainNav = () => {
             </NavigationMenu>
             
             {/* Search Bar - Responsive */}
-            <form onSubmit={handleSearch} className="bg-[rgba(240,240,240,1)] flex w-full max-w-[150px] sm:max-w-[200px] md:max-w-[250px] lg:max-w-[400px] xl:max-w-[500px] gap-2 sm:gap-3 overflow-hidden rounded-[62px] px-3 sm:px-4 py-2 sm:py-3">
+            <form onSubmit={handleSearch} className="bg-[rgba(240,240,240,1)] flex w-full max-w-[150px] sm:max-w-[220px] md:max-w-[280px] lg:max-w-[420px] xl:max-w-[520px] gap-2 sm:gap-3 overflow-hidden rounded-[62px] px-3 sm:px-4 py-2 sm:py-3">
               <img 
                 src="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/6b478e42f8403dc6f5eae99c7cf3bb374642f221?placeholderIfAbsent=true"
                 className="aspect-[1] object-contain w-4 sm:w-5 shrink-0" 
@@ -232,7 +267,7 @@ export const MainNav = () => {
       </div>
       
       {/* Mobile menu: slide-in drawer with backdrop */}
-      {isMobile && (
+  {isMobile && (
         <>
           {/* Backdrop */}
           <div
@@ -273,23 +308,6 @@ export const MainNav = () => {
 
             {/* Drawer body */}
             <div className="flex flex-col h-[calc(100%-60px)]">
-              <div className="p-4 border-b">
-                <form onSubmit={handleSearch} className="bg-[rgba(240,240,240,1)] flex gap-3 overflow-hidden rounded-[62px] px-4 py-3 w-full">
-                  <img 
-                    src="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/6b478e42f8403dc6f5eae99c7cf3bb374642f221?placeholderIfAbsent=true"
-                    className="aspect-[1] object-contain w-5 shrink-0" 
-                    alt="Search" 
-                  />
-                  <input 
-                    type="text"
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                    placeholder="Search for products..."
-                    className="bg-transparent outline-none w-full"
-                  />
-                </form>
-              </div>
-
               {/* Quick category links */}
               <div className="p-3 border-b">
                 <div className="flex gap-2">
@@ -434,36 +452,51 @@ export const MainNav = () => {
                   </li>
                 </ul>
               </nav>
-
-              {/* Drawer footer shortcuts */}
-              <div className="mt-auto border-t p-3 flex items-center justify-around">
-                <Link to="/account" aria-label="User account" className="flex flex-col items-center text-sm" onClick={() => setIsMenuOpen(false)}>
-                  <User size={22} className="mb-1" />
-                  <span>Account</span>
-                </Link>
-                <Link to="/cart" aria-label="Shopping cart" className={`flex flex-col items-center text-sm ${isCartPage ? 'text-[#D92030]' : ''}`} onClick={() => setIsMenuOpen(false)}>
-                  <ShoppingCart size={22} className="mb-1" />
-                  <span>Cart</span>
-                </Link>
-                <Link to="/wishlist" aria-label="Wishlist" className="flex flex-col items-center text-sm" onClick={() => setIsMenuOpen(false)}>
-                  <img 
-                    src="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/ac715f0dd7f9aaef44ddb1306739d29ec63e93de?placeholderIfAbsent=true" 
-                    className="aspect-[1] object-contain w-6 mb-1" 
-                    alt="Wishlist" 
-                  />
-                  <span>Wishlist</span>
-                </Link>
-                {user?.role === 'admin' && (
-                  <a href={adminHref} target="_blank" rel="noopener noreferrer" aria-label="Admin panel" className="flex flex-col items-center text-sm" onClick={() => setIsMenuOpen(false)}>
-                    <User size={22} className="mb-1 text-red-600" />
-                    <span>Admin</span>
-                  </a>
-                )}
-              </div>
             </div>
           </aside>
         </>
       )}
-    </>
+
+      {/* Bottom Navigation Bar for Mobile */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 px-2 py-1 safe-area-inset-bottom">
+          <div className="flex items-center justify-between max-w-[500px] mx-auto">
+            <Link to="/" className="flex flex-col items-center p-2 flex-1">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                className="w-5 h-5 mb-1"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                />
+              </svg>
+              <span className="text-xs">Home</span>
+            </Link>
+            <Link to="/wishlist" className={`flex flex-col items-center p-2 flex-1 ${isWishlistPage ? 'text-[#D92030]' : ''}`}>
+              <img 
+                src="https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/ac715f0dd7f9aaef44ddb1306739d29ec63e93de?placeholderIfAbsent=true" 
+                className="w-5 h-5 mb-1" 
+                alt="Wishlist" 
+              />
+              <span className="text-xs">Wishlist</span>
+            </Link>
+            <Link to="/cart" className={`flex flex-col items-center p-2 flex-1 ${isCartPage ? 'text-[#D92030]' : ''}`}>
+              <ShoppingCart size={20} className="mb-1" />
+              <span className="text-xs">Cart</span>
+            </Link>
+            <Link to="/account" className="flex flex-col items-center p-2 flex-1">
+              <User size={20} className="mb-1" />
+              <span className="text-xs">Account</span>
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };

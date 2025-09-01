@@ -44,6 +44,7 @@ interface ProductType {
   theme?: string;
   isWishlisted?: boolean;
   afterQtyprice?: number;
+  features?: string[];
   variation?: {
     size: string;
     color: string;
@@ -295,19 +296,20 @@ const Product = () => {
       <Header />
       <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-8 py-6 md:py-8">
         {/* Breadcrumb */}
-        <div className="text-sm text-muted-foreground mb-6">
-          <span className="hover:text-foreground">{product.category || 'Category'}</span>
-          <span className="mx-2">/</span>
-          <span className="hover:text-foreground">{product.subcategory || 'Subcategory'}</span>
-          <span className="mx-2">/</span>
-          <span className="text-foreground font-medium">{product.title}</span>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6 overflow-x-auto whitespace-nowrap pb-2">
+          <Link to="/" className="hover:text-purple-500 transition-colors">Home</Link>
+          <span className="text-purple-300">→</span>
+          <Link to={`/category/${product.category}`} className="hover:text-purple-500 transition-colors">{product.category || 'Category'}</Link>
+          <span className="text-purple-300">→</span>
+          <Link to={`/category/${product.category}/${product.subcategory}`} className="hover:text-purple-500 transition-colors">{product.subcategory || 'Subcategory'}</Link>
+          <span className="text-purple-300">→</span>
+          <span className="text-purple-600 font-medium truncate">{product.title}</span>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 mb-8 md:mb-10 items-start">
           <div className="flex flex-col gap-3">
-
             <div
               ref={imageWrapRef}
-              className={`rounded-xl bg-white shadow-md border flex items-center justify-center h-[500px] sm:h-[600px] lg:h-[min(85vh,900px)] p-2 md:p-3 overflow-hidden relative ${isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
+              className={`rounded-3xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/10 dark:to-pink-900/10 backdrop-blur-xl shadow-xl border border-white/20 flex items-center justify-center h-[500px] sm:h-[600px] lg:h-[min(85vh,900px)] p-2 md:p-3 overflow-hidden relative group ${isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
               onMouseEnter={() => setIsZoomed(true)}
               onMouseLeave={() => setIsZoomed(false)}
               onMouseMove={(e) => {
@@ -324,9 +326,9 @@ const Product = () => {
                 type="button"
                 aria-label="Open fullscreen"
                 onClick={(e) => { e.stopPropagation(); openLightbox(); }}
-                className="absolute top-2 right-2 z-10 inline-flex items-center justify-center w-9 h-9 rounded-md bg-white/90 hover:bg-white shadow border"
+                className="absolute top-3 right-3 z-10 inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white/80 hover:bg-white shadow-lg border border-white/20 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform hover:scale-110"
               >
-                <Maximize2 className="w-4 h-4" />
+                <Maximize2 className="w-5 h-5 text-purple-600" />
               </button>
               <img
                 src={(product.image && product.image[currentImageIndex])
@@ -340,16 +342,18 @@ const Product = () => {
                 }}
               />
             </div>
-            <div className="flex gap-2 md:gap-3 overflow-x-auto pb-1">
+            <div className="flex gap-3 md:gap-4 overflow-x-auto pb-2 px-1">
               {((product.image ?? []).length ? product.image : [
                 `https://source.unsplash.com/featured/160x160/${(product.subcategory || product.category || 'fashion').replace(/\s+/g, '+')}`
               ]).map((image, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentImageIndex(index)}
-                  className={`flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden border-2 ${
-                    currentImageIndex === index ? 'border-destructive' : 'border-transparent'
-                  }`}
+                  className={`relative flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden group/thumb ${
+                    currentImageIndex === index 
+                      ? 'ring-2 ring-purple-500 ring-offset-2 shadow-lg transform scale-105' 
+                      : 'border border-white/20 hover:ring-2 hover:ring-purple-400 hover:ring-offset-1 hover:shadow-md transform hover:scale-105'
+                  } transition-all duration-300`}
                 >
                   <img src={image} alt={`${product.title} ${index + 1}`} className="w-full h-full object-contain bg-white" />
                 </button>
@@ -357,114 +361,297 @@ const Product = () => {
             </div>
           </div>
 
-          <div className="space-y-5 lg:sticky lg:top-20 self-start lg:max-h-[calc(100vh-180px)] lg:overflow-auto pr-1">
-            <Badge variant="secondary" className="mb-2">{product.brand}</Badge>
-            <h1 className="text-2xl md:text-3xl font-bold mb-1">{product.title}</h1>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="flex items-center gap-1">
+          <div className="space-y-6 lg:sticky lg:top-20 self-start lg:max-h-[calc(100vh-180px)] lg:overflow-auto lg:pr-4">
+            <Badge variant="secondary" className="px-4 py-1.5 text-sm font-medium bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 border border-purple-200/50 rounded-full">{product.brand}</Badge>
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-black bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 bg-clip-text text-transparent animate-text-shine tracking-tight">{product.title}</h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-1.5 rounded-full">
                 {[1,2,3,4,5].map((star) => (
-                  <Star key={star} className={`w-5 h-5 ${star <= Math.floor(product.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                  <Star key={star} className={`w-4 h-4 ${star <= Math.floor(product.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
                 ))}
+                <span className="ml-1 text-sm font-medium text-yellow-600 dark:text-yellow-400">{product.rating}</span>
               </div>
-              <span className="text-sm text-muted-foreground">{product.rating} ({product.reviewCount} reviews)</span>
+              <span className="text-sm text-muted-foreground bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full">
+                {product.reviewCount} reviews
+              </span>
             </div>
-            <Card className="p-3 md:p-4">
-              <h3 className="font-semibold mb-2">Product Features</h3>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• 100% Organic Cotton</li>
-                <li>• Machine Washable</li>
-                <li>• Pre-shrunk Fabric</li>
-                <li>• Comfortable Fit</li>
-                <li>• Eco-friendly Dyes</li>
-              </ul>
-            </Card>
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-2xl md:text-3xl font-bold text-destructive">₹{product.price}</span>
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/10 dark:to-pink-900/10 rounded-2xl p-4 md:p-5 backdrop-blur-xl border border-white/20">
+              <h3 className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 mb-3">Product Features</h3>
+              {product.features && Array.isArray(product.features) && product.features.length > 0 ? (
+                <ul className="text-sm space-y-2">
+                  {product.features.map((feature, index) => (
+                    <li key={index} className="flex items-center gap-2">
+                      <span className={`w-1.5 h-1.5 rounded-full ${index % 2 === 0 ? 'bg-purple-400' : 'bg-pink-400'}`}></span>
+                      <span className="text-gray-700 dark:text-gray-300">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <ul className="text-sm space-y-2">
+                  {product.category === 'Shirt' || product.category === 'T-Shirt' ? (
+                    <>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">100% Premium Cotton</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-pink-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Comfortable Regular Fit</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Machine Washable</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-pink-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Breathable Fabric</span>
+                      </li>
+                    </>
+                  ) : product.category === 'Jeans' ? (
+                    <>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Durable Denim Material</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-pink-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Perfect Fit Design</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Multiple Pockets</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-pink-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Fade Resistant</span>
+                      </li>
+                    </>
+                  ) : product.category === 'Shoes' ? (
+                    <>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Comfortable Cushioning</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-pink-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Durable Sole</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Breathable Design</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-pink-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Perfect for Daily Use</span>
+                      </li>
+                    </>
+                  ) : product.category === 'Accessories' ? (
+                    <>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Premium Quality Material</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-pink-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Stylish Design</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Long Lasting</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-pink-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Perfect for Any Occasion</span>
+                      </li>
+                    </>
+                  ) : (
+                    <>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Premium Quality Material</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-pink-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Comfortable Fit</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Durable Design</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-pink-400"></span>
+                        <span className="text-gray-700 dark:text-gray-300">Easy Maintenance</span>
+                      </li>
+                    </>
+                  )}
+                </ul>
+              )}
+            </div>
+            <div className="flex items-center gap-3 flex-wrap bg-white/50 dark:bg-black/20 rounded-2xl p-4 backdrop-blur-sm border border-white/20">
+              <span className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">₹{product.price}</span>
               {product.discount > 0 && (
                 <>
                   <span className="text-lg md:text-xl text-muted-foreground line-through">₹{(product.price/(1 - product.discount/100)).toFixed(2)}</span>
-                  <Badge variant="destructive">{Math.round(product.discount)}% OFF</Badge>
+                  <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 rounded-full font-bold text-sm animate-pulse">
+                    {Math.round(product.discount)}% OFF
+                  </Badge>
                 </>
               )}
               {outOfStock ? (
-                <Badge variant="destructive">Out of Stock</Badge>
+                <Badge className="bg-red-500 text-white px-3 py-1 rounded-full font-bold text-sm">Out of Stock</Badge>
               ) : (
-                <Badge variant="secondary">In Stock</Badge>
+                <Badge className="bg-gradient-to-r from-green-400 to-emerald-500 text-white px-3 py-1 rounded-full font-bold text-sm">In Stock</Badge>
               )}
             </div>
             {!outOfStock && (
               <p className="text-sm text-muted-foreground -mt-2">{availableStock} item{availableStock === 1 ? '' : 's'} left</p>
             )}
 
-            {/* Size Selector */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Size</label>
-              {product.size?.length ? (
-                <Select value={selectedSize} onValueChange={setSelectedSize}>
-                  <SelectTrigger className="w-full"><SelectValue placeholder="Select a size" /></SelectTrigger>
-                  <SelectContent>
-                    {product.size.map((size) => (<SelectItem key={size} value={size}>{size}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              ) : <p className="text-sm text-gray-500">No size options available</p>}
-            </div>
+            {/* Size and Color Selectors */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-white/50 dark:bg-black/20 rounded-2xl p-4 backdrop-blur-sm border border-white/20">
+                <label className="text-sm font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent mb-3 block">Size</label>
+                {product.size?.length ? (
+                  <div className="flex flex-wrap gap-2">
+                    {product.size.map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedSize(size);
+                        }}
+                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                          selectedSize === size
+                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg transform scale-105'
+                            : 'bg-white/50 dark:bg-white/10 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                ) : <p className="text-sm text-gray-500">No size options available</p>}
+              </div>
 
-            {/* Color Selector */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Color</label>
-              {product.color?.length ? (
-                <Select value={selectedColor} onValueChange={setSelectedColor}>
-                  <SelectTrigger className="w-full"><SelectValue placeholder="Select a color" /></SelectTrigger>
-                  <SelectContent>
-                    {product.color.map((color) => (<SelectItem key={color} value={color}>{color}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              ) : <p className="text-sm text-gray-500">No color options available</p>}
-            </div>
-
-            {/* Quantity Selector */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Quantity</label>
-              <div className="flex items-center gap-3">
-                <Button variant="outline" size="icon" onClick={() => handleQuantityChange('decrease')} disabled={quantity <= 1 || outOfStock}>
-                  <Minus className="w-4 h-4" />
-                </Button>
-                <span className="font-medium text-lg w-8 text-center">{quantity}</span>
-                <Button variant="outline" size="icon" onClick={() => handleQuantityChange('increase')} disabled={outOfStock || (availableStock > 0 && quantity >= availableStock)}>
-                  <Plus className="w-4 h-4" />
-                </Button>
+              <div className="bg-white/50 dark:bg-black/20 rounded-2xl p-4 backdrop-blur-sm border border-white/20">
+                <label className="text-sm font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent mb-3 block">Color</label>
+                {product.color?.length ? (
+                  <div className="flex flex-wrap gap-2">
+                    {product.color.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedColor(color);
+                        }}
+                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                          selectedColor === color
+                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg transform scale-105'
+                            : 'bg-white/50 dark:bg-white/10 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        {color}
+                      </button>
+                    ))}
+                  </div>
+                ) : <p className="text-sm text-gray-500">No color options available</p>}
               </div>
             </div>
 
-            {/* Buttons */}
-            <div className="flex gap-3 md:gap-4">
-              <Button className="flex-1 bg-destructive hover:bg-destructive/90" onClick={handleAddToCart} disabled={outOfStock || (availableStock > 0 && quantity > availableStock)}>
-                <ShoppingCart className="w-4 h-4 mr-2" /> Add to Cart
-              </Button>
-              <Button variant="outline" size="icon" onClick={handleAddToWishlist} className={isWishlisted ? 'text-destructive border-destructive' : ''}>
-                <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
-              </Button>
-              <Button variant="outline" size="icon" onClick={() => navigator?.share?.({ title: product.title, url: window.location.href }).catch(() => {})}>
-                <Share2 className="w-4 h-4" />
-              </Button>
+            {/* Quantity Selector */}
+            <div className="bg-white/50 dark:bg-black/20 rounded-2xl p-4 backdrop-blur-sm border border-white/20">
+              <label className="text-sm font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent mb-3 block">Quantity</label>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleQuantityChange('decrease')}
+                  disabled={quantity <= 1 || outOfStock}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                    quantity <= 1 || outOfStock
+                      ? 'bg-gray-100 text-gray-400'
+                      : 'bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95'
+                  }`}
+                >
+                  <Minus className="w-5 h-5" />
+                </button>
+                <span className="font-bold text-xl w-12 text-center bg-white/50 dark:bg-black/20 rounded-xl py-1.5">{quantity}</span>
+                <button
+                  onClick={() => handleQuantityChange('increase')}
+                  disabled={outOfStock || (availableStock > 0 && quantity >= availableStock)}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                    outOfStock || (availableStock > 0 && quantity >= availableStock)
+                      ? 'bg-gray-100 text-gray-400'
+                      : 'bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95'
+                  }`}
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+              <button
+                onClick={handleAddToCart}
+                disabled={outOfStock || (availableStock > 0 && quantity > availableStock)}
+                className={`flex-1 py-4 rounded-2xl font-bold text-white transition-all duration-300 group relative overflow-hidden ${
+                  outOfStock || (availableStock > 0 && quantity > availableStock)
+                    ? 'bg-gray-300 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]'
+                }`}
+              >
+                <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></span>
+                <span className="flex items-center justify-center gap-2">
+                  <ShoppingCart className="w-5 h-5" />
+                  <span className="text-lg">Add to Cart</span>
+                </span>
+              </button>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAddToWishlist}
+                  className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                    isWishlisted
+                      ? 'bg-pink-100 text-pink-500 hover:bg-pink-200'
+                      : 'bg-white/50 dark:bg-black/20 hover:bg-purple-100 dark:hover:bg-purple-900/30'
+                  }`}
+                >
+                  <Heart className={`w-6 h-6 ${isWishlisted ? 'fill-pink-500 animate-heartbeat' : ''}`} />
+                </button>
+
+                <button
+                  onClick={() => navigator?.share?.({ title: product.title, url: window.location.href }).catch(() => {})}
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center bg-white/50 dark:bg-black/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all duration-300"
+                >
+                  <Share2 className="w-6 h-6" />
+                </button>
+              </div>
             </div>
 
             {/* Info Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Card className="p-3 md:p-4 flex items-center gap-3">
-                <Truck className="w-5 h-5 text-destructive" />
-                <div>
-                  <p className="text-sm font-medium">Fast Delivery</p>
-                  <p className="text-xs text-muted-foreground">3-5 business days</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/10 dark:to-pink-900/10 rounded-2xl p-4 backdrop-blur-xl border border-white/20 flex items-center gap-4 group hover:shadow-lg transition-all duration-300">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
+                  <Truck className="w-6 h-6 text-white" />
                 </div>
-              </Card>
-              <Card className="p-3 md:p-4 flex items-center gap-3">
-                <RotateCcw className="w-5 h-5 text-destructive" />
                 <div>
-                  <p className="text-sm font-medium">Easy Returns</p>
-                  <p className="text-xs text-muted-foreground">Within 14 days</p>
+                  <p className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">Fast Delivery</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">3-5 business days</p>
                 </div>
-              </Card>
+              </div>
+
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/10 dark:to-pink-900/10 rounded-2xl p-4 backdrop-blur-xl border border-white/20 flex items-center gap-4 group hover:shadow-lg transition-all duration-300">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
+                  <RotateCcw className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">Easy Returns</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Within 14 days</p>
+                </div>
+              </div>
             </div>
 
             {/* Description */}
@@ -484,34 +671,41 @@ const Product = () => {
 
         {/* Related Products Section */}
         {relatedProducts.length > 0 && (
-          <section className="mt-12 sm:mt-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12">Related Products</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <section className="mt-16 sm:mt-24">
+            <div className="flex items-center justify-center gap-3 mb-8 sm:mb-12">
+              <span className="inline-block w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+              <h2 className="text-2xl sm:text-4xl font-black bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 bg-clip-text text-transparent animate-text-shine tracking-tight">Related Products</h2>
+              <span className="inline-block w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
               {relatedProducts.map((relatedProduct, index) => (
-                <div key={relatedProduct._id || index} className="bg-white rounded-lg shadow-sm p-4 hover:shadow-lg transition-shadow">
+                <div key={relatedProduct._id || index} className="group bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/10 dark:to-pink-900/10 rounded-2xl p-3 md:p-4 hover:shadow-xl transition-all duration-300 backdrop-blur-xl border border-white/20 transform hover:scale-[1.02]">
                   <Link to={`/product/${relatedProduct._id}`} className="block">
-                    <div className="aspect-square bg-gray-100 mb-3 sm:mb-4 rounded-lg overflow-hidden">
+                    <div className="aspect-square bg-white/50 dark:bg-black/20 mb-4 rounded-xl overflow-hidden relative group-hover:shadow-lg transition-all duration-300">
                       <img
                         src={Array.isArray(relatedProduct.image) ? relatedProduct.image[0] : relatedProduct.image || `https://source.unsplash.com/featured/400x400/${(relatedProduct.category || 'fashion').replace(/\s+/g, '+')}`}
                         alt={relatedProduct.title}
-                        className="w-full h-full object-contain hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                         loading="lazy"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
-                    <h3 className="font-medium text-sm sm:text-base mb-2 line-clamp-2">{relatedProduct.title}</h3>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-lg">₹{relatedProduct.price}</span>
+                    <h3 className="font-bold text-sm sm:text-base mb-2 line-clamp-2 bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent group-hover:from-pink-500 group-hover:to-purple-600">{relatedProduct.title}</h3>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-black text-lg bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">₹{relatedProduct.price}</span>
                       {relatedProduct.oldPrice && (
-                        <>
-                          <span className="text-gray-500 line-through text-sm">₹{relatedProduct.oldPrice}</span>
-                          <span className="text-[#D92030] text-sm font-medium">
+                        <div className="flex flex-col items-end">
+                          <span className="text-gray-500 line-through text-xs">₹{relatedProduct.oldPrice}</span>
+                          <span className="text-xs font-bold text-pink-500">
                             {Math.round((1 - relatedProduct.price / relatedProduct.oldPrice) * 100)}% OFF
                           </span>
-                        </>
+                        </div>
                       )}
                     </div>
                     {relatedProduct.brand && (
-                      <p className="text-xs text-gray-500 mt-1">{relatedProduct.brand}</p>
+                      <div className="mt-2 inline-block px-2 py-1 rounded-lg bg-white/50 dark:bg-black/20 text-xs font-medium text-gray-600 dark:text-gray-400">
+                        {relatedProduct.brand}
+                      </div>
                     )}
                   </Link>
                 </div>

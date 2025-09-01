@@ -52,28 +52,24 @@ export const TopBar = () => {
   const { languages } = useLanguage();
 
   return (
-    <div className="bg-[rgba(34,40,40,1)] w-full flex flex-col items-stretch justify-center px-3 md:px-6 lg:px-80">
-      <div className="flex min-h-[45px] w-full items-center gap-2 md:gap-8 justify-between flex-wrap sm:flex-nowrap">
+    <div className="bg-[rgba(34,40,40,1)] w-full flex flex-col items-stretch justify-center px-3 md:px-6 lg:px-0">
+      <div className="max-w-[1280px] w-full mx-auto flex min-h-[45px] items-center gap-2 md:gap-8 justify-between flex-wrap sm:flex-nowrap py-1">
         {/* Mobile Menu Toggle removed: Men/Women/Kids now live in MainNav drawer */}
 
         {/* Nav Links */}
-        <nav className={
-          `${isMobile ? 'hidden' : 'flex flex-row'} items-stretch text-sm font-bold text-center uppercase ml-0`
-        }>
+  <nav className={`${isMobile ? 'hidden' : 'flex flex-row'} items-stretch text-sm font-bold text-center uppercase ml-72` }>
           {['women', 'men', 'kids'].map(tab => (
             <Link 
               key={tab}
               to={`/${tab}`}
-              className={`flex-1 md:flex-none min-w-[90px] md:min-w-0 md:w-[114px] px-px border-x border-[#52505] transition-all duration-300 hover:scale-105 ${
+              className={`flex-1 md:flex-none min-w-[80px] md:min-w-0 md:w-[114px] px-1 border-x border-transparent md:border-[#52505] transition-all duration-300 hover:scale-105 ${
                 activeTab === tab 
                   ? 'bg-white text-black transform scale-105' 
                   : 'text-white hover:bg-gray-700'
               }`}
-              onClick={() => {
-                setActiveTab(tab);
-              }}
+              onClick={() => setActiveTab(tab)}
             >
-              <div className="font-bold leading-[21px] py-3">{t(`header.${tab}`)}</div>
+              <div className="font-bold leading-[21px] py-2 md:py-3 text-xs md:text-sm">{t(`header.${tab}`)}</div>
             </Link>
           ))}
 
@@ -81,7 +77,7 @@ export const TopBar = () => {
         </nav>
 
         {/* Account + Location + Actions — Always Visible */}
-        <div className="z-10 ml-auto flex items-center gap-1 md:gap-2.5 text-white">
+  <div className="z-10 ml-auto flex items-center gap-1 md:gap-2.5 text-white">
           {/* Language Selector (always visible) */}
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-1 md:gap-[5px] text-xs md:text-sm font-bold whitespace-nowrap leading-[1.1] hover:opacity-80 transition-opacity">
@@ -137,7 +133,7 @@ export const TopBar = () => {
                 </span>
                 <ChevronDown className="w-3 h-3" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-48 bg-white border border-gray-200 shadow-lg z-50" align="end">
+                <DropdownMenuContent className="w-56 bg-white border border-gray-200 shadow-lg z-50" align="end">
                 <DropdownMenuItem asChild>
                   <Link to="/account" className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer">
                     <User className="w-4 h-4" />

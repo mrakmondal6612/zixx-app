@@ -89,48 +89,72 @@ const Women = () => {
   const newArrivals = allData.filter(p => p.theme?.toLowerCase().includes('new'));
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 dark:from-gray-900 dark:to-gray-800">
       <Header />
 
       <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-8 py-8">
-      <DynamicBanner
-        page="women"
-        position="featured"
-        fallback={{
-          imageUrl: "https://res.cloudinary.com/dxtle1heo/image/upload/v1756038296/profile_pics/gatpp49d6jwhb9q2l6yv.png",
-          heading: "Featured Collection",
-          description: "Explore our curated selection of the season's must-haves.",
-          linkText: "Shop Collection",
-          linkUrl: "/women",
-        }}
-        style={{ variant: 'pro', overlay: 'dark', cta: 'brand', radius: '2xl', hover: 'zoom' }}
-      />
+        <section className="relative mb-20">
+          <DynamicBanner
+            page="women"
+            position="featured"
+            fallback={{
+              imageUrl: "https://res.cloudinary.com/dxtle1heo/image/upload/v1756038296/profile_pics/gatpp49d6jwhb9q2l6yv.png",
+              heading: "Featured Collection",
+              description: "Explore our curated selection of the season's must-haves.",
+              linkText: "Shop Collection",
+              linkUrl: "/women",
+            }}
+            style={{ variant: 'pro', overlay: 'dark', cta: 'brand', radius: '2xl', hover: 'zoom' }}
+          />
+          <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 flex gap-4">
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl p-4 shadow-lg flex gap-3 items-center border border-pink-200 dark:border-pink-800">
+              <span className="text-pink-600 dark:text-pink-400 text-sm font-medium">👗 Fashion</span>
+            </div>
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl p-4 shadow-lg flex gap-3 items-center border border-purple-200 dark:border-purple-800">
+              <span className="text-purple-600 dark:text-purple-400 text-sm font-medium">✨ Style</span>
+            </div>
+          </div>
+        </section>
+
         {/* Category Grid */}
-        <section className="mb-16">
-          <h2 className="text-2xl font-bold mb-8">Shop by Category</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <section className="mb-20">
+          <div className="flex flex-col items-center mb-12 text-center">
+            <span className="text-sm font-medium text-pink-600 dark:text-pink-400 mb-2">DISCOVER</span>
+            <h2 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-pink-600 via-purple-500 to-pink-600 bg-clip-text text-transparent animate-text-shine">Shop by Category</h2>
+            <div className="mt-4 h-1 w-20 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"></div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8">
             {categories.map((category, index) => (
               <div key={index} className="group">
                 <Link to={`/category/${category.category.toLowerCase()}`}>
-                  <Card className="overflow-hidden">
-                    <div className="aspect-square relative">
+                  <div className="bg-white dark:bg-gray-800 rounded-3xl p-3 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-pink-500/10 relative overflow-hidden border border-pink-100 dark:border-pink-900">
+                    <div className="aspect-square rounded-2xl overflow-hidden relative">
                       <img
                         src={category.image}
                         alt={category.category} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
-                        <h3 className="text-white text-xl font-bold">{category.category.toUpperCase()}</h3>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-60 group-hover:opacity-70 transition-opacity"></div>
+                      <div className="absolute inset-0 flex flex-col justify-end p-6">
+                        <h3 className="text-white text-2xl font-black drop-shadow-lg">{category.category.toUpperCase()}</h3>
+                      </div>
+                      <div className="absolute top-4 right-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl px-3 py-1.5 text-xs font-medium text-pink-600 dark:text-pink-400 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                        Explore →
                       </div>
                     </div>
-                  </Card>
+                  </div>
                 </Link>
 
-                <div className="mt-3">
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li className="hover:text-[#D92030]">
-                      <Link to={`/category/${category.category.toLowerCase()}/${category.subcategory.toLowerCase()}`}>
-                        {category.subcategory}
+                <div className="mt-4 px-2">
+                  <ul className="text-sm space-y-2">
+                    <li className="transition-colors hover:text-pink-600 dark:hover:text-pink-400">
+                      <Link 
+                        to={`/category/${category.category.toLowerCase()}/${category.subcategory.toLowerCase()}`}
+                        className="flex items-center gap-2 group"
+                      >
+                        <span className="h-1 w-1 rounded-full bg-current opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                        <span>{category.subcategory}</span>
                       </Link>
                     </li>
                   </ul>
@@ -142,9 +166,14 @@ const Women = () => {
 
         {/* All Women's Products */}
         {allData.length > 0 && (
-          <section className="mb-16">
-            <h2 className="text-2xl font-bold mb-6">All Women's Products</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+          <section className="mb-20">
+            <div className="flex flex-col items-center mb-12 text-center">
+              <span className="text-sm font-medium text-pink-600 dark:text-pink-400 mb-2">EXPLORE</span>
+              <h2 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-pink-600 via-purple-500 to-pink-600 bg-clip-text text-transparent animate-text-shine">All Women's Products</h2>
+              <div className="mt-4 h-1 w-20 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"></div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 lg:gap-8">
               {allData.map((p) => (
                 <ProductCard
                   key={p._id}
@@ -160,16 +189,36 @@ const Women = () => {
           </section>
         )}
 
-        {/* Product Grid */}
-        {loading && <p>Loading...</p>}
-        {error && <p className="text-red-500">{error}</p>}
+        {/* Product Grid by Category */}
+        {loading && (
+          <div className="flex justify-center items-center min-h-[200px]">
+            <div className="animate-pulse flex gap-2">
+              <div className="h-2 w-2 bg-pink-500 rounded-full animate-bounce"></div>
+              <div className="h-2 w-2 bg-purple-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+              <div className="h-2 w-2 bg-pink-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+            </div>
+          </div>
+        )}
+        {error && (
+          <div className="text-center py-10">
+            <p className="text-pink-600 dark:text-pink-400 font-medium">{error}</p>
+          </div>
+        )}
         {!loading && !error && Object.keys(groupedProducts).map((category, i) => (
-          <section key={i} className="mb-16">
-            <h2 className="text-2xl font-bold mb-6">{category.toUpperCase()}</h2>
+          <section key={i} className="mb-20">
+            <div className="flex flex-col items-center mb-12 text-center">
+              <span className="text-sm font-medium text-pink-600 dark:text-pink-400 mb-2">{category.toUpperCase()}</span>
+              <h2 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-pink-600 via-purple-500 to-pink-600 bg-clip-text text-transparent animate-text-shine">{category} Collection</h2>
+              <div className="mt-4 h-1 w-20 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"></div>
+            </div>
+
             {Object.keys(groupedProducts[category]).map((subcategory, j) => (
-              <div key={j} className="mb-8">
-                <h3 className="text-xl font-semibold mb-4">{subcategory}</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              <div key={j} className="mb-12">
+                <div className="flex items-center gap-4 mb-8">
+                  <h3 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-purple-500 bg-clip-text text-transparent">{subcategory}</h3>
+                  <div className="h-px flex-grow bg-gradient-to-r from-pink-500/20 to-purple-500/20 dark:from-pink-500/10 dark:to-purple-500/10"></div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 lg:gap-8">
                   {groupedProducts[category][subcategory].slice(0, 4).map((p, index) => (
                     <ProductCard
                       key={index}
@@ -188,13 +237,10 @@ const Women = () => {
         ))}
 
 
-        {/* Special Sections: Best Seller & New Arrival */}
-
+        {/* Best Sellers Section */}
         {bestSellers.length > 0 && (
-          <section className="mb-16">
-            {/* Banner */}
-            <section className="mb-16">
-              
+          <section className="mb-20">
+            <div className="relative mb-12">
               <DynamicBanner
                 page="women"
                 position="summer"
@@ -207,41 +253,61 @@ const Women = () => {
                 }}
                 style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
               />
-            </section>
-        
-          <h2 className="text-2xl font-bold mb-6">Best Sellers</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-            {bestSellers.slice(0, 8).map((p) => (
-              <ProductCard
-                key={p._id}
-                id={p._id}
-                title={p.title}
-                image={p.image?.[0]}
-                price={p.price}
-                discount={p.discount}
-                badge={'Best Seller'}
-              />
-            ))}
-          </div>
-        </section>
+              <div className="absolute -bottom-6 left-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl px-6 py-3 shadow-xl border border-pink-200 dark:border-pink-800">
+                <span className="text-xl font-black bg-gradient-to-r from-pink-600 to-purple-500 bg-clip-text text-transparent">Most Loved ✨</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center mb-12 text-center">
+              <span className="text-sm font-medium text-pink-600 dark:text-pink-400 mb-2">CUSTOMER FAVORITES</span>
+              <h2 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-pink-600 via-purple-500 to-pink-600 bg-clip-text text-transparent animate-text-shine">Best Sellers</h2>
+              <div className="mt-4 h-1 w-20 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"></div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 lg:gap-8">
+              {bestSellers.slice(0, 8).map((p) => (
+                <ProductCard
+                  key={p._id}
+                  id={p._id}
+                  title={p.title}
+                  image={p.image?.[0]}
+                  price={p.price}
+                  discount={p.discount}
+                  badge={'Best Seller'}
+                />
+              ))}
+            </div>
+          </section>
         )}
 
+        {/* New Arrivals Section */}
         {newArrivals.length > 0 && (
-          <section className="mb-16">
-            <DynamicBanner
-              page="women"
-              position="new"
-              fallback={{
-                imageUrl: "https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/d5b391a024519f0a274f617aaa8e815af74b7883?placeholderIfAbsent=true",
-                heading: "New Arrivals",
-                description: "Explore our curated selection of the season's must-haves.",
-                linkText: "Shop Collection",
-                linkUrl: "/women",
-              }}
-              style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
-            />
-            <h2 className="text-2xl font-bold mb-6">New Arrivals</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+          <section className="mb-20">
+            <div className="relative mb-12">
+              <DynamicBanner
+                page="women"
+                position="new"
+                fallback={{
+                  imageUrl: "https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/d5b391a024519f0a274f617aaa8e815af74b7883?placeholderIfAbsent=true",
+                  heading: "New Arrivals",
+                  description: "Fresh styles for the fashion-forward. Be the first to wear what's next.",
+                  linkText: "Shop Collection",
+                  linkUrl: "/women",
+                }}
+                style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
+              />
+              <div className="absolute -bottom-6 right-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl px-6 py-3 shadow-xl border border-purple-200 dark:border-purple-800">
+                <span className="text-xl font-black bg-gradient-to-r from-pink-600 to-purple-500 bg-clip-text text-transparent">Fresh Drops 🔥</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center mb-12 text-center">
+              <span className="text-sm font-medium text-pink-600 dark:text-pink-400 mb-2">JUST LANDED</span>
+              <h2 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-pink-600 via-purple-500 to-pink-600 bg-clip-text text-transparent animate-text-shine">New Arrivals</h2>
+              <div className="mt-4 h-1 w-20 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"></div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 lg:gap-8">
               {newArrivals.map((p) => (
                 <ProductCard
                   key={p._id}
@@ -254,7 +320,7 @@ const Women = () => {
                 />
               ))}
             </div>
-        </section>
+          </section>
         )}
 
       </main>

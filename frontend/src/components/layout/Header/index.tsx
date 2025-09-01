@@ -5,11 +5,14 @@ import { MainNav } from './MainNav';
 
 export const Header = () => {
   return (
-    <div className="flex left-0 right-0 top-0 z-20  sticky">
-    <header className="bg-white border-b w-full flex max-w-[1540px] flex-col pb-[9px] border-[rgba(139,139,139,1)] border-solid ">
-      <TopBar />
-      <MainNav />
-    </header>
+    <div className="sticky top-0 z-30 w-full">
+      <header className="w-full bg-white border-b border-solid border-[rgba(139,139,139,1)]">
+        {/* Centered container to keep header responsive and aligned with page content */}
+        <div className="max-w-[1540px] mx-auto w-full flex flex-col">
+          <TopBar />
+          <MainNav />
+        </div>
+      </header>
     </div>
   );
 };

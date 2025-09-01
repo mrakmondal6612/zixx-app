@@ -109,32 +109,59 @@ const Kids = () => {
   
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-yellow-50 via-orange-50 to-pink-50 dark:from-gray-900 dark:via-orange-900/10 dark:to-gray-800">
       <Header />
 
       <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-8 py-8">
         {/* Hero Banner (dynamic) */}
-        <DynamicBanner
-          page="kids"
-          position="featured"
-          fallback={{
-            imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true',
-            heading: 'Playful Picks',
-            description: 'Fun and vibrant styles for your little ones.',
-            linkText: 'Shop Now',
-            linkUrl: '/new-arrivals',
-          }}
-          style={{ variant: 'pro', overlay: 'dark', cta: 'brand', radius: '2xl', hover: 'zoom' }}
-        />
+        <section className="relative mb-20">
+          <DynamicBanner
+            page="kids"
+            position="featured"
+            fallback={{
+              imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true',
+              heading: 'Playful Picks',
+              description: 'Fun and vibrant styles for your little ones.',
+              linkText: 'Shop Now',
+              linkUrl: '/new-arrivals',
+            }}
+            style={{ variant: 'pro', overlay: 'dark', cta: 'brand', radius: '2xl', hover: 'zoom' }}
+          />
+          <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 flex gap-4">
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl p-4 shadow-lg flex gap-3 items-center border border-yellow-200 dark:border-yellow-800">
+              <span className="text-yellow-600 dark:text-yellow-400 text-sm font-medium">🌈 Fun & Play</span>
+            </div>
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl p-4 shadow-lg flex gap-3 items-center border border-orange-200 dark:border-orange-800">
+              <span className="text-orange-600 dark:text-orange-400 text-sm font-medium">🎨 Creative</span>
+            </div>
+          </div>
+        </section>
 
-        {loading && <p>Loading...</p>}
-        {error && <p className="text-red-500">{error}</p>}
+        {loading && (
+          <div className="flex justify-center items-center min-h-[200px]">
+            <div className="animate-pulse flex gap-2">
+              <div className="h-2 w-2 bg-yellow-500 rounded-full animate-bounce"></div>
+              <div className="h-2 w-2 bg-orange-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+              <div className="h-2 w-2 bg-pink-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+            </div>
+          </div>
+        )}
+        {error && (
+          <div className="text-center py-10">
+            <p className="text-orange-600 dark:text-orange-400 font-medium">{error}</p>
+          </div>
+        )}
 
         {/* Shop by Category (Kids) - shown first */}
         {categoriesList.length > 0 && (
-          <section className="mb-16">
-            <h2 className="text-2xl font-bold mb-8">Shop by Category</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <section className="mb-20">
+            <div className="text-center space-y-3 mb-12">
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-yellow-600 via-orange-600 to-pink-600 bg-clip-text text-transparent">
+                Shop by Category
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">Discover perfect styles for your little adventurers</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {categoriesList.map((category, index) => (
                 <div key={index} className="group">
                   <Link 
@@ -142,27 +169,36 @@ const Kids = () => {
                     className="block"
                     onClick={() => { sessionStorage.setItem('kidsContext', 'true'); sessionStorage.removeItem('menContext'); }}
                   >
-                    <Card className="overflow-hidden">
-                      <div className="aspect-square relative">
+                    <div className="relative rounded-3xl bg-gradient-to-br from-yellow-100 via-orange-50 to-pink-100 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 p-1 overflow-hidden shadow-xl transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+                      <div className="aspect-square relative rounded-[22px] overflow-hidden">
                         <img
                           src={category.image || `https://source.unsplash.com/featured/400x400?kid,children,${encodeURIComponent(category.name)}`}
                           alt={category.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover transform transition-transform duration-500 group-hover:scale-110"
                           onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/placeholder.svg'; }}
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
-                          <h3 className="text-white text-xl font-bold">{category.name}</h3>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-end p-6 opacity-90 group-hover:opacity-100 transition-opacity">
+                          <div className="transform transition-transform duration-300 group-hover:translate-y-0 translate-y-4">
+                            <h3 className="text-xl font-bold text-white mb-2 group-hover:text-yellow-300">{category.name}</h3>
+                            <div className="flex items-center text-yellow-300 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                              Explore Collection
+                              <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </Card>
+                    </div>
                   </Link>
-                  <div className="mt-3">
-                    <ul className="text-sm text-gray-600 space-y-1">
+                  <div className="mt-4 px-2">
+                    <ul className="flex flex-wrap gap-2 text-sm">
                       {category.subcategories.map((sub, idx) => (
-                        <li key={idx} className="hover:text-[#D92030]">
+                        <li key={idx}>
                           <Link 
                             to={`/category/${encodeURIComponent(category.name.toLowerCase())}/${encodeURIComponent(sub.toLowerCase())}`}
                             onClick={() => { sessionStorage.setItem('kidsContext', 'true'); sessionStorage.removeItem('menContext'); }}
+                            className="inline-block px-3 py-1 rounded-full bg-white/80 dark:bg-gray-800/80 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
                           >
                             {sub}
                           </Link>
@@ -178,19 +214,27 @@ const Kids = () => {
 
         {/* All Kids Products */}
         {!loading && !error && (
-          <section className="mb-16">
-            <h2 className="text-2xl font-bold mb-6">All Kids Products</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+          <section className="mb-20">
+            <div className="text-center space-y-3 mb-12">
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-yellow-600 via-orange-600 to-pink-600 bg-clip-text text-transparent">
+                All Kids Products
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">Explore our complete collection of children's fashion</p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 lg:gap-8">
               {allProducts.map((p) => (
-                <ProductCard
-                  key={p._id}
-                  id={p._id}
-                  title={p.title}
-                  image={p.image?.[0]}
-                  price={p.price}
-                  discount={p.discount}
-                  badge={p.theme?.toLowerCase().includes('best') ? 'Best Seller' : p.theme?.toLowerCase().includes('new') ? 'New Arrival' : undefined}
-                />
+                <div key={p._id} className="group transform transition-all duration-300 hover:-translate-y-1">
+                  <div className="bg-gradient-to-br from-yellow-100 via-orange-50 to-pink-100 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 p-[1px] rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                    <ProductCard
+                      id={p._id}
+                      title={p.title}
+                      image={p.image?.[0]}
+                      price={p.price}
+                      discount={p.discount}
+                      badge={p.theme?.toLowerCase().includes('best') ? 'Best Seller' : p.theme?.toLowerCase().includes('new') ? 'New Arrival' : undefined}
+                    />
+                  </div>
+                </div>
               ))}
             </div>
           </section>
@@ -200,65 +244,95 @@ const Kids = () => {
         <section className="mb-16">
           {/* Best Sellers Banner always visible */}
             </section>
-          <section className="mb-16">
-        {bestSellers.length > 0 && (
-          <>
-            <DynamicBanner
-              page="kids"
-              position="best"
-              fallback={{
-                imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true',
-                heading: 'Kids Summer Collection',
-                description: 'Light fabrics and vibrant colors for the perfect summer look.',
-                linkText: 'Shop Now',
-                linkUrl: '/categories',
-              }}
-              style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
-            />
-              <h2 className="text-2xl font-bold mb-6">Best Sellers</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+        <section className="mb-20">
+          {bestSellers.length > 0 && (
+            <>
+              <div className="relative mb-12">
+                <DynamicBanner
+                  page="kids"
+                  position="best"
+                  fallback={{
+                    imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true',
+                    heading: 'Kids Summer Collection',
+                    description: 'Light fabrics and vibrant colors for the perfect summer look.',
+                    linkText: 'Shop Now',
+                    linkUrl: '/categories',
+                  }}
+                  style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
+                />
+                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2">
+                  <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-full px-6 py-3 shadow-lg border border-yellow-200 dark:border-yellow-800">
+                    <span className="text-yellow-600 dark:text-yellow-400 font-semibold">✨ Most Loved by Kids</span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-center space-y-3 mb-10">
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-yellow-600 via-orange-600 to-pink-600 bg-clip-text text-transparent">
+                  Best Sellers
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400">Top picks loved by kids and parents alike</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 lg:gap-8">
                 {bestSellers.map(p => (
-                  <ProductCard
-                    key={p._id}
-                    id={p._id}
-                    title={p.title}
-                    image={p.image?.[0]}
-                    price={p.price}
-                    discount={p.discount}
-                    badge={'Best Seller'}
-                  />
+                  <div key={p._id} className="group transform transition-all duration-300 hover:-translate-y-1">
+                    <div className="bg-gradient-to-br from-yellow-100 via-orange-50 to-pink-100 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 p-[1px] rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                      <ProductCard
+                        id={p._id}
+                        title={p.title}
+                        image={p.image?.[0]}
+                        price={p.price}
+                        discount={p.discount}
+                        badge={'Best Seller'}
+                      />
+                    </div>
+                  </div>
                 ))}
               </div>
             </>
           )}
-        </section>
-
-        <section className="mb-16">
+        </section>        <section className="mb-20">
           {newArrivals.length > 0 && (
             <>
-          <DynamicBanner
-            page="kids"
-            position="new"
-            fallback={{
-              imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true',
-              heading: 'New Arrivals',
-              description: 'Fresh styles for kids just in.',
-              linkText: 'Shop New',
-              linkUrl: '/new-arrivals',
-            }}
-            style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
-          />
-              <h2 className="text-2xl font-bold mb-6">New Arrivals</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              <div className="relative mb-12">
+                <DynamicBanner
+                  page="kids"
+                  position="new"
+                  fallback={{
+                    imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true',
+                    heading: 'New Arrivals',
+                    description: 'Fresh styles for kids just in.',
+                    linkText: 'Shop New',
+                    linkUrl: '/new-arrivals',
+                  }}
+                  style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
+                />
+                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2">
+                  <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-full px-6 py-3 shadow-lg border border-pink-200 dark:border-pink-800">
+                    <span className="text-pink-600 dark:text-pink-400 font-semibold">🎉 Just Arrived</span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-center space-y-3 mb-10">
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-yellow-600 via-orange-600 to-pink-600 bg-clip-text text-transparent">
+                  New Arrivals
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400">Fresh and exciting styles just for your kids</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 lg:gap-8">
                 {newArrivals.map(p => (
-                  <ProductCard
-                    key={p._id}
-                    id={p._id}
-                    title={p.title}
-                    image={p.image?.[0]}
-                    price={p.price}
-                    discount={p.discount}
-                  />
+                  <div key={p._id} className="group transform transition-all duration-300 hover:-translate-y-1">
+                    <div className="bg-gradient-to-br from-yellow-100 via-orange-50 to-pink-100 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 p-[1px] rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                      <ProductCard
+                        key={p._id}
+                        id={p._id}
+                        title={p.title}
+                        image={p.image?.[0]}
+                        price={p.price}
+                        discount={p.discount}
+                        badge={'New Arrival'}
+                      />
+                    </div>
+                  </div>
                 ))}
               </div>
             </>

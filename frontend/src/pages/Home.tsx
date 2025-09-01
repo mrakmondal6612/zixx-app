@@ -95,52 +95,80 @@ const Home = () => {
   const bestSellers = products.filter(p => p.theme?.toLowerCase().includes('best'));
   
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800">
       <Header />
       <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-8 py-8">
-        <DynamicBanner
-          page="home"
-          position="hero"
-          fallback={{
-            imageUrl: "https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/7087fa7cadbd89e8fc148d4f01d42317d99eaccb?placeholderIfAbsent=true",
-            heading: "Summer Collection",
-            description: "Light fabrics and vibrant colors for the perfect summer look.",
-            linkText: "Shop Now",
-            linkUrl: "/women",
-          }}
-          style={{ variant: 'pro', overlay: 'dark', cta: 'brand', radius: '2xl', hover: 'zoom' }}
-        />
+        <section className="relative mb-20">
+          <DynamicBanner
+            page="home"
+            position="hero"
+            fallback={{
+              imageUrl: "https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/7087fa7cadbd89e8fc148d4f01d42317d99eaccb?placeholderIfAbsent=true",
+              heading: "Summer Collection",
+              description: "Light fabrics and vibrant colors for the perfect summer look.",
+              linkText: "Shop Now",
+              linkUrl: "/women",
+            }}
+            style={{ variant: 'pro', overlay: 'dark', cta: 'brand', radius: '2xl', hover: 'zoom' }}
+          />
+          <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 flex gap-4">
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl p-4 shadow-lg flex gap-3 items-center border border-purple-200 dark:border-purple-800">
+              <span className="text-purple-600 dark:text-purple-400 text-sm font-medium">🔥 Hot Deals</span>
+            </div>
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl p-4 shadow-lg flex gap-3 items-center border border-pink-200 dark:border-pink-800">
+              <span className="text-pink-600 dark:text-pink-400 text-sm font-medium">✨ New Arrivals</span>
+            </div>
+          </div>
+        </section>
+
         {/* Categories Section */}
-        <section className="mb-16">
-          <h2 className="text-2xl font-bold mb-8">Shop by Category</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <section className="mb-20">
+          <div className="flex flex-col items-center mb-12 text-center">
+            <span className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-2">DISCOVER</span>
+            <h2 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 bg-clip-text text-transparent animate-text-shine">Shop by Category</h2>
+            <div className="mt-4 h-1 w-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8">
             {categories.map((category, index) => (
               <div key={index} className="group">
                 <Link to={`/category/${category.name.toLowerCase()}`} className="block">
-                  <Card className="overflow-hidden">
-                    <div className="aspect-square relative">
+                  <div className="bg-white dark:bg-gray-800 rounded-3xl p-3 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-purple-500/10 relative overflow-hidden border border-purple-100 dark:border-purple-900">
+                    <div className="aspect-square rounded-2xl overflow-hidden relative">
                       <img
                         src={category.image}
                         alt={category.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
-                        <h3 className="text-white text-xl font-bold">{category.name}</h3>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-60 group-hover:opacity-70 transition-opacity"></div>
+                      <div className="absolute inset-0 flex flex-col justify-end p-6">
+                        <h3 className="text-white text-2xl font-black drop-shadow-lg">{category.name}</h3>
+                      </div>
+                      <div className="absolute top-4 right-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl px-3 py-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                        Explore →
                       </div>
                     </div>
-                  </Card>
+                  </div>
                 </Link>
-                <div className="mt-3">
-                  <ul className="text-sm text-gray-600 space-y-1">
+                <div className="mt-4 px-2">
+                  <ul className="text-sm space-y-2">
                     {Array.isArray(category.subcategories)
                       ? category.subcategories.map((sub, idx) => (
-                          <li key={idx} className="hover:text-[#D92030]">
-                            <Link to={`/category/${category.name.toLowerCase()}/${sub.toLowerCase()}`}>{sub}</Link>
+                          <li key={idx} className="transition-colors hover:text-purple-600 dark:hover:text-purple-400">
+                            <Link to={`/category/${category.name.toLowerCase()}/${sub.toLowerCase()}`}
+                              className="flex items-center gap-2 group">
+                              <span className="h-1 w-1 rounded-full bg-current opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                              <span>{sub}</span>
+                            </Link>
                           </li>
                         ))
                       : Array.from(category.subcategories as Set<string>).map((sub, idx) => (
-                          <li key={idx} className="hover:text-[#D92030]">
-                            <Link to={`/category/${category.name.toLowerCase()}/${sub.toLowerCase()}`}>{sub}</Link>
+                          <li key={idx} className="transition-colors hover:text-purple-600 dark:hover:text-purple-400">
+                            <Link to={`/category/${category.name.toLowerCase()}/${sub.toLowerCase()}`}
+                              className="flex items-center gap-2 group">
+                              <span className="h-1 w-1 rounded-full bg-current opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                              <span>{sub}</span>
+                            </Link>
                           </li>
                         ))
                     }
@@ -153,21 +181,26 @@ const Home = () => {
 
         {/* New Arrivals Section */}
         {newArrivals.length > 0 && (
-        <section className="mb-16">
-          <DynamicBanner
-            page="home"
-            position="new-arrivals"
-            fallback={{
-              imageUrl: "https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true",
-              heading: "Summer Collection",
-              description: "Light fabrics and vibrant colors for the perfect summer look.",
-              linkText: "Shop Now",
-              linkUrl: "/women",
-            }}
-            style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
-          />
-          <h2 className="text-2xl font-bold mb-8">New Arrivals</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+        <section className="mb-20">
+          <div className="relative mb-12">
+            <DynamicBanner
+              page="home"
+              position="new-arrivals"
+              fallback={{
+                imageUrl: "https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true",
+                heading: "Summer Collection",
+                description: "Light fabrics and vibrant colors for the perfect summer look.",
+                linkText: "Shop Now",
+                linkUrl: "/women",
+              }}
+              style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
+            />
+            <div className="absolute -bottom-6 left-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl px-6 py-3 shadow-xl border border-purple-200 dark:border-purple-800">
+              <span className="text-xl font-black bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">New Drops 🔥</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 lg:gap-8">
             {newArrivals.map(p => (
               <ProductCard
                 key={p._id}
@@ -184,25 +217,37 @@ const Home = () => {
         )}
 
         {/* Featured Collection Banner */}
-        <DynamicBanner
-          page="home"
-          position="featured"
-          fallback={{
-            imageUrl: "https://res.cloudinary.com/dxtle1heo/image/upload/v1756038296/profile_pics/gatpp49d6jwhb9q2l6yv.png",
-            heading: "Featured Collection",
-            description: "Explore our curated selection of the season's must-haves.",
-            linkText: "Shop Collection",
-            linkUrl: "/men",
-          }}
-          style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
-        />
-        
+        <section className="mb-20">
+          <div className="flex flex-col items-center mb-12 text-center">
+            <span className="text-sm font-medium text-pink-600 dark:text-pink-400 mb-2">TRENDING NOW</span>
+            <h2 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 bg-clip-text text-transparent animate-text-shine">Featured Collection</h2>
+            <div className="mt-4 h-1 w-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+          </div>
+
+          <DynamicBanner
+            page="home"
+            position="featured"
+            fallback={{
+              imageUrl: "https://res.cloudinary.com/dxtle1heo/image/upload/v1756038296/profile_pics/gatpp49d6jwhb9q2l6yv.png",
+              heading: "Featured Collection",
+              description: "Explore our curated selection of the season's must-haves.",
+              linkText: "Shop Collection",
+              linkUrl: "/men",
+            }}
+            style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
+          />
+        </section>
 
         {/* Best Sellers Section */}
         {bestSellers.length > 0 && (
-        <section className="mb-16">
-          <h2 className="text-2xl font-bold mb-8">Best Sellers</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+        <section className="mb-20">
+          <div className="flex flex-col items-center mb-12 text-center">
+            <span className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-2">TOP PICKS</span>
+            <h2 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 bg-clip-text text-transparent animate-text-shine">Best Sellers</h2>
+            <div className="mt-4 h-1 w-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 lg:gap-8">
             {bestSellers.map(p => (
               <ProductCard
                 key={p._id}
@@ -218,38 +263,51 @@ const Home = () => {
         </section>
         )}
 
+        {/* Men's Collection Promo */}
+        <section className="mb-20">
+          <div className="relative">
+            <DynamicBanner
+              page="home"
+              position="men-promo"
+              fallback={{
+                imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/d5b391a024519f0a274f617aaa8e815af74b7883?placeholderIfAbsent=true',
+                heading: "Men's Collection",
+                description: "Elevate your style with our versatile men's collection.",
+                linkText: "Shop Now",
+                linkUrl: "/men",
+              }}
+              style={{ variant: 'pro', overlay: 'dark', cta: 'brand', radius: '2xl', hover: 'zoom' }}
+            />
+            <div className="absolute -bottom-6 right-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl px-6 py-3 shadow-xl border border-purple-200 dark:border-purple-800">
+              <span className="text-xl font-black bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">Men's Collection 👔</span>
+            </div>
+          </div>
+        </section>
 
-        <DynamicBanner
-          page="home"
-          position="men-promo"
-          fallback={{
-            imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/d5b391a024519f0a274f617aaa8e815af74b7883?placeholderIfAbsent=true',
-            heading: "Men's Collection",
-            description: "Elevate your style with our versatile men's collection.",
-            linkText: "Shop Now",
-            linkUrl: "/men",
-          }}
-          style={{ variant: 'pro', overlay: 'dark', cta: 'brand', radius: '2xl', hover: 'zoom' }}
-        />
+        {/* All Collection */}
+        {products.length > 0 && (
+          <section className="mb-20">
+            <div className="flex flex-col items-center mb-12 text-center">
+              <span className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-2">EXPLORE</span>
+              <h2 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 bg-clip-text text-transparent animate-text-shine">All Collection</h2>
+              <div className="mt-4 h-1 w-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+            </div>
 
-          {products.length > 0 && (
-            <section className="mb-16">
-              <h2 className="text-2xl font-bold mb-8">All Collection</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-                {products.map(p => (
-                  <ProductCard
-                    key={p._id}
-                    id={p._id}
-                    title={p.title}
-                    image={p.image?.[0]}
-                    price={p.price}
-                    discount={p.discount}
-                    badge={p.theme?.toLowerCase().includes('best') ? 'Best Seller' : p.theme?.toLowerCase().includes('new') ? 'New Arrival' : undefined}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 lg:gap-8">
+              {products.map(p => (
+                <ProductCard
+                  key={p._id}
+                  id={p._id}
+                  title={p.title}
+                  image={p.image?.[0]}
+                  price={p.price}
+                  discount={p.discount}
+                  badge={p.theme?.toLowerCase().includes('best') ? 'Best Seller' : p.theme?.toLowerCase().includes('new') ? 'New Arrival' : undefined}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
 
       </main>
