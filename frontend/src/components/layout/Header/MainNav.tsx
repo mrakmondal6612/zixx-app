@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from "@/hooks/AuthProvider";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, User, ShoppingCart, ChevronDown, MapPin } from 'lucide-react';
+import { Menu, X, User, ShoppingCart, ChevronDown, MapPin, Shield } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
   NavigationMenu,
@@ -494,6 +494,12 @@ export const MainNav = () => {
               <User size={20} className="mb-1" />
               <span className="text-xs">Account</span>
             </Link>
+            {user?.role === 'admin' && (
+              <a href={adminHref} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center p-2 flex-1">
+                <Shield size={20} className="mb-1 text-red-600" />
+                <span className="text-xs">Admin</span>
+              </a>
+            )}
           </div>
         </div>
       )}
