@@ -43,10 +43,13 @@ export const globalSlice = createSlice({
   name: "global",
   initialState,
   reducers: {
-    setMode: (state) => {
+    // Accept optional payload to explicitly set the mode, fallback to toggle when not provided
+    setMode: (state, action) => {
       // Force recalculation of new mode to prevent state sync issues
       const currentMode = state.mode || 'dark';
-      const newMode = currentMode === "light" ? "dark" : "light";
+      const newMode = (action && action.payload && (action.payload === 'light' || action.payload === 'dark'))
+        ? action.payload
+        : (currentMode === "light" ? "dark" : "light");
       state.mode = newMode;
       
       // Multiple persistence strategies for production reliability

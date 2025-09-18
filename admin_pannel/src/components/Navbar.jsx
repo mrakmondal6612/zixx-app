@@ -185,8 +185,8 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                 const actualCurrentMode = currentReduxMode || currentStoredMode || currentDOMMode;
                 const newMode = actualCurrentMode === 'dark' ? 'light' : 'dark';
                 
-                // Dispatch Redux action
-                dispatch(setMode());
+                // Dispatch Redux action with explicit new mode payload for reliability
+                dispatch(setMode(newMode));
                 
                 // Immediately update DOM for instant visual feedback
                 document.documentElement.setAttribute('data-theme', newMode);

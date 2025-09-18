@@ -54,8 +54,31 @@ const Orders = () => {
   const [courierPhoneInput, setCourierPhoneInput] = React.useState("");
   const [courierLogoUrlInput, setCourierLogoUrlInput] = React.useState("");
   const [logoFileConfirm, setLogoFileConfirm] = React.useState(null);
+  const [confirmPreset, setConfirmPreset] = React.useState("");
   const [confirmNotes, setConfirmNotes] = React.useState("");
   const [confirmErr, setConfirmErr] = React.useState("");
+  // Editable presets persisted in localStorage
+  const PRESETS_KEY = 'admin_courier_presets_v1';
+  const [editablePresets, setEditablePresets] = React.useState(() => {
+    try {
+      const raw = window.localStorage.getItem(PRESETS_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return null;
+      return parsed;
+    } catch (e) {
+      return null;
+    }
+  });
+  const saveEditablePresets = (next) => {
+    setEditablePresets(next);
+    try { window.localStorage.setItem(PRESETS_KEY, JSON.stringify(next)); } catch (e) { /* ignore */ }
+  };
+  const [lastApplied, setLastApplied] = React.useState(null); // { type, carrier, carrierUrl }
+  const [presetEditorOpen, setPresetEditorOpen] = React.useState(false);
+  const [editedPresets, setEditedPresets] = React.useState([]);
+  const [newPresetName, setNewPresetName] = React.useState('');
+  const [newPresetUrl, setNewPresetUrl] = React.useState('');
 
   const rows = Array.isArray(data?.orders) ? data.orders : [];
 
@@ -76,6 +99,15 @@ const Orders = () => {
     const last = u.last_name || u.lastName || "";
     const email = u.email || "";
     return (first || last) ? `${first} ${last}`.trim() : email || u._id || "-";
+  };
+
+  const getOrderQuantity = (row) => {
+    try {
+      const items = Array.isArray(row?.orderItems) ? row.orderItems : [];
+      return items.reduce((sum, it) => sum + (Number(it?.quantity) || 0), 0);
+    } catch (e) {
+      return 0;
+    }
   };
 
   const [packAdminOrder, { isLoading: isPacking }] = usePackAdminOrderMutation();
@@ -155,11 +187,18 @@ const Orders = () => {
 
   const onPresetChange = (val) => {
     setPreset(val);
-    const p = presets.find(p => p.name === val);
+    const list = editablePresets || presets;
+    const p = list.find(p => p.name === val);
     if (!p) return;
-    // set carrier; do not override if user already typed a different name
-    if (!carrier) setCarrier(p.name);
-    if (!carrierUrl) setCarrierUrl(p.url);
+    // Save previous state for undo
+    setLastApplied({ type: 'courier', carrier: carrier || '', carrierUrl: carrierUrl || '' });
+    if (p.name === 'Select preset') {
+      setCarrier('');
+      setCarrierUrl('');
+    } else {
+      setCarrier(p.name);
+      setCarrierUrl(p.url);
+    }
   };
 
   const onSelectLogoFile = async (e) => {
@@ -320,13 +359,27 @@ const Orders = () => {
     // Generate timeline HTML
     const timelineContent = generateTimelineHTML(row);
     const win = window.open('', 'Print Timeline', 'height=800,width=600');
-    win.document.write(`<html><head><title>Order Timeline #${row._id}</title>`);
-    win.document.write('<link rel="stylesheet" href="/timeline-print.css" type="text/css" />');
-    win.document.write('</head><body>');
-    win.document.write(timelineContent);
-    win.document.write('</body></html>');
-    win.document.close();
-    win.print();
+    if (!win) {
+      showToast('Unable to open print window. Please allow popups for this site.', 'error');
+      return;
+    }
+    try {
+      win.document.write(`<html><head><title>Order Timeline #${row._id}</title>`);
+      win.document.write('<link rel="stylesheet" href="/timeline-print.css" type="text/css" />');
+      win.document.write('</head><body>');
+      win.document.write(timelineContent);
+      win.document.write('</body></html>');
+      win.document.close();
+      // Focus and allow some time for rendering before printing
+      try { win.focus(); } catch (e) {}
+      setTimeout(() => {
+        try { win.print(); } catch (e) { console.warn('Print failed', e); }
+      }, 250);
+    } catch (e) {
+      console.error('Failed to open print window', e);
+      showToast('Failed to open print window', 'error');
+      try { win.close(); } catch (er) {}
+    }
   };
 
   // Cancel order function
@@ -759,13 +812,41 @@ const Orders = () => {
     } else {
       setDeliveryDate(null);
     }
-    setCarrierUrlInput(row?.carrierUrl || '');
+  setCarrierUrlInput(row?.carrierUrl || '');
     setCourierPhoneInput(row?.courierPhone || '');
     setCourierLogoUrlInput(row?.courierLogoUrl || '');
+  setConfirmPreset('');
     setLogoFileConfirm(null);
     setConfirmNotes("");
     setConfirmErr("");
     setConfirmOpen(true);
+  };
+
+  const onConfirmPresetChange = (val) => {
+    setConfirmPreset(val);
+    const list = editablePresets || presets;
+    const p = list.find(p => p.name === val);
+    if (!p) return;
+    setLastApplied({ type: 'confirm', carrier: courierName || '', carrierUrl: carrierUrlInput || '' });
+    if (p.name === 'Select preset') {
+      setCourierName('');
+      setCarrierUrlInput('');
+    } else {
+      setCourierName(p.name);
+      setCarrierUrlInput(p.url);
+    }
+  };
+
+  const undoLast = (type) => {
+    if (!lastApplied || lastApplied.type !== type) return;
+    if (type === 'courier') {
+      setCarrier(lastApplied.carrier || '');
+      setCarrierUrl(lastApplied.carrierUrl || '');
+    } else if (type === 'confirm') {
+      setCourierName(lastApplied.carrier || '');
+      setCarrierUrlInput(lastApplied.carrierUrl || '');
+    }
+    setLastApplied(null);
   };
 
   const submitConfirm = async () => {
@@ -908,8 +989,8 @@ const Orders = () => {
                             {getUserText(row)}
                           </Typography>
                           <Typography variant="body2">
-                            <Box component="span" sx={{ color: theme.palette.mode === "dark" ? theme.palette.secondary[300] : '#032944', fontWeight: 600 }}>Items: </Box>
-                            {Array.isArray(row.orderItems) ? row.orderItems.length : 0}
+                            <Box component="span" sx={{ color: theme.palette.mode === "dark" ? theme.palette.secondary[300] : '#032944', fontWeight: 600 }}>Quantity: </Box>
+                            {getOrderQuantity(row)}
                           </Typography>
                           <Typography variant="body2">
                             <Box component="span" sx={{ color: theme.palette.mode === "dark" ? theme.palette.secondary[300] : '#032944', fontWeight: 600 }}>Total: </Box>
@@ -1477,19 +1558,23 @@ const Orders = () => {
         <DialogTitle>Update Courier</DialogTitle>
         <DialogContent>
           <Stack spacing={1.5} sx={{ mt: 0.5 }}>
-            <FormControl fullWidth>
-              <InputLabel id="preset-label">Carrier Preset</InputLabel>
-              <Select
-                labelId="preset-label"
-                label="Carrier Preset"
-                value={preset}
-                onChange={(e) => onPresetChange(e.target.value)}
-              >
-                {presets.map(p => (
-                  <MenuItem key={p.name} value={p.name}>{p.name}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <FormControl sx={{ flex: 1 }}>
+                <InputLabel id="preset-label">Carrier Preset</InputLabel>
+                <Select
+                  labelId="preset-label"
+                  label="Carrier Preset"
+                  value={preset}
+                  onChange={(e) => onPresetChange(e.target.value)}
+                >
+                  {(editablePresets || presets).map(p => (
+                    <MenuItem key={p.name} value={p.name}>{p.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Button size="small" variant="outlined" onClick={() => undoLast('courier')} disabled={!lastApplied || lastApplied.type !== 'courier'}>Undo</Button>
+              <Button size="small" variant="text" onClick={() => { setEditedPresets(editablePresets || presets); setPresetEditorOpen(true); }}>Edit presets</Button>
+            </Box>
             <TextField label="Courier Name" value={carrier} onChange={(e) => setCarrier(e.target.value)} fullWidth />
             <TextField label="Tracking/Carrier URL" value={carrierUrl} onChange={(e) => setCarrierUrl(e.target.value)} fullWidth placeholder="https://..." />
             <TextField label="Courier Phone" value={courierPhone} onChange={(e) => setCourierPhone(e.target.value)} fullWidth placeholder="+91 98-7654-3210" />
@@ -1518,52 +1603,91 @@ const Orders = () => {
       <Dialog open={confirmOpen} onClose={() => (!isConfirming && setConfirmOpen(false))} fullWidth maxWidth="xs">
         <DialogTitle>Confirm & Ship</DialogTitle>
         <DialogContent>
-          <Stack spacing={1.5} sx={{ mt: 0.5 }}>
-            <TextField
-              label="Tracking Number"
-              value={trackingNumber}
-              onChange={(e) => setTrackingNumber(e.target.value)}
-              fullWidth
-              autoFocus
-              disabled={isConfirming}
-            />
-            <TextField
-              label="Carrier (Courier Name)"
-              value={courierName}
-              onChange={e => setCourierName(e.target.value)}
-              fullWidth
-              sx={{ mb: 1 }}
-              required
-            />
-            <TextField label="Carrier URL" value={carrierUrlInput} onChange={(e) => setCarrierUrlInput(e.target.value)} fullWidth placeholder="https://..." sx={{ mb: 1 }} />
-            <TextField label="Courier Phone" value={courierPhoneInput} onChange={(e) => setCourierPhoneInput(e.target.value)} fullWidth placeholder="+91 98-7654-3210" sx={{ mb: 1 }} />
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Button component="label" variant="outlined" size="small" disabled={isUploadingLogo || !confirmRow}>
-                {isUploadingLogo ? <><CircularProgress size={14} style={{ marginRight: 8 }} /> Uploading...</> : 'Upload Logo File'}
-                <input type="file" accept="image/*" hidden onChange={onSelectLogoFileConfirm} />
-              </Button>
-              {logoFileConfirm ? <Typography variant="caption">{logoFileConfirm.name}</Typography> : null}
-            </Box>
-            <TextField label="Courier Logo URL" value={courierLogoUrlInput} onChange={(e) => setCourierLogoUrlInput(e.target.value)} fullWidth placeholder="https://cdn.example.com/logo.png" sx={{ mb: 1 }} />
-            <ReactDatePicker
-              selected={deliveryDate}
-              onChange={(date) => setDeliveryDate(date)}
-              dateFormat="yyyy-MM-dd"
-              customInput={<TextField label="Expected Delivery" fullWidth InputLabelProps={{ shrink: true }} />}
-              disabled={isConfirming}
-              placeholderText="Select date"
-            />
-            <TextField
-              label="Admin Notes"
-              value={confirmNotes}
-              onChange={(e) => setConfirmNotes(e.target.value)}
-              fullWidth
-              multiline
-              rows={3}
-              disabled={isConfirming}
-            />
-            {confirmErr ? <Alert severity="error">{confirmErr}</Alert> : null}
-          </Stack>
+          <Box sx={{ mt: 0.5 }}>
+            <Grid container spacing={1}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Tracking Number"
+                  value={trackingNumber}
+                  onChange={(e) => setTrackingNumber(e.target.value)}
+                  fullWidth
+                  autoFocus
+                  disabled={isConfirming}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <FormControl sx={{ flex: 1 }}>
+                    <InputLabel id="confirm-preset-label">Carrier Preset</InputLabel>
+                    <Select
+                      labelId="confirm-preset-label"
+                      label="Carrier Preset"
+                      value={confirmPreset}
+                      onChange={(e) => onConfirmPresetChange(e.target.value)}
+                    >
+                      {(editablePresets || presets).map(p => (
+                        <MenuItem key={p.name} value={p.name}>{p.name}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Button size="small" variant="outlined" onClick={() => undoLast('confirm')} disabled={!lastApplied || lastApplied.type !== 'confirm'}>Undo</Button>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField label="Carrier (Courier Name)" value={courierName} onChange={e => setCourierName(e.target.value)} fullWidth required />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField label="Carrier URL" value={carrierUrlInput} onChange={(e) => setCarrierUrlInput(e.target.value)} fullWidth placeholder="https://..." />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField label="Courier Phone" value={courierPhoneInput} onChange={(e) => setCourierPhoneInput(e.target.value)} fullWidth placeholder="+91 98-7654-3210" />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField label="Courier Logo URL" value={courierLogoUrlInput} onChange={(e) => setCourierLogoUrlInput(e.target.value)} fullWidth placeholder="https://cdn.example.com/logo.png" />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Button component="label" variant="outlined" size="small" disabled={isUploadingLogo || !confirmRow}>
+                    {isUploadingLogo ? <><CircularProgress size={14} style={{ marginRight: 8 }} /> Uploading...</> : 'Upload Logo File'}
+                    <input type="file" accept="image/*" hidden onChange={onSelectLogoFileConfirm} />
+                  </Button>
+                  {logoFileConfirm ? <Typography variant="caption">{logoFileConfirm.name}</Typography> : null}
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <ReactDatePicker
+                  selected={deliveryDate}
+                  onChange={(date) => setDeliveryDate(date)}
+                  dateFormat="yyyy-MM-dd"
+                  customInput={<TextField label="Expected Delivery" fullWidth InputLabelProps={{ shrink: true }} />}
+                  disabled={isConfirming}
+                  placeholderText="Select date"
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  label="Admin Notes"
+                  value={confirmNotes}
+                  onChange={(e) => setConfirmNotes(e.target.value)}
+                  fullWidth
+                  multiline
+                  rows={3}
+                  disabled={isConfirming}
+                />
+              </Grid>
+
+              {confirmErr ? (
+                <Grid item xs={12}>
+                  <Alert severity="error">{confirmErr}</Alert>
+                </Grid>
+              ) : null}
+            </Grid>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)} disabled={isConfirming}>Cancel</Button>
@@ -1577,6 +1701,41 @@ const Orders = () => {
           {toast.message}
         </Alert>
       </Snackbar>
+
+      {/* Preset Editor Dialog */}
+      <Dialog open={presetEditorOpen} onClose={() => setPresetEditorOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Edit Carrier Presets</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1} sx={{ mt: 1 }}>
+            {(editedPresets || []).map((p, idx) => (
+              <Box key={p.name || idx} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <TextField label="Name" value={p.name} onChange={(e) => {
+                  const next = [...editedPresets]; next[idx] = { ...next[idx], name: e.target.value }; setEditedPresets(next);
+                }} sx={{ flex: 1 }} />
+                <TextField label="URL" value={p.url} onChange={(e) => {
+                  const next = [...editedPresets]; next[idx] = { ...next[idx], url: e.target.value }; setEditedPresets(next);
+                }} sx={{ flex: 2 }} />
+                <Button variant="outlined" color="error" onClick={() => { const next = editedPresets.filter((_, i) => i !== idx); setEditedPresets(next); }}>Remove</Button>
+              </Box>
+            ))}
+
+            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+              <TextField label="New name" value={newPresetName} onChange={(e) => setNewPresetName(e.target.value)} sx={{ flex: 1 }} />
+              <TextField label="New URL" value={newPresetUrl} onChange={(e) => setNewPresetUrl(e.target.value)} sx={{ flex: 2 }} />
+              <Button onClick={() => {
+                if (!newPresetName) return;
+                const next = [...(editedPresets || []) , { name: newPresetName, url: newPresetUrl }];
+                setEditedPresets(next);
+                setNewPresetName(''); setNewPresetUrl('');
+              }}>Add</Button>
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPresetEditorOpen(false)}>Cancel</Button>
+          <Button onClick={() => { saveEditablePresets(editedPresets); setPresetEditorOpen(false); }} variant="contained">Save</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
