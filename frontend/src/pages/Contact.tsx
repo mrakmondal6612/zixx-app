@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,54 @@ const Contact = () => {
     message: ''
   });
   const [submitting, setSubmitting] = useState(false);
+  const [contactInfo, setContactInfo] = useState({ address: '', phone: '', email: '' });
+
+  // Load contact info from the same backend source as Footer
+  useEffect(() => {
+    const loadContactInfo = async () => {
+      try {
+        const candidates: string[] = [];
+        const envBackend = (import.meta as any).env?.VITE_BACKEND_URL;
+        if (envBackend) candidates.push(String(envBackend).replace(/\/$/, ''));
+        const envFallback = (import.meta as any).env?.VITE_BACKEND_FALLBACK || (import.meta as any).env?.VITE_DEPLOYED_BACKEND;
+        if (envFallback) candidates.push(String(envFallback).replace(/\/$/, ''));
+        candidates.push('/api');
+
+        let response: Response | null = null;
+        let lastError: any = null;
+        for (const base of candidates) {
+          const url = `${base.replace(/\/$/, '')}/admin/footer`;
+          try {
+            const r = await fetch(url, { cache: 'no-store', credentials: 'include', headers: { Accept: 'application/json' } });
+            if (r.ok) {
+              response = r;
+              break;
+            } else {
+              lastError = new Error(`Non-OK status ${r.status} from ${url}`);
+            }
+          } catch (e) {
+            lastError = e;
+          }
+        }
+        if (!response) {
+          // nothing available, leave defaults
+          console.error('Failed to fetch contact info from any backend candidate', lastError);
+          return;
+        }
+        const json = await response.json().catch(() => null);
+        if (json && json.contactInfo) {
+          setContactInfo({
+            address: json.contactInfo.address || '',
+            phone: json.contactInfo.phone || '',
+            email: json.contactInfo.email || ''
+          });
+        }
+      } catch (e) {
+        console.error('Failed loading contact info', e);
+      }
+    };
+    loadContactInfo();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,9 +252,17 @@ const Contact = () => {
                   <div>
                     <h3 className="font-semibold text-gray-900">Our Location</h3>
                     <p className="text-gray-600 mt-1">
-                      1, Khan Road Mankundu<br />
-                      Hooghly - 720012<br />
-                      West Bengal, India
+                      {contactInfo.address ? (
+                        contactInfo.address.split(/\n|,\s*/).map((line, i) => (
+                          <React.Fragment key={i}>{line}{i < contactInfo.address.split(/\n|,\s*/).length - 1 && <br />}</React.Fragment>
+                        ))
+                      ) : (
+                        <>
+                          1, Khan Road Mankundu<br />
+                          Hooghly - 720012<br />
+                          West Bengal, India
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -217,8 +273,16 @@ const Contact = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">Phone Number</h3>
-                    <p className="text-gray-600 mt-1">+91 015-8436-9999</p>
-                    <p className="text-gray-600">+91 98765 43210</p>
+                    {contactInfo.phone ? (
+                      contactInfo.phone.split(/[,\n]/).map((p, i) => (
+                        <p key={i} className="text-gray-600 mt-1">{p.trim()}</p>
+                      ))
+                    ) : (
+                      <>
+                        <p className="text-gray-600 mt-1">+91 015-8436-9999</p>
+                        <p className="text-gray-600">+91 98765 43210</p>
+                      </>
+                    )}
                   </div>
                 </div>
                 
@@ -228,8 +292,16 @@ const Contact = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">Email Address</h3>
-                    <p className="text-gray-600 mt-1">contact@zixxapp.com</p>
-                    <p className="text-gray-600">support@zixxapp.com</p>
+                    {contactInfo.email ? (
+                      contactInfo.email.split(/[,\n]/).map((e, i) => (
+                        <p key={i} className="text-gray-600 mt-1">{e.trim()}</p>
+                      ))
+                    ) : (
+                      <>
+                        <p className="text-gray-600 mt-1">contact@zixxapp.com</p>
+                        <p className="text-gray-600">support@zixxapp.com</p>
+                      </>
+                    )}
                   </div>
                 </div>
                 
@@ -251,16 +323,10 @@ const Contact = () => {
             
             {/* Map Section */}
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3682.0413150601777!2d88.36376941533467!3d22.656859137187!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39f89e5d9c7c7b5b%3A0x1a1a1a1a1a1a1a1a!2sKhan%20Road%2C%20Mankundu%2C%20West%20Bengal%20712123!5e0!3m2!1sen!2sin!4v1620000000000!5m2!1sen!2sin"
-                width="100%"
-                height="300"
-                style={{ border: 0 }}
-                allowFullScreen={true}
-                loading="lazy"
-                title="Our Location"
-                className="rounded-b-lg"
-              ></iframe>
+              {/* Attempt to load Google Maps iframe. Many ad-blockers and privacy extensions will block requests
+                  to Google's maps JS and generate console errors like "ERR_BLOCKED_BY_CLIENT". To improve UX
+                  we detect iframe load/callback and show a graceful fallback when blocked. */}
+              <MapEmbedFallback address={contactInfo.address || 'Khan Road Mankundu, Hooghly, West Bengal 712123'} />
             </div>
           </div>
         </div>
@@ -272,4 +338,108 @@ const Contact = () => {
 };
 
 export default Contact;
+
+// --- MapEmbedFallback component ---
+type MapEmbedFallbackProps = { address: string };
+
+const MapEmbedFallback: React.FC<MapEmbedFallbackProps> = ({ address }) => {
+  const [blocked, setBlocked] = React.useState(false);
+  const [coords, setCoords] = React.useState<{ lat?: string; lon?: string }>({});
+  const iframeRef = React.useRef<HTMLIFrameElement | null>(null);
+
+  // Try to geocode the address via Nominatim (OpenStreetMap) to get precise lat/lon.
+  // Using a non-Google geocoder avoids loading Google's Maps JS API and is less likely
+  // to be blocked by privacy extensions. If geocoding fails we fall back to the
+  // simple google.com/maps?q=... embed URL.
+  useEffect(() => {
+    let mounted = true;
+    const doGeocode = async () => {
+      if (!address || address.trim().length === 0) return;
+      try {
+        const q = encodeURIComponent(address);
+        // Public Nominatim endpoint. Keep requests light (limit=1).
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`;
+        const r = await fetch(url, { cache: 'no-store' });
+        if (!r.ok) return;
+        const arr = await r.json().catch(() => null);
+        if (!arr || !Array.isArray(arr) || arr.length === 0) return;
+        const first = arr[0];
+        if (mounted && first && first.lat && first.lon) {
+          setCoords({ lat: String(first.lat), lon: String(first.lon) });
+        }
+      } catch (e) {
+        // geocoding failed — we'll fall back to the query-based embed
+        console.debug('Nominatim geocode failed', e);
+      }
+    };
+    doGeocode();
+    return () => {
+      mounted = false;
+    };
+  }, [address]);
+
+  useEffect(() => {
+    // Track whether the iframe has fired the load event
+    const loadedRef = { current: false } as { current: boolean };
+
+    const onLoad = () => {
+      loadedRef.current = true;
+      setBlocked(false);
+    };
+
+    // Attach listener when iframe node is available
+    const node = iframeRef.current;
+    if (node) node.addEventListener('load', onLoad);
+
+    // If load hasn't happened within 5s, assume it's blocked
+    const timeout = setTimeout(() => {
+      if (!loadedRef.current) setBlocked(true);
+    }, 5000);
+
+    return () => {
+      clearTimeout(timeout);
+      if (node) node.removeEventListener('load', onLoad);
+    };
+  }, [coords]);
+
+  const query = encodeURIComponent(address);
+  const mapsUrl = coords.lat && coords.lon
+    ? `https://www.openstreetmap.org/?mlat=${coords.lat}&mlon=${coords.lon}#map=16/${coords.lat}/${coords.lon}`
+    : `https://www.google.com/maps/search/?api=1&query=${query}`;
+
+  // Prefer OpenStreetMap embed when we have precise coords (avoids Google JS API entirely)
+  const embedSrc = coords.lat && coords.lon
+    ? // bbox: [lon-0.01, lat-0.01, lon+0.01, lat+0.01]
+      `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(
+        `${Number(coords.lon) - 0.01},${Number(coords.lat) - 0.01},${Number(coords.lon) + 0.01},${Number(coords.lat) + 0.01}`
+      )}&layer=mapnik&marker=${coords.lat},${coords.lon}`
+    : `https://www.google.com/maps?q=${query}&output=embed`;
+
+  if (blocked) {
+    return (
+      <div className="p-6 text-center">
+        <p className="mb-4 text-gray-700">Map preview blocked by browser extension or network policy.</p>
+        <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="inline-block px-4 py-2 bg-[#D92030] text-white rounded-md">Open in Maps</a>
+        <div className="mt-4 text-sm text-gray-700">
+          <p className="font-medium">Address</p>
+          <p>{address}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <iframe
+      ref={iframeRef}
+      src={embedSrc}
+      width="100%"
+      height="300"
+      style={{ border: 0 }}
+      allowFullScreen={true}
+      loading="lazy"
+      title="Our Location"
+      className="rounded-b-lg"
+    />
+  );
+};
 
