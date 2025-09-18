@@ -50,6 +50,10 @@ const Orders = () => {
   const [courierName, setCourierName] = React.useState("");
   // deliveryDate will be a Date object or null for react-datepicker
   const [deliveryDate, setDeliveryDate] = React.useState(null);
+  const [carrierUrlInput, setCarrierUrlInput] = React.useState("");
+  const [courierPhoneInput, setCourierPhoneInput] = React.useState("");
+  const [courierLogoUrlInput, setCourierLogoUrlInput] = React.useState("");
+  const [logoFileConfirm, setLogoFileConfirm] = React.useState(null);
   const [confirmNotes, setConfirmNotes] = React.useState("");
   const [confirmErr, setConfirmErr] = React.useState("");
 
@@ -169,6 +173,26 @@ const Orders = () => {
         setCourierLogoUrl(res.url);
         showToast('Logo uploaded', 'success');
         // reflect ASAP in list
+        refetch();
+      } else {
+        showToast('Logo uploaded but no URL returned', 'warning');
+      }
+    } catch (err) {
+      console.error('Upload failed', err);
+      showToast(err?.data?.msg || err?.message || 'Failed to upload logo', 'error');
+    }
+  };
+
+  const onSelectLogoFileConfirm = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setLogoFileConfirm(file);
+    if (!confirmRow || !confirmRow._id) return;
+    try {
+      const res = await uploadLogo({ id: confirmRow._id, file }).unwrap();
+      if (res && res.url) {
+        setCourierLogoUrlInput(res.url);
+        showToast('Logo uploaded', 'success');
         refetch();
       } else {
         showToast('Logo uploaded but no URL returned', 'warning');
@@ -735,6 +759,10 @@ const Orders = () => {
     } else {
       setDeliveryDate(null);
     }
+    setCarrierUrlInput(row?.carrierUrl || '');
+    setCourierPhoneInput(row?.courierPhone || '');
+    setCourierLogoUrlInput(row?.courierLogoUrl || '');
+    setLogoFileConfirm(null);
     setConfirmNotes("");
     setConfirmErr("");
     setConfirmOpen(true);
@@ -764,9 +792,12 @@ const Orders = () => {
         return;
       }
       await confirmAdminOrder({
-        id: confirmRow._id,
+  id: confirmRow._id,
         trackingNumber: tracking,
         carrier: courier,
+        carrierUrl: carrierUrlInput || undefined,
+        courierPhone: courierPhoneInput || undefined,
+        courierLogoUrl: courierLogoUrlInput || undefined,
         deliveryDate: date || undefined,
         adminNotes: (confirmNotes || undefined),
       }).unwrap();
@@ -1497,13 +1528,23 @@ const Orders = () => {
               disabled={isConfirming}
             />
             <TextField
-              label="Carrier"
+              label="Carrier (Courier Name)"
               value={courierName}
               onChange={e => setCourierName(e.target.value)}
               fullWidth
-              sx={{ mb: 2 }}
+              sx={{ mb: 1 }}
               required
             />
+            <TextField label="Carrier URL" value={carrierUrlInput} onChange={(e) => setCarrierUrlInput(e.target.value)} fullWidth placeholder="https://..." sx={{ mb: 1 }} />
+            <TextField label="Courier Phone" value={courierPhoneInput} onChange={(e) => setCourierPhoneInput(e.target.value)} fullWidth placeholder="+91 98-7654-3210" sx={{ mb: 1 }} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Button component="label" variant="outlined" size="small" disabled={isUploadingLogo || !confirmRow}>
+                {isUploadingLogo ? <><CircularProgress size={14} style={{ marginRight: 8 }} /> Uploading...</> : 'Upload Logo File'}
+                <input type="file" accept="image/*" hidden onChange={onSelectLogoFileConfirm} />
+              </Button>
+              {logoFileConfirm ? <Typography variant="caption">{logoFileConfirm.name}</Typography> : null}
+            </Box>
+            <TextField label="Courier Logo URL" value={courierLogoUrlInput} onChange={(e) => setCourierLogoUrlInput(e.target.value)} fullWidth placeholder="https://cdn.example.com/logo.png" sx={{ mb: 1 }} />
             <ReactDatePicker
               selected={deliveryDate}
               onChange={(date) => setDeliveryDate(date)}

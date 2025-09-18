@@ -175,11 +175,11 @@ export const api = createApi({
     }),
 
     confirmAdminOrder: build.mutation({
-      query: ({ id, trackingNumber, deliveryDate, adminNotes, carrier } = {}) => ({
+      query: ({ id, trackingNumber, deliveryDate, adminNotes, carrier, carrierUrl, courierPhone, courierLogoUrl } = {}) => ({
         url: `admin/orders/${id}/confirm`,
         method: "PATCH",
-        // include both carrier and courierName to be compatible with backend
-        body: { trackingNumber, deliveryDate, adminNotes, carrier, courierName: carrier },
+        // include both carrier and courierName to be compatible with backend; also include extra courier details
+        body: { trackingNumber, deliveryDate, adminNotes, carrier, courierName: carrier, carrierUrl, courierPhone, courierLogoUrl },
       }),
       invalidatesTags: ["Orders"],
     }),
