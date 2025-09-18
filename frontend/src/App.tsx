@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ScrollToTop } from "./components/ScrollToTop";
 import GlobalLoadingOverlay from "@/components/GlobalLoadingOverlay";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import AntiInspect from "@/components/AntiInspect";
 
 // Route-level code splitting
 const Home = lazy(() => import('./pages/Home'));
@@ -33,6 +34,9 @@ const OrderDetails = lazy(() => import('./pages/OrderDetails'));
 const Search = lazy(() => import('./pages/Search'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfUse = lazy(() => import('./pages/TermsOfUse'));
+const ShippingPolicy = lazy(() => import('./pages/ShippingPolicy'));
+const ReturnsRefunds = lazy(() => import('./pages/ReturnsRefunds'));
+const Webhooks = lazy(() => import('./pages/Webhooks'));
 const FAQ = lazy(() => import('./pages/FAQ'));
 const Clothes = lazy(() => import('./pages/Clothes'));
 const Accessories = lazy(() => import('./pages/Accessories'));
@@ -57,6 +61,7 @@ const App = () => (
             <Toaster />
             <ScrollToTop />
             <GlobalLoadingOverlay />
+            <AntiInspect />
             <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
               <Routes>
         <Route path="/" element={<Home />} />
@@ -85,6 +90,9 @@ const App = () => (
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfUse />} />
         <Route path="/terms-of-use" element={<TermsOfUse />} />
+        <Route path="/shipping" element={<ShippingPolicy />} />
+        <Route path="/returns" element={<ReturnsRefunds />} />
+        <Route path="/webhooks" element={<Webhooks />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/clothes" element={<Clothes />} />
         <Route path="/accessories" element={<Accessories />} />

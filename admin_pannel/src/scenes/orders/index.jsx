@@ -1,6 +1,8 @@
 import React from "react";
-import { Box, Typography, Button, Stack, Grid, Card, CardContent, CardActions, Divider, useTheme, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, Tooltip, IconButton, Snackbar, Alert, MenuItem, Select, InputLabel, FormControl } from "@mui/material";
+import { Box, Typography, Button, Stack, Grid, Card, CardContent, CardActions, Divider, useTheme, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, Tooltip, IconButton, Snackbar, Alert, MenuItem, Select, InputLabel, FormControl, FormControlLabel, Checkbox, Icon } from "@mui/material";
+import { Timeline, TimelineItem, TimelineSeparator, TimelineConnector, TimelineDot, TimelineContent } from "@mui/lab";
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import PrintIcon from '@mui/icons-material/Print';
 import Header from "@components/Header";
 import { useGetAdminOrdersQuery, useVerifyAdminOrderMutation, useConfirmAdminOrderMutation, useDeliverAdminOrderMutation, useRefundAdminOrderMutation, useDeleteAdminOrderMutation, usePackAdminOrderMutation, useUpdateAdminOrderCourierMutation, useUploadAdminOrderCourierLogoMutation } from "@state/api";
 
@@ -12,6 +14,13 @@ const Orders = () => {
   const [deliverAdminOrder, { isLoading: isDelivering }] = useDeliverAdminOrderMutation();
   const [refundAdminOrder, { isLoading: isRefunding }] = useRefundAdminOrderMutation();
   const [deleteAdminOrder, { isLoading: isDeleting }] = useDeleteAdminOrderMutation();
+  
+  // New state for bulk actions
+  const [selectedOrders, setSelectedOrders] = React.useState(new Set());
+  const [timelineOpen, setTimelineOpen] = React.useState(false);
+  const [selectedOrderTimeline, setSelectedOrderTimeline] = React.useState(null);
+  const [contactDialogOpen, setContactDialogOpen] = React.useState(false);
+  const [selectedCustomer, setSelectedCustomer] = React.useState(null);
   const [refundOpen, setRefundOpen] = React.useState(false);
   const [refundOrderRow, setRefundOrderRow] = React.useState(null);
   const [refundAmount, setRefundAmount] = React.useState("");
@@ -177,6 +186,469 @@ const Orders = () => {
     }
   };
 
+  // New handlers for additional features
+  const handleBulkActions = async (selectedIds) => {
+    try {
+      const action = await new Promise((resolve) => {
+        const dialog = document.createElement('dialog');
+        dialog.innerHTML = `
+          <div style="padding: 20px;">
+            <h3>Bulk Actions</h3>
+            <button onclick="this.closest('dialog').returnValue='verify'">Verify Selected</button>
+            <button onclick="this.closest('dialog').returnValue='pack'">Mark Packed</button>
+            <button onclick="this.closest('dialog').returnValue='export'">Export to CSV</button>
+            <button onclick="this.closest('dialog').returnValue='print'">Print All</button>
+            <button onclick="this.closest('dialog').returnValue='cancel'">Cancel</button>
+          </div>
+        `;
+        dialog.onclose = () => resolve(dialog.returnValue);
+        document.body.appendChild(dialog);
+        dialog.showModal();
+      });
+
+      if (!action || action === 'cancel') return;
+
+      const selectedOrdersList = Array.from(selectedIds);
+      switch(action) {
+        case 'verify':
+          for (const id of selectedOrdersList) {
+            await verifyAdminOrder({ id }).unwrap();
+          }
+          showToast('Bulk verify completed', 'success');
+          break;
+        case 'pack':
+          for (const id of selectedOrdersList) {
+            await packAdminOrder({ id }).unwrap();
+          }
+          showToast('Bulk pack completed', 'success');
+          break;
+        case 'export':
+          // Export to CSV logic
+          const ordersToExport = rows.filter(row => selectedIds.has(row._id));
+          const csv = generateOrdersCSV(ordersToExport);
+          downloadCSV(csv, 'orders-export.csv');
+          break;
+        case 'print':
+          // Print multiple invoices
+          const ordersToPrint = rows.filter(row => selectedIds.has(row._id));
+          printMultipleInvoices(ordersToPrint);
+          break;
+      }
+      refetch();
+    } catch (e) {
+      console.error('Bulk action failed', e);
+      showToast('Bulk action failed: ' + (e?.message || 'Unknown error'), 'error');
+    }
+  };
+
+  // Print functions
+  const handlePrintInvoice = (row) => {
+    const invoiceContent = generateInvoiceHTML(row);
+    const win = window.open('', 'Print Invoice', 'height=650,width=900');
+    win.document.write(`<html><head><title>Invoice #${row._id}</title>`);
+    win.document.write('<link rel="stylesheet" href="/invoice-print.css" type="text/css" />');
+    win.document.write('</head><body>');
+    win.document.write(invoiceContent);
+    win.document.write('</body></html>');
+    win.document.close();
+    win.print();
+  };
+
+  const handlePrintLabel = (row) => {
+    // Generate shipping label HTML
+    const labelContent = generateShippingLabelHTML(row);
+    const win = window.open('', 'Print Shipping Label', 'height=450,width=500');
+    win.document.write(`<html><head><title>Shipping Label #${row._id}</title>`);
+    win.document.write('<link rel="stylesheet" href="/label-print.css" type="text/css" />');
+    win.document.write('</head><body>');
+    win.document.write(labelContent);
+    win.document.write('</body></html>');
+    win.document.close();
+    win.print();
+  };
+
+  const handlePrintSlip = (row) => {
+    // Generate packing slip HTML
+    const slipContent = generatePackingSlipHTML(row);
+    const win = window.open('', 'Print Packing Slip', 'height=550,width=700');
+    win.document.write(`<html><head><title>Packing Slip #${row._id}</title>`);
+    win.document.write('<link rel="stylesheet" href="/slip-print.css" type="text/css" />');
+    win.document.write('</head><body>');
+    win.document.write(slipContent);
+    win.document.write('</body></html>');
+    win.document.close();
+    win.print();
+  };
+
+  const handlePrintTimeline = (row) => {
+    // Generate timeline HTML
+    const timelineContent = generateTimelineHTML(row);
+    const win = window.open('', 'Print Timeline', 'height=800,width=600');
+    win.document.write(`<html><head><title>Order Timeline #${row._id}</title>`);
+    win.document.write('<link rel="stylesheet" href="/timeline-print.css" type="text/css" />');
+    win.document.write('</head><body>');
+    win.document.write(timelineContent);
+    win.document.write('</body></html>');
+    win.document.close();
+    win.print();
+  };
+
+  // Cancel order function
+  const handleCancel = async (row) => {
+    try {
+      const reason = window.prompt("Enter cancellation reason (required):");
+      if (!reason) {
+        showToast('Cancellation reason is required', 'warning');
+        return;
+      }
+      const notes = window.prompt("Add admin notes (optional):", "");
+      
+      // Use the existing admin cancel order endpoint
+      await cancelOrder({ 
+        id: row._id, 
+        cancelReason: reason,
+        adminNotes: notes || undefined 
+      }).unwrap();
+      
+      showToast('Order cancelled successfully', 'success');
+      refetch();
+    } catch (e) {
+      console.error('Failed to cancel order', e);
+      showToast(e?.data?.msg || e?.message || 'Failed to cancel order', 'error');
+    }
+  };
+
+  // Track shipment function
+  const handleTrackShipment = (row) => {
+    if (!row.carrier || !row.trackingNumber) {
+      showToast('No tracking information available', 'warning');
+      return;
+    }
+    
+    // Try to construct tracking URL based on carrier
+    let trackingUrl = row.carrierUrl;
+    if (!trackingUrl) {
+      const carrierUrls = {
+        'Delhivery': 'https://www.delhivery.com/track/package/',
+        'Bluedart': 'https://www.bluedart.com/tracking/',
+        'DTDC': 'https://tracking.dtdc.com/ctbs-tracking/customerInterface.tr?submitName=showCITrackingDetails&cType=Consignment&cnNo=',
+        'XpressBees': 'https://www.xpressbees.com/track?trackingId=',
+        'Ecom Express': 'https://ecomexpress.in/tracking/?awb_field=',
+        'India Post': 'https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx?consignmentno='
+      };
+      trackingUrl = carrierUrls[row.carrier];
+      if (trackingUrl) trackingUrl += row.trackingNumber;
+    }
+
+    if (trackingUrl) {
+      window.open(trackingUrl, '_blank');
+    } else {
+      showToast(`No tracking URL found for carrier: ${row.carrier}`, 'info');
+    }
+  };
+
+  // HTML Generators
+  const generateShippingLabelHTML = (order) => {
+    return `
+      <div class="shipping-label" style="
+        font-family: 'Inter', sans-serif;
+        max-width: 420px;
+        margin: 20px auto;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        background: #fff;
+        color: #111;
+      ">
+        
+        <!-- Header -->
+        <div style="
+          background: linear-gradient(135deg, #6EE7B7 0%, #3B82F6 100%);
+          padding: 16px;
+          color: white;
+          text-align: center;
+        ">
+          <h2 style="margin: 0; font-size: 22px; font-weight: 700;">🚚 Shipping Label</h2>
+          <div style="font-size: 14px; opacity: 0.9;">Order #${order._id}</div>
+        </div>
+        
+        <!-- Addresses -->
+        <div style="display: flex; justify-content: space-between; padding: 16px; gap: 12px;">
+          <div style="flex: 1; background: #F9FAFB; border-radius: 12px; padding: 12px;">
+            <h3 style="margin: 0 0 8px; font-size: 14px; color: #374151;">📦 From</h3>
+            <p style="margin: 0; font-size: 13px; line-height: 1.4; color: #111827;">
+              Your Company Name<br/>
+              Warehouse Address<br/>
+              📞 Your Phone
+            </p>
+          </div>
+          
+          <div style="flex: 1; background: #F9FAFB; border-radius: 12px; padding: 12px;">
+            <h3 style="margin: 0 0 8px; font-size: 14px; color: #374151;">📍 To</h3>
+            <p style="margin: 0; font-size: 13px; line-height: 1.4; color: #111827;">
+              ${order.formattedAddress || order.shippingAddress}
+            </p>
+          </div>
+        </div>
+  
+        <!-- Shipping Info -->
+        <div style="padding: 16px; border-top: 1px dashed #E5E7EB; border-bottom: 1px dashed #E5E7EB; background: #F3F4F6;">
+          <div style="font-size: 14px; margin-bottom: 6px;">🚀 Carrier: <strong>${order.carrier || 'N/A'}</strong></div>
+          <div style="font-size: 14px; margin-bottom: 6px;">🔗 Tracking: <strong>${order.trackingNumber || 'N/A'}</strong></div>
+          ${order.courierPhone ? `<div style="font-size: 14px;">☎️ Courier Phone: <strong>${order.courierPhone}</strong></div>` : ''}
+        </div>
+  
+        <!-- Barcode / QR -->
+        <div style="text-align: center; padding: 20px;">
+          <div style="
+            background: #111827;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            padding: 10px 20px;
+            border-radius: 12px;
+            display: inline-block;
+          ">
+            ${order.trackingNumber || order._id}
+          </div>
+          <div style="margin-top: 10px; font-size: 12px; color: #6B7280;">Scan QR / Barcode for live tracking</div>
+        </div>
+      </div>
+    `;
+  };
+  
+
+  const generatePackingSlipHTML = (order) => {
+    return `
+      <div class="packing-slip">
+        <div class="header">
+          <h2>Packing Slip</h2>
+          <div class="order-info">
+            <div>Order #${order._id}</div>
+            <div>Date: ${new Date().toLocaleDateString()}</div>
+          </div>
+        </div>
+
+        <div class="customer-info">
+          <h3>Customer Information</h3>
+          <p>${getUserText(order)}<br />
+          ${order.formattedAddress || order.shippingAddress}</p>
+        </div>
+
+        <div class="items">
+          <h3>Order Items</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>SKU</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(order.orderItems || []).map(item => `
+                <tr>
+                  <td>${item.productName}</td>
+                  <td>${item.quantity}</td>
+                  <td>${item.productId}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="footer">
+          <p>Thank you for your order!</p>
+          ${order.adminNotes ? `<p>Notes: ${order.adminNotes}</p>` : ''}
+        </div>
+      </div>
+    `;
+  };
+
+  const generateTimelineHTML = (order) => {
+    const events = [
+      { date: order.createdAt, title: 'Order Placed', details: `Total Amount: ₹${order.totalAmount}` },
+      order.verifiedAt && { date: order.verifiedAt, title: 'Order Verified', details: 'Verification complete' },
+      order.packedAt && { date: order.packedAt, title: 'Order Packed', details: 'Ready for shipping' },
+      order.shippedAt && { 
+        date: order.shippedAt, 
+        title: 'Order Shipped',
+        details: `Carrier: ${order.carrier || 'N/A'}\nTracking: ${order.trackingNumber || 'N/A'}` 
+      },
+      order.deliveredAt && { date: order.deliveredAt, title: 'Order Delivered', details: 'Delivery complete' }
+    ].filter(Boolean);
+
+    return `
+  <div class="timeline-print" style="
+    font-family: 'Inter', sans-serif;
+    max-width: 700px;
+    margin: 20px auto;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    padding: 24px;
+    color: #111;
+  ">
+
+    <!-- Header -->
+    <div style="
+      background: linear-gradient(135deg, #F59E0B, #EF4444);
+      padding: 16px;
+      border-radius: 12px;
+      text-align: center;
+      color: white;
+      margin-bottom: 20px;
+    ">
+      <h2 style="margin: 0; font-size: 22px; font-weight: 800;">📜 Order Timeline</h2>
+      <div style="font-size: 14px; opacity: 0.9;">Order #${order._id}</div>
+    </div>
+
+    <!-- Events -->
+    <div class="events" style="position: relative; margin-left: 20px; padding-left: 20px; border-left: 3px solid #E5E7EB;">
+      ${events.map(event => `
+        <div class="event" style="margin-bottom: 20px; position: relative;">
+          <div style="
+            position: absolute; 
+            left: -31px; 
+            top: 0; 
+            width: 18px; 
+            height: 18px; 
+            background: linear-gradient(135deg, #3B82F6, #9333EA); 
+            border-radius: 50%; 
+            box-shadow: 0 0 0 4px #fff;
+          "></div>
+          <div class="date" style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">
+            ${new Date(event.date).toLocaleString()}
+          </div>
+          <div class="title" style="font-weight: 600; font-size: 15px; margin-bottom: 2px;">
+            ${event.title}
+          </div>
+          <div class="details" style="font-size: 13px; color: #374151;">
+            ${event.details}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    <!-- Summary -->
+    <div class="summary" style="
+      margin-top: 24px;
+      background: #F9FAFB;
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid #E5E7EB;
+    ">
+      <h3 style="margin: 0 0 10px; font-size: 18px; font-weight: 700; color: #111827;">📦 Order Summary</h3>
+      <div style="font-size: 14px; margin-bottom: 6px;">🔖 Status: <strong>${order.status}</strong></div>
+      <div style="font-size: 14px; margin-bottom: 6px;">💳 Payment: <strong>${order.paymentStatus}</strong></div>
+      ${order.adminNotes ? `<div style="font-size: 14px; margin-bottom: 6px;">📝 Notes: ${order.adminNotes}</div>` : ''}
+    </div>
+
+  </div>
+`;
+
+  };
+
+  
+  const generateInvoiceHTML = (order) => {
+    return `
+      <div class="invoice" style="
+        font-family: 'Inter', sans-serif;
+        max-width: 700px;
+        margin: 20px auto;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        padding: 24px;
+        color: #111;
+      ">
+  
+        <!-- Header -->
+        <div style="text-align: center; padding-bottom: 16px; border-bottom: 2px solid #E5E7EB;">
+          <h1 style="
+            font-size: 28px; 
+            font-weight: 800; 
+            margin: 0; 
+            background: linear-gradient(135deg, #3B82F6, #9333EA);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+          ">
+            🧾 Invoice
+          </h1>
+          <p style="margin: 4px 0; font-size: 14px; color: #6B7280;">
+            Thank you for shopping with us 💜
+          </p>
+        </div>
+  
+        <!-- Order Info -->
+        <div style="margin-top: 16px; display: flex; justify-content: space-between; flex-wrap: wrap;">
+          <div style="font-size: 14px; line-height: 1.6;">
+            <p><strong>Order ID:</strong> #${order._id}</p>
+            <p><strong>Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
+            <p><strong>Customer:</strong> ${getUserText(order)}</p>
+          </div>
+          <div style="text-align: right; font-size: 14px; color: #374151;">
+            <p><strong>From:</strong></p>
+            <p>Your Company Name</p>
+            <p>📍 Warehouse Address</p>
+            <p>📞 Support: +91-XXXXXXXXXX</p>
+          </div>
+        </div>
+  
+        <!-- Table -->
+        <table style="
+          width: 100%; 
+          border-collapse: collapse; 
+          margin-top: 20px; 
+          font-size: 14px;
+        ">
+          <thead>
+            <tr style="background: #F3F4F6; text-align: left;">
+              <th style="padding: 12px; border-bottom: 2px solid #E5E7EB;">Item</th>
+              <th style="padding: 12px; border-bottom: 2px solid #E5E7EB;">Qty</th>
+              <th style="padding: 12px; border-bottom: 2px solid #E5E7EB;">Price</th>
+              <th style="padding: 12px; border-bottom: 2px solid #E5E7EB;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(order.orderItems || []).map(item => `
+              <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #E5E7EB;">${item.productName}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #E5E7EB; text-align:center;">${item.quantity}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #E5E7EB;">₹${item.price.toFixed(2)}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #E5E7EB;">₹${item.totalPrice.toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="background: #F9FAFB;">
+              <td colspan="3" style="padding: 12px; text-align: right; font-weight: 600;">💰 Total Amount</td>
+              <td style="padding: 12px; font-weight: 700; color: #111827;">₹${order.totalAmount.toFixed(2)}</td>
+            </tr>
+          </tfoot>
+        </table>
+  
+        <!-- Footer -->
+        <div style="margin-top: 24px; text-align: center; font-size: 12px; color: #6B7280;">
+          <p>🚀 This is a computer-generated invoice, no signature required.</p>
+          <p>✨ Need help? Contact us at support@example.com</p>
+        </div>
+  
+      </div>
+    `;
+  };
+  
+  const showOrderTimeline = (row) => {
+    setSelectedOrderTimeline(row);
+    setTimelineOpen(true);
+  };
+
+  const contactCustomer = (row) => {
+    setSelectedCustomer(row.userId);
+    setContactDialogOpen(true);
+  };
+
   const openRefundModal = (row) => {
     if (!row || !row._id) return;
     const isRefunded = String(row.paymentStatus) === 'refunded' || (String(row.status) === 'cancelled' && String(row.adminNotes || '').toLowerCase().includes('refund'));
@@ -241,13 +713,35 @@ const Orders = () => {
       if (!row.isVerified) {
         return showToast('Verify order before confirming for delivery', 'warning');
       }
-      const tracking = window.prompt("Tracking number (optional):", row.trackingNumber || "");
-      await confirmAdminOrder({ id: row._id, trackingNumber: tracking || undefined }).unwrap();
+
+      // Get required tracking and courier info
+      const tracking = window.prompt("Enter tracking number:", row.trackingNumber || "");
+      if (!tracking) {
+        return showToast('Tracking number is required', 'warning');
+      }
+
+      const carrier = window.prompt("Enter courier name (required):", row.carrier || "");
+      if (!carrier) {
+        return showToast('Courier name is required', 'warning');  
+      }
+
+      // Get optional fields
+      const deliveryDate = window.prompt("Expected delivery date (optional, YYYY-MM-DD):", "");
+      const adminNotes = window.prompt("Add admin notes (optional):", "");
+
+      await confirmAdminOrder({ 
+        id: row._id, 
+        trackingNumber: tracking,
+        courierName: carrier,  // Changed from carrier to courierName to match backend
+        deliveryDate: deliveryDate || undefined,
+        adminNotes: adminNotes || undefined
+      }).unwrap();
+      
       showToast('Order confirmed for delivery', 'success');
       refetch();
     } catch (e) {
       console.error("Failed to confirm order for delivery", e);
-      showToast('Failed to confirm order for delivery', 'error');
+      showToast(e?.data?.msg || e?.message || 'Failed to confirm order for delivery', 'error');
     }
   };
 
@@ -415,80 +909,207 @@ const Orders = () => {
                       </CardContent>
                       <CardActions sx={{ px: 2, pb: 2 }}>
                         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5, width: '100%' }}>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            sx={{ px: 1.2, py: 0.5, width: '100%', fontSize: 12, borderRadius: 1.2, color: theme.palette.mode === "dark" ? "#0AC2F5" : "#033645", borderColor: theme.palette.mode === "dark" ? "#0AC2F5" : "#033645" }}
-                            disabled={!canVerify || isVerifying}
-                            onClick={() => handleVerify(row)}
-                          >
-                            VERIFY
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="contained"
-                            color="success"
-                            sx={{ px: 1.2, py: 0.5, width: '100%', fontSize: 12, borderRadius: 1.2 }}
-                            disabled={!canConfirm || isConfirming}
-                            onClick={() => handleConfirm(row)}
-                          >
-                            CONFIRM
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="contained"
-                            color="info"
-                            sx={{ px: 1.2, py: 0.5, width: '100%', fontSize: 12, borderRadius: 1.2 }}
-                            disabled={!canPack || packingIds.has(row._id)}
-                            onClick={() => handlePack(row)}
-                          >
-                            {packingIds.has(row._id) ? 'PACKING...' : 'MARK PACKED'}
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            color="info"
-                            sx={{ px: 1.2, py: 0.5, width: '100%', fontSize: 12, borderRadius: 1.2 }}
-                            onClick={() => openCourier(row)}
-                          >
-                            UPDATE COURIER
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="contained"
-                            color="primary"
-                            sx={{ px: 1.2, py: 0.5, width: '100%', fontSize: 12, borderRadius: 1.2 }}
-                            disabled={!canDeliver || isDelivering}
-                            onClick={() => handleDeliver(row)}
-                          >
-                            MARK DELIVERED
-                          </Button>
-                          <Tooltip title={isRefunded ? "Already refunded" : "Initiate refund"} disableHoverListener={!isRefunded} arrow>
-                            <span>
+                          {/* Action buttons based on order status */}
+                          <Stack direction="column" spacing={1} width="100%">
+                            {/* Primary Actions */}
+                            <Stack direction="row" spacing={1}>
+                              {/* VERIFY button - show for pending orders */}
+                              {!row.isVerified && row.status !== 'cancelled' && (
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  color="primary"
+                                  fullWidth
+                                  sx={{ fontSize: 12 }}
+                                  disabled={isVerifying}
+                                  onClick={() => handleVerify(row)}
+                                >
+                                  VERIFY ORDER
+                                </Button>
+                              )}
+
+                              {/* PACK ORDER button - show for verified but not packed */}
+                              {row.isVerified && !packedAtVal && row.status !== 'cancelled' && (
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  color="warning"
+                                  fullWidth
+                                  sx={{ fontSize: 12 }}
+                                  disabled={isPacking || packingIds.has(row._id)}
+                                  onClick={() => handlePack(row)}
+                                >
+                                  {packingIds.has(row._id) ? 'PACKING...' : 'PACK ORDER'}
+                                </Button>
+                              )}
+
+                              {/* CONFIRM/SHIP button - show for verified and packed but not shipped */}
+                              {row.isVerified && packedAtVal && !row.shippedAt && row.status !== 'cancelled' && (
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  color="success"
+                                  fullWidth
+                                  sx={{ fontSize: 12 }}
+                                  disabled={isConfirming}
+                                  onClick={() => handleConfirm(row)}
+                                >
+                                  CONFIRM & SHIP
+                                </Button>
+                              )}
+
+                              {/* DELIVER button - show for shipped orders */}
+                              {row.deliveryStatus === 'shipped' && row.status !== 'cancelled' && (
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  color="success"
+                                  fullWidth
+                                  sx={{ fontSize: 12 }}
+                                  disabled={isDelivering}
+                                  onClick={() => handleDeliver(row)}
+                                >
+                                  MARK DELIVERED
+                                </Button>
+                              )}
+                            </Stack>
+
+                            {/* Secondary Actions */}
+                            <Stack direction="row" spacing={1}>
+                              {/* Packing/Shipping related buttons */}
+                              {row.isVerified && !row.deliveredAt && row.status !== 'cancelled' && (
+                                <>
+                                  {/* UPDATE COURIER button */}
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    color="info"
+                                    fullWidth
+                                    sx={{ fontSize: 12 }}
+                                    onClick={() => openCourier(row)}
+                                  >
+                                    {row.carrier ? 'UPDATE COURIER' : 'ADD COURIER'}
+                                  </Button>
+
+                                  {/* PRINT buttons - only show after courier is set */}
+                                  {row.carrier && (
+                                    <Button
+                                      size="small"
+                                      variant="outlined"
+                                      color="info"
+                                      fullWidth
+                                      sx={{ fontSize: 12 }}
+                                      onClick={() => handlePrintLabel(row)}
+                                    >
+                                      SHIPPING LABEL
+                                    </Button>
+                                  )}
+                                </>
+                              )}
+
+                              {/* Track shipment - show for shipped orders */}
+                              {row.deliveryStatus === 'shipped' && row.trackingNumber && (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  color="primary"
+                                  fullWidth
+                                  sx={{ fontSize: 12 }}
+                                  onClick={() => handleTrackShipment(row)}
+                                >
+                                  TRACK ORDER
+                                </Button>
+                              )}
+                            </Stack>
+
+                            {/* Utility Actions */}
+                            <Stack direction="row" spacing={1}>
+                              {/* Cancel button - show for non-delivered orders */}
+                              {!row.deliveredAt && row.status !== 'cancelled' && (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  color="error"
+                                  fullWidth
+                                  sx={{ fontSize: 12 }}
+                                  onClick={() => handleCancel(row)}
+                                >
+                                  CANCEL ORDER
+                                </Button>
+                              )}
+
+                              {/* Refund button - show for delivered or cancelled orders */}
+                              {(row.deliveredAt || row.status === 'cancelled') && !isRefunded && (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  color="warning"
+                                  fullWidth
+                                  sx={{ fontSize: 12 }}
+                                  disabled={isRefunding}
+                                  onClick={() => openRefundModal(row)}
+                                >
+                                  REFUND ORDER
+                                </Button>
+                              )}
+
+                              {/* Always visible buttons */}
                               <Button
                                 size="small"
-                                variant="contained"
-                                color="warning"
-                                sx={{
-                                  px: 1.2,
-                                  py: 0.5,
-                                  width: '100%',
-                                  fontSize: 12,
-                                  borderRadius: 1.2,
-                                  // Keep visual consistency even when disabled
-                                  '&.Mui-disabled': {
-                                    color: theme.palette.getContrastText(theme.palette.warning.main),
-                                    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.warning.dark : theme.palette.warning.main,
-                                    opacity: 0.5,
-                                  },
-                                }}
-                                disabled={isRefunded || isRefunding}
-                                onClick={() => openRefundModal(row)}
+                                variant="outlined"
+                                color="inherit"
+                                fullWidth
+                                sx={{ fontSize: 12 }}
+                                onClick={() => handlePrintInvoice(row)}
                               >
-                                {isRefunded ? 'REFUNDED' : 'REFUND'}
+                                INVOICE
                               </Button>
-                            </span>
-                          </Tooltip>
+
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="inherit"
+                                fullWidth
+                                sx={{ fontSize: 12 }}
+                                onClick={() => showOrderTimeline(row)}
+                              >
+                                HISTORY
+                              </Button>
+                            </Stack>
+
+                            {/* Contact button - separate row */}
+                            <Button
+                              size="small"
+                              variant="text"
+                              color="primary"
+                              fullWidth
+                              sx={{ fontSize: 12 }}
+                              onClick={() => contactCustomer(row)}
+                            >
+                              CONTACT BUYER
+                            </Button>
+                          </Stack>
+
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={selectedOrders.has(row._id)}
+                                onChange={(e) => {
+                                  setSelectedOrders(prev => {
+                                    const next = new Set(prev);
+                                    if (e.target.checked) {
+                                      next.add(row._id);
+                                    } else {
+                                      next.delete(row._id);
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                size="small"
+                              />
+                            }
+                            label="Select"
+                          />
                         </Box>
                       </CardActions>
                     </Card>
@@ -499,6 +1120,261 @@ const Orders = () => {
           )}
         </Box>
       )}
+
+      {/* Timeline Dialog */}
+      <Dialog 
+        open={timelineOpen} 
+        onClose={() => setTimelineOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6">Order Timeline</Typography>
+            <Typography variant="body2" color="textSecondary">Order #{selectedOrderTimeline?._id}</Typography>
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          {selectedOrderTimeline && (
+            <Box sx={{ position: 'relative', pt: 1 }}>
+              <Timeline>
+                {/* Creation */}
+                <TimelineItem>
+                  <TimelineSeparator>
+                    <TimelineDot color="primary" />
+                    <TimelineConnector />
+                  </TimelineSeparator>
+                  <TimelineContent>
+                    <Typography variant="subtitle1" fontWeight="bold">Order Placed</Typography>
+                    <Typography variant="body2">
+                      {new Date(selectedOrderTimeline.createdAt).toLocaleString()}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Amount: ₹{selectedOrderTimeline.totalAmount}
+                    </Typography>
+                    {selectedOrderTimeline.paymentStatus && (
+                      <Typography variant="body2" color="textSecondary">
+                        Payment: {selectedOrderTimeline.paymentStatus.toUpperCase()}
+                      </Typography>
+                    )}
+                  </TimelineContent>
+                </TimelineItem>
+                
+                {/* Verification */}
+                {selectedOrderTimeline.verifiedAt && (
+                  <TimelineItem>
+                    <TimelineSeparator>
+                      <TimelineDot color="success" />
+                      <TimelineConnector />
+                    </TimelineSeparator>
+                    <TimelineContent>
+                      <Typography variant="subtitle1" fontWeight="bold">Order Verified</Typography>
+                      <Typography variant="body2">
+                        {new Date(selectedOrderTimeline.verifiedAt).toLocaleString()}
+                      </Typography>
+                      {selectedOrderTimeline.verifiedBy && (
+                        <Typography variant="body2" color="textSecondary">
+                          By: {selectedOrderTimeline.verifiedBy.name || selectedOrderTimeline.verifiedBy.email}
+                        </Typography>
+                      )}
+                    </TimelineContent>
+                  </TimelineItem>
+                )}
+
+                {/* Packing */}
+                {selectedOrderTimeline.packedAt && (
+                  <TimelineItem>
+                    <TimelineSeparator>
+                      <TimelineDot color="info" />
+                      <TimelineConnector />
+                    </TimelineSeparator>
+                    <TimelineContent>
+                      <Typography variant="subtitle1" fontWeight="bold">Order Packed</Typography>
+                      <Typography variant="body2">
+                        {new Date(selectedOrderTimeline.packedAt).toLocaleString()}
+                      </Typography>
+                      {selectedOrderTimeline.adminNotes && (
+                        <Typography variant="body2" color="textSecondary">
+                          Notes: {selectedOrderTimeline.adminNotes}
+                        </Typography>
+                      )}
+                    </TimelineContent>
+                  </TimelineItem>
+                )}
+
+                {/* Shipping */}
+                {selectedOrderTimeline.shippedAt && (
+                  <TimelineItem>
+                    <TimelineSeparator>
+                      <TimelineDot color="warning" />
+                      <TimelineConnector />
+                    </TimelineSeparator>
+                    <TimelineContent>
+                      <Typography variant="subtitle1" fontWeight="bold">Order Shipped</Typography>
+                      <Typography variant="body2">
+                        {new Date(selectedOrderTimeline.shippedAt).toLocaleString()}
+                      </Typography>
+                      {selectedOrderTimeline.carrier && (
+                        <Typography variant="body2" color="textSecondary">
+                          Carrier: {selectedOrderTimeline.carrier}
+                        </Typography>
+                      )}
+                      {selectedOrderTimeline.trackingNumber && (
+                        <Typography variant="body2" color="textSecondary">
+                          Tracking: {selectedOrderTimeline.trackingNumber}
+                        </Typography>
+                      )}
+                      {selectedOrderTimeline.expectedDeliveryDate && (
+                        <Typography variant="body2" color="textSecondary">
+                          Expected Delivery: {new Date(selectedOrderTimeline.expectedDeliveryDate).toLocaleDateString()}
+                        </Typography>
+                      )}
+                    </TimelineContent>
+                  </TimelineItem>
+                )}
+
+                {/* Out for Delivery */}
+                {selectedOrderTimeline.outForDeliveryAt && (
+                  <TimelineItem>
+                    <TimelineSeparator>
+                      <TimelineDot color="info" />
+                      <TimelineConnector />
+                    </TimelineSeparator>
+                    <TimelineContent>
+                      <Typography variant="subtitle1" fontWeight="bold">Out for Delivery</Typography>
+                      <Typography variant="body2">
+                        {new Date(selectedOrderTimeline.outForDeliveryAt).toLocaleString()}
+                      </Typography>
+                    </TimelineContent>
+                  </TimelineItem>
+                )}
+
+                {/* Delivery */}
+                {selectedOrderTimeline.deliveredAt && (
+                  <TimelineItem>
+                    <TimelineSeparator>
+                      <TimelineDot color="success" />
+                      {selectedOrderTimeline.returnedAt && <TimelineConnector />}
+                    </TimelineSeparator>
+                    <TimelineContent>
+                      <Typography variant="subtitle1" fontWeight="bold">Order Delivered</Typography>
+                      <Typography variant="body2">
+                        {new Date(selectedOrderTimeline.deliveredAt).toLocaleString()}
+                      </Typography>
+                      {selectedOrderTimeline.deliveryProof && (
+                        <Typography variant="body2" color="textSecondary">
+                          Proof: {selectedOrderTimeline.deliveryProof}
+                        </Typography>
+                      )}
+                    </TimelineContent>
+                  </TimelineItem>
+                )}
+
+                {/* Returns/Refunds */}
+                {(selectedOrderTimeline.returnedAt || selectedOrderTimeline.paymentStatus === 'refunded') && (
+                  <TimelineItem>
+                    <TimelineSeparator>
+                      <TimelineDot color="error" />
+                    </TimelineSeparator>
+                    <TimelineContent>
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        {selectedOrderTimeline.returnedAt ? 'Order Returned' : 'Order Refunded'}
+                      </Typography>
+                      <Typography variant="body2">
+                        {new Date(selectedOrderTimeline.returnedAt || selectedOrderTimeline.refundedAt || Date.now()).toLocaleString()}
+                      </Typography>
+                      {selectedOrderTimeline.refundAmount && (
+                        <Typography variant="body2" color="textSecondary">
+                          Refund Amount: ₹{selectedOrderTimeline.refundAmount}
+                        </Typography>
+                      )}
+                    </TimelineContent>
+                  </TimelineItem>
+                )}
+              </Timeline>
+
+              {/* Additional Order Details */}
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+                <Typography variant="subtitle2" gutterBottom>Additional Details</Typography>
+                <Stack spacing={1}>
+                  <Typography variant="body2">
+                    <strong>Payment Method:</strong> {selectedOrderTimeline.paymentMethod || 'N/A'}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Shipping Address:</strong><br />
+                    {selectedOrderTimeline.formattedAddress || selectedOrderTimeline.shippingAddress || 'N/A'}
+                  </Typography>
+                  {selectedOrderTimeline.adminNotes && (
+                    <Typography variant="body2">
+                      <strong>Admin Notes:</strong><br />
+                      {selectedOrderTimeline.adminNotes}
+                    </Typography>
+                  )}
+                </Stack>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTimelineOpen(false)}>Close</Button>
+          <Button 
+            variant="outlined" 
+            startIcon={<Icon>print</Icon>}
+            onClick={() => handlePrintTimeline(selectedOrderTimeline)}
+          >
+            Print Timeline
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Contact Customer Dialog */}
+      <Dialog
+        open={contactDialogOpen}
+        onClose={() => setContactDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Contact Customer</DialogTitle>
+        <DialogContent>
+          {selectedCustomer && (
+            <Stack spacing={2} sx={{ pt: 1 }}>
+              <TextField
+                label="Subject"
+                fullWidth
+                defaultValue={`Regarding your order ${selectedOrderTimeline?._id}`}
+              />
+              <TextField
+                label="Message"
+                multiline
+                rows={4}
+                fullWidth
+              />
+              <FormControlLabel
+                control={<Checkbox defaultChecked />}
+                label="Send copy to my email"
+              />
+              <Box>
+                <Typography variant="body2" color="text.secondary">
+                  Message will be sent to: {selectedCustomer.email}
+                </Typography>
+              </Box>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setContactDialogOpen(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={() => {
+              // Here you would implement the email sending logic
+              showToast('Message sent to customer', 'success');
+              setContactDialogOpen(false);
+            }}
+          >
+            Send Message
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Refund Modal */}
       <Dialog open={refundOpen} onClose={() => (!isRefunding && setRefundOpen(false))} fullWidth maxWidth="xs">

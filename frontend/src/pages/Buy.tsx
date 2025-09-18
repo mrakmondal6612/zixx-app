@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 import { useAuthContext } from '@/hooks/AuthProvider';
 import { apiUrl } from '@/lib/api';
+import { uuidv4 } from '@/lib/uuid';
 
 interface CartItem {
   id: string;
@@ -115,6 +116,7 @@ const Buy: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cartIds,
+          batchId: uuidv4(),
           paymentDetails: {
             provider: 'cod',
             paymentStatus: 'pending'
@@ -240,6 +242,7 @@ const Buy: React.FC = () => {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 cartIds,
+                batchId: uuidv4(),
                 paymentDetails: {
                   provider: 'razorpay',
                   razorpay_order_id: response.razorpay_order_id,

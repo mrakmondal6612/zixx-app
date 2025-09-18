@@ -269,7 +269,7 @@ const Auth = () => {
       // Use current origin so OAuth always returns to the active domain (e.g., https://zixx.in)
       const frontendBase = window.location.origin;
       const returnTo = `${frontendBase}${from}`;
-      
+      console.log(returnTo);
       // Build the OAuth URL with the correct returnTo parameter
       const oauthUrl = `${apiUrl('/clients/auth/google')}?returnTo=${encodeURIComponent(returnTo)}`;
       

@@ -649,7 +649,7 @@ const Product = () => {
                 </div>
                 <div>
                   <p className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">Easy Returns</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Within 14 days</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Within 7 days</p>
                 </div>
               </div>
             </div>

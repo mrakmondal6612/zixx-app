@@ -32,7 +32,6 @@ export type ProductQuery = {
 };
 
 // Central API base builder
-// In Vite dev, force relative "/api" so requests go through Vite proxy (avoids CORS)
 const ENV_BASE: string = (import.meta as any).env?.VITE_API_BASE || (import.meta as any).env?.VITE_BACKEND_URL || '';
 const IS_DEV: boolean = Boolean((import.meta as any).env?.DEV);
 export const RAW_BASE: string = IS_DEV ? '/api' : ENV_BASE;
@@ -42,7 +41,6 @@ export const API_ROOT = TRIMMED_BASE
   ? (HAS_API_IN_BASE ? TRIMMED_BASE : `${TRIMMED_BASE}/api`)
   : '/api';
 export const apiUrl = (p: string) => `${API_ROOT}${p.startsWith('/') ? p : `/${p}`}`;
-
 // Build Authorization header from stored token (mobile fallback when cookies are blocked)
 export function getAuthHeaders(): Record<string, string> {
   try {

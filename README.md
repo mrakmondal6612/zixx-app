@@ -43,6 +43,70 @@ This repository contains multiple services used for local development:
 
 That's a minimal starter guide. Add project-specific scripts or a docker-compose later for a single-command dev start.
 
+## Webhooks
+
+ZIXX provides webhook notifications for various events in your store. You can set up webhooks to receive real-time updates about orders, payments, and more.
+
+### Available Events
+
+- `order.created`: Triggered when a new order is placed
+- `order.updated`: Triggered when an order is updated (status change, etc.)
+- `payment.succeeded`: Triggered when a payment is successfully processed
+- `payment.failed`: Triggered when a payment fails
+- `refund.processed`: Triggered when a refund is processed
+
+### Setting Up Webhooks
+
+1. **Create a Webhook Endpoint**
+   Your server should have an HTTPS endpoint ready to receive POST requests with webhook events.
+
+2. **Register Your Webhook**
+   Send a POST request to create a webhook subscription:
+
+   ```bash
+   curl -X POST https://api.zixxapp.com/v1/webhooks \
+     -H "Authorization: Bearer YOUR_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "url": "https://your-webhook-url.com/endpoint",
+       "events": ["order.created", "payment.succeeded"],
+       "description": "Order and payment notifications"
+     }'
+   ```
+
+3. **Verify Webhook Signatures**
+   Each webhook request includes a `X-ZIXX-Signature` header. Verify this signature using your webhook secret to ensure the request is legitimate.
+
+### Webhook Payload Example
+
+```json
+{
+  "id": "evt_123456789",
+  "event": "order.created",
+  "created_at": "2023-06-15T10:00:00Z",
+  "data": {
+    "order_id": "ord_123456",
+    "amount": 2999,
+    "currency": "INR",
+    "status": "processing",
+    "customer": {
+      "id": "cus_123",
+      "email": "customer@example.com"
+    }
+  }
+}
+```
+
+### Retry Policy
+
+If your endpoint returns a non-2xx status code, we'll retry the webhook delivery with exponential backoff for up to 3 days.
+
+### Testing Webhooks
+
+You can test your webhook implementation using the web interface at `/webhooks` in your admin dashboard.
+
+---
+
 ## One-time Setup (Payments, Webhooks, Email)
 
 Follow these once per environment (dev/staging/prod):

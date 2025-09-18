@@ -24,12 +24,21 @@ export default function AdminRouteGuard({ children }) {
         const urlToken = urlParams.get('token');
         if (urlToken) {
           try {
+            // Save token and log masked token for debugging
             localStorage.setItem('token', urlToken);
+            try {
+              const masked = typeof urlToken === 'string' && urlToken.length > 10 ? `${urlToken.substring(0,6)}...${urlToken.substring(urlToken.length-4)}` : urlToken;
+              // eslint-disable-next-line no-console
+              console.debug('[AdminRouteGuard] token from URL:', masked);
+            } catch {}
             // Clean URL by removing token parameter
             const newUrl = new URL(window.location);
             newUrl.searchParams.delete('token');
             window.history.replaceState({}, '', newUrl);
-          } catch {}
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.debug('[AdminRouteGuard] failed to set token from URL', e && e.message);
+          }
         }
 
         // helper to build auth headers from localStorage token
@@ -46,6 +55,15 @@ export default function AdminRouteGuard({ children }) {
           credentials: 'include',
           headers: buildAuthHeaders(),
         });
+        // Debug: log response status and body (dev only)
+        try {
+          // eslint-disable-next-line no-console
+          console.debug('[AdminRouteGuard] GET /clients/user/me ->', res.status);
+          const clone = res.clone();
+          clone.text().then(t => {
+            try { console.debug('[AdminRouteGuard] body:', t && t.substring(0, 200)); } catch {}
+          }).catch(() => {});
+        } catch {}
         // 2) If unauthorized, attempt refresh using httpOnly refresh cookie
         if (res.status === 401) {
           try {

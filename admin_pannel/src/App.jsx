@@ -28,6 +28,7 @@ import Admin from "@scenes/admin";
 import Performance from "@scenes/performance";
 import AuthFallback from "./pages/AuthFallback";
 import Banners from "@scenes/banners";
+import Footer from "@scenes/footer";
 
 import "./App.css";
 
@@ -123,6 +124,7 @@ function App() {
               <Route path="/performance" element={<Performance />} />
               <Route path="/banners" element={<Banners />} />
               <Route path="/testimonials" element={<Testimonials />} />
+              <Route path="/footer" element={<Footer />} />
             </Route>
           </Routes>
         </ThemeProvider>

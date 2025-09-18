@@ -8,6 +8,32 @@ import { toast } from 'sonner';
 import { useAuthContext } from '@/hooks/AuthProvider';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { apiUrl, getAuthHeaders } from '@/lib/api';
+import { uuidv4 } from '@/lib/uuid';
+
+type AddressObjectType = {
+  personal_address?: string;
+  shoping_address?: string;
+  billing_address?: string;
+  address_village?: string;
+  landmark?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  zip?: string;
+};
+
+const formatAddress = (addressObj: AddressObjectType): string => {
+  const parts = [
+    addressObj.personal_address,
+    addressObj.address_village,
+    addressObj.landmark,
+    addressObj.city,
+    addressObj.state,
+    addressObj.country,
+    addressObj.zip
+  ].filter(Boolean);
+  return parts.join(', ') || 'No address provided';
+};
 
 interface CartProduct {
   id: string;
@@ -32,7 +58,21 @@ const SingleCartProduct = () => {
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
+  // Extract the necessary items
   const { user } = useAuthContext();
+
+  // Type guard function to check if an object is an address
+  const isAddressObject = (obj: any): obj is AddressObjectType => {
+    return obj && typeof obj === 'object' && (
+      'personal_address' in obj ||
+      'address_village' in obj ||
+      'landmark' in obj ||
+      'city' in obj ||
+      'state' in obj ||
+      'country' in obj ||
+      'zip' in obj
+    );
+  };
   const { t } = useLanguage();
 
   // translation helper that falls back to a safe English string when key is missing
@@ -101,15 +141,45 @@ const SingleCartProduct = () => {
       return;
     }
 
+    // First check if we have a valid shipping address
+    const addr = user?.address;
+    if (!addr) {
+      toast.error(t('orders.noShippingAddress') || 'Please add a shipping address before placing order');
+      return;
+    }
+
     try {
       setPaying(true);
-      const placeRes = await fetch(apiUrl(`/clients/order/buy`), {
+    const placeRes = await fetch(apiUrl(`/clients/order/buy-selected`), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({
-          singleCartId: product.id,
-          paymentDetails: { provider: 'cod', paymentStatus: 'pending' }
+          cartIds: [product.id],
+      batchId: uuidv4(),
+          paymentDetails: { 
+            provider: 'cod',
+            paymentStatus: 'pending',
+            paymentAmount: product.price * product.quantity
+          },
+          shippingAddress: (() => {
+            if (typeof addr === 'string') {
+              if (!addr.trim()) return 'No address provided';
+              try {
+                const parsed = JSON.parse(addr);
+                if (isAddressObject(parsed)) {
+                  return formatAddress(parsed);
+                }
+                return addr;
+              } catch {
+                return addr;
+              }
+            }
+            if (isAddressObject(addr)) {
+              return formatAddress(addr);
+            }
+            return 'No address provided';
+          })()
         })
       });
       const placeData = await placeRes.json().catch(() => ({}));
@@ -217,11 +287,43 @@ const SingleCartProduct = () => {
             }
 
             // 4) Place order
-            const placeRes = await fetch(apiUrl(`/clients/order/buy`), {
+            const placeRes = await fetch(apiUrl(`/clients/order/buy-selected`), {
               method: 'POST',
               credentials: 'include',
               headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-              body: JSON.stringify({ singleCartId: product.id, paymentDetails: { provider: 'razorpay', razorpay_order_id: response.razorpay_order_id, razorpay_payment_id: response.razorpay_payment_id } }),
+              body: JSON.stringify({ 
+                cartIds: [product.id], 
+                batchId: uuidv4(),
+                paymentDetails: { 
+                  provider: 'razorpay', 
+                  razorpay_order_id: response.razorpay_order_id, 
+                  razorpay_payment_id: response.razorpay_payment_id 
+                },
+                shippingAddress: (() => {
+                  const addr = user?.address;
+                  if (!addr) return 'No address provided';
+
+                  if (typeof addr === 'string') {
+                    if (!addr.trim()) return 'No address provided';
+                    
+                    try {
+                      const parsed = JSON.parse(addr);
+                      if (parsed && typeof parsed === 'object') {
+                        return formatAddress(parsed as AddressObjectType);
+                      }
+                      return addr;
+                    } catch {
+                      return addr;
+                    }
+                  }
+                  
+                  if (isAddressObject(addr)) {
+                    return formatAddress(addr);
+                  }
+                  
+                  return 'No address provided';
+                })()
+              }),
             });
             const placeData = await placeRes.json().catch(() => ({}));
             if (!placeRes.ok || placeData?.ok === false) {

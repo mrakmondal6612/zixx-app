@@ -257,7 +257,21 @@ export const MainNav = () => {
                 />
               </Link>
               {user?.role === 'admin' && (
-                <a href={adminHref} target="_blank" rel="noopener noreferrer" aria-label="Admin panel">
+                <a
+                  href={adminHref}
+                  onClick={(e) => {
+                    try {
+                      e.preventDefault();
+                      // script-open the admin panel so window.close() works from the child
+                      window.open(adminHref, '_blank');
+                    } catch (err) {
+                      // fallback to normal navigation
+                      window.location.href = adminHref;
+                    }
+                  }}
+                  aria-label="Admin panel"
+                  rel="noopener noreferrer"
+                >
                   <User size={20} className="sm:w-6 sm:h-6 hover:opacity-80 transition-opacity text-red-600" />
                 </a>
               )}
@@ -495,7 +509,19 @@ export const MainNav = () => {
               <span className="text-xs">Account</span>
             </Link>
             {user?.role === 'admin' && (
-              <a href={adminHref} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center p-2 flex-1">
+              <a
+                href={adminHref}
+                onClick={(e) => {
+                  try {
+                    e.preventDefault();
+                    window.open(adminHref, '_blank');
+                  } catch (err) {
+                    window.location.href = adminHref;
+                  }
+                }}
+                className="flex flex-col items-center p-2 flex-1"
+                rel="noopener noreferrer"
+              >
                 <Shield size={20} className="mb-1 text-red-600" />
                 <span className="text-xs">Admin</span>
               </a>

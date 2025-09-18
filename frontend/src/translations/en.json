@@ -59,7 +59,12 @@
     "processing": "Processing...",
     "freeDelivery": "FREE FAST DELIVERY",
     "customerService": "24/7 CUSTOMER SERVICE",
-    "moneyBack": "MONEY BACK GUARANTEE"
+    "moneyBack": "MONEY BACK GUARANTEE",
+    "unitPrice": "Unit Price",
+    "quantity": "Quantity",
+    "shippingNote": "Shipping calculated at checkout",
+    "paymentMethod": "Payment Method",
+    "remove": "Remove"
   },
   "address": {
     "editShippingAddress": "Edit Shipping Address",
@@ -148,7 +153,10 @@
     "viewDetails": "View Details",
     "trackOrder": "Track Order",
     "noOrders": "No orders found",
-    "noOrdersDesc": "You haven't placed any orders yet."
+    "noOrdersDesc": "You haven't placed any orders yet.",
+    "placeOrderCOD": "Place Order (COD)",
+    "orderFailed": "Failed to place order",
+    "orderPlaced": "Order placed successfully"
   },
   "payment": {
     "paymentSuccessful": "Payment successful! Order placed.",
@@ -168,7 +176,9 @@
     "failedToInitiate": "Failed to initiate payment",
     "verificationFailed": "Payment verification failed",
     "unexpectedError": "Unexpected error after payment",
-    "initializationFailed": "Payment initialization failed"
+    "initializationFailed": "Payment initialization failed",
+    "onlinePayment": "Online Payment",
+    "cod": "Cash on Delivery"
   },
   "messages": {
     "itemRemovedFromCart": "Item removed from cart",

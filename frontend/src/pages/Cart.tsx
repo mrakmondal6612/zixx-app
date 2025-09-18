@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useAuthContext } from '@/hooks/AuthProvider';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { apiUrl, getAuthHeaders } from '@/lib/api';
+import { uuidv4 } from '@/lib/uuid';
 import { Minus, Plus, Trash2, ShoppingBag, ChevronDown } from 'lucide-react';
 
 interface CartItem {
@@ -350,12 +351,21 @@ const Cart = () => {
       
       // Place order with COD payment method
       const cartIds = cartItems.map((it) => it.id);
-      const placeRes = await fetch(apiUrl('/clients/order/buy-selected'), {
+    const placeRes = await fetch(apiUrl('/clients/order/buy-selected'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({
-          cartIds,
+      cartIds,
+      batchId: uuidv4(),
+          shippingAddress: (() => {
+            const addr = user?.address || {};
+            if (typeof addr === 'string') {
+              try { return JSON.parse(addr); }
+              catch { return {}; }
+            }
+            return addr;
+          })(),
           paymentDetails: {
             provider: 'cod',
             paymentStatus: 'pending'
@@ -480,6 +490,7 @@ const Cart = () => {
               headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
               body: JSON.stringify({
                 cartIds,
+                batchId: uuidv4(),
                 paymentDetails: {
                   provider: 'razorpay',
                   razorpay_order_id: response.razorpay_order_id,

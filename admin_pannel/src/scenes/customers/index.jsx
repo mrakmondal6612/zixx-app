@@ -1,5 +1,6 @@
 import {
   Box,
+  Grid,
   useTheme,
   Dialog,
   DialogTitle,
@@ -38,11 +39,11 @@ function UserCard({ user, onEdit, onDelete }) {
   return (
     <Box
       sx={{
-        width: 280,
+        width: "100%",
         p: 1,
-        borderRadius: "16px",
+        borderRadius: "12px",
         bgcolor: "#46B4E7",
-        boxShadow: 3,
+        boxShadow: 2,
         textAlign: "center",
       }}
     >
@@ -276,25 +277,27 @@ function Customers() {
       {isLoading ? (
         <p>Loading...</p>
       ) : (
-        <Box
-          sx={{
-            mt: 4,
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 3,
-          }}
-        >
+        <Grid container spacing={3} sx={{ mt: 4 }}>
           {users.map((user, idx) =>
             user && user.role !== "admin" ? (
-              <UserCard
+              <Grid
+                item
                 key={user._id || user.id || user.email || idx}
-                user={user}
-                onEdit={handleEditClick}
-                onDelete={handleDelete}
-              />
+                xs={12}
+                sm={6}
+                md={4}
+                lg={3}
+                xl={2.3}
+              >
+                <UserCard
+                  user={user}
+                  onEdit={handleEditClick}
+                  onDelete={handleDelete}
+                />
+              </Grid>
             ) : null
           )}
-        </Box>
+        </Grid>
       )}
 
       {/* Edit Dialog */}

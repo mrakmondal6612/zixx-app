@@ -23,7 +23,7 @@ export const TopBar = () => {
   });
 
   const isMobile = useIsMobile();
-  const { currentLanguage, setLanguage, t } = useLanguage();
+  const { currentLanguage, t } = useLanguage();
   const { user, logout, loading } = useAuthContext();
 
   const isProfileComplete = useMemo(() => {
@@ -49,7 +49,7 @@ export const TopBar = () => {
   // Allow dismissing the banner until next refresh (no persistence)
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(false);
 
-  const { languages } = useLanguage();
+  // languages is intentionally single-entry (English only)
 
   return (
     <div className="bg-[rgba(34,40,40,1)] w-full flex flex-col items-stretch justify-center px-3 md:px-6 lg:px-0">
@@ -78,28 +78,7 @@ export const TopBar = () => {
 
         {/* Account + Location + Actions — Always Visible */}
   <div className="z-10 ml-auto flex items-center gap-1 md:gap-2.5 text-white">
-          {/* Language Selector (always visible) */}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-1 md:gap-[5px] text-xs md:text-sm font-bold whitespace-nowrap leading-[1.1] hover:opacity-80 transition-opacity">
-              <span className="text-base">{currentLanguage.flag}</span>
-              <div>{currentLanguage.name}</div>
-              <ChevronDown className="w-3 h-3" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-48 bg-white border border-gray-200 shadow-lg z-50">
-              {languages.map(language => (
-                <DropdownMenuItem
-                  key={language.code}
-                  onClick={() => setLanguage(language)}
-                  className={`cursor-pointer px-3 py-2 text-sm hover:bg-gray-100 ${currentLanguage.code === language.code ? 'bg-gray-50 font-medium' : ''}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">{language.flag}</span>
-                    <span>{language.name}</span>
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Language selector removed per request */}
 
           {/* Track Order + Contact (visible for all) */}
           <>

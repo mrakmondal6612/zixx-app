@@ -51,6 +51,7 @@ const navItems = [
   { text: "Products", icon: <ShoppingCartOutlined /> },
   { text: "Banners", icon: <ReceiptLongOutlined /> },
   { text: "Testimonials", icon: <ReceiptLongOutlined /> },
+  { text: "Footer", icon: <ReceiptLongOutlined /> },
   { text: "Customers", icon: <Groups2Outlined /> },
   { text: "Orders", icon: <LocalShippingOutlined /> },
   { text: "Transactions", icon: <ReceiptLongOutlined /> },

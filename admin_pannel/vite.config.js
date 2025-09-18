@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
   const portEnv = parseInt(env.PORT);
   const port = Number.isFinite(portEnv) ? portEnv : 8000;
   const backendUrl = env.VITE_BACKEND_SERVER;
-  const proxyTarget = (backendUrl || '').replace(/\/?api\/?$/i, '');
+  const proxyTarget = backendUrl || 'http://localhost:8282';
   return {
     plugins: [react()],
     define: {

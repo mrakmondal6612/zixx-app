@@ -1,17 +1,16 @@
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 
-// Determine the callback URL based on environment
 const getCallbackURL = () => {
   let baseUrl;
   if (process.env.NODE_ENV === 'production') {
-    baseUrl = process.env.SERVER_URL || 'https://zixx-server.onrender.com/api';
+    baseUrl = process.env.SERVER_URL || 'https://stingray-app-p5rsq.ondigitalocean.app/api';
   } else {
     baseUrl = process.env.SERVER_DEV_URL || 'http://localhost:8282/api';
   }
-  // Ensure no double slashes in the URL
   const cleanBase = baseUrl.replace(/\/+$/, '');
   const callbackUrl = `${cleanBase}/clients/auth/google/callback`;
+
   return callbackUrl;
 };
 
@@ -21,11 +20,10 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: getCallbackURL(),
-      proxy: true, // Trust the proxy in production
-      passReqToCallback: true // Pass the request to the callback
+      proxy: true,
+      passReqToCallback: true
     },
     (req, accessToken, refreshToken, profile, done) => {
-      // Store the returnTo URL from the session if it exists
       const returnTo = req.session.returnTo;
       if (returnTo) {
         profile.returnTo = returnTo;
@@ -46,6 +44,3 @@ passport.deserializeUser((user, done) => {
 });
 
 module.exports = passport;
-
-
-
