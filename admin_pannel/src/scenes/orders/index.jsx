@@ -1,4 +1,6 @@
 import React from "react";
+import ReactDatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { Box, Typography, Button, Stack, Grid, Card, CardContent, CardActions, Divider, useTheme, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, Tooltip, IconButton, Snackbar, Alert, MenuItem, Select, InputLabel, FormControl, FormControlLabel, Checkbox, Icon } from "@mui/material";
 import { Timeline, TimelineItem, TimelineSeparator, TimelineConnector, TimelineDot, TimelineContent } from "@mui/lab";
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -40,6 +42,16 @@ const Orders = () => {
   const [packedOverride, setPackedOverride] = React.useState({}); // { [orderId]: isoDate }
   const showToast = (message, severity = 'info') => setToast({ open: true, message, severity });
   const closeToast = (_, reason) => { if (reason === 'clickaway') return; setToast((t) => ({ ...t, open: false })); };
+
+  // Confirm & Ship dialog state
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [confirmRow, setConfirmRow] = React.useState(null);
+  const [trackingNumber, setTrackingNumber] = React.useState("");
+  const [courierName, setCourierName] = React.useState("");
+  // deliveryDate will be a Date object or null for react-datepicker
+  const [deliveryDate, setDeliveryDate] = React.useState(null);
+  const [confirmNotes, setConfirmNotes] = React.useState("");
+  const [confirmErr, setConfirmErr] = React.useState("");
 
   const rows = Array.isArray(data?.orders) ? data.orders : [];
 
@@ -708,40 +720,64 @@ const Orders = () => {
     }
   };
 
-  const handleConfirm = async (row) => {
+  const openConfirm = (row) => {
+    if (!row || !row._id) return;
+    if (!row.isVerified) return showToast('Verify order before confirming for delivery', 'warning');
+    setConfirmRow(row);
+    setTrackingNumber(row.trackingNumber || "");
+    setCourierName(row.carrier || "");
+    // Prefill expected delivery date if available, else empty. Format to YYYY-MM-DD for input[type=date]
+    const existing = row.expectedDeliveryDate || row.deliveryDate || row.expectedDelivery || null;
+    if (existing) {
+      const d = new Date(existing);
+      if (!isNaN(d)) setDeliveryDate(d);
+      else setDeliveryDate(null);
+    } else {
+      setDeliveryDate(null);
+    }
+    setConfirmNotes("");
+    setConfirmErr("");
+    setConfirmOpen(true);
+  };
+
+  const submitConfirm = async () => {
     try {
-      if (!row.isVerified) {
-        return showToast('Verify order before confirming for delivery', 'warning');
-      }
-
-      // Get required tracking and courier info
-      const tracking = window.prompt("Enter tracking number:", row.trackingNumber || "");
+      setConfirmErr("");
+      if (!confirmRow) return;
+      const tracking = (trackingNumber || "").trim();
+      const courier = (courierName || "").trim();
       if (!tracking) {
-        return showToast('Tracking number is required', 'warning');
+        setConfirmErr('Tracking number is required');
+        return;
       }
-
-      const carrier = window.prompt("Enter courier name (required):", row.carrier || "");
-      if (!carrier) {
-        return showToast('Courier name is required', 'warning');  
+      if (!courier) {
+        setConfirmErr('Courier name is required');
+        return;
       }
-
-      // Get optional fields
-      const deliveryDate = window.prompt("Expected delivery date (optional, YYYY-MM-DD):", "");
-      const adminNotes = window.prompt("Add admin notes (optional):", "");
-
-      await confirmAdminOrder({ 
-        id: row._id, 
+      // Normalize deliveryDate: if it's a Date, convert to YYYY-MM-DD
+      let date;
+      if (!deliveryDate) date = undefined;
+      else if (deliveryDate instanceof Date) date = deliveryDate.toISOString().slice(0,10);
+      else date = String(deliveryDate || '').trim();
+      if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        setConfirmErr('Delivery date must be YYYY-MM-DD');
+        return;
+      }
+      await confirmAdminOrder({
+        id: confirmRow._id,
         trackingNumber: tracking,
-        courierName: carrier,  // Changed from carrier to courierName to match backend
-        deliveryDate: deliveryDate || undefined,
-        adminNotes: adminNotes || undefined
+        carrier: courier,
+        deliveryDate: date || undefined,
+        adminNotes: (confirmNotes || undefined),
       }).unwrap();
-      
+      setConfirmOpen(false);
       showToast('Order confirmed for delivery', 'success');
       refetch();
     } catch (e) {
-      console.error("Failed to confirm order for delivery", e);
-      showToast(e?.data?.msg || e?.message || 'Failed to confirm order for delivery', 'error');
+      console.error('Failed to confirm order for delivery', e);
+      const msg = e?.data?.msg || e?.message || 'Failed to confirm order for delivery';
+      setConfirmErr(String(msg));
+      showToast(String(msg), 'error');
     }
   };
 
@@ -952,7 +988,7 @@ const Orders = () => {
                                   fullWidth
                                   sx={{ fontSize: 12 }}
                                   disabled={isConfirming}
-                                  onClick={() => handleConfirm(row)}
+                                  onClick={() => openConfirm(row)}
                                 >
                                   CONFIRM & SHIP
                                 </Button>
@@ -1443,6 +1479,55 @@ const Orders = () => {
           <Button onClick={() => setCourierOpen(false)} disabled={isUpdatingCourier}>Cancel</Button>
           <Button onClick={submitCourier} variant="contained" disabled={isUpdatingCourier}>
             {isUpdatingCourier ? <><CircularProgress size={16} style={{ marginRight: 8 }} /> Saving...</> : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirm & Ship Modal */}
+      <Dialog open={confirmOpen} onClose={() => (!isConfirming && setConfirmOpen(false))} fullWidth maxWidth="xs">
+        <DialogTitle>Confirm & Ship</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5} sx={{ mt: 0.5 }}>
+            <TextField
+              label="Tracking Number"
+              value={trackingNumber}
+              onChange={(e) => setTrackingNumber(e.target.value)}
+              fullWidth
+              autoFocus
+              disabled={isConfirming}
+            />
+            <TextField
+              label="Carrier"
+              value={courierName}
+              onChange={e => setCourierName(e.target.value)}
+              fullWidth
+              sx={{ mb: 2 }}
+              required
+            />
+            <ReactDatePicker
+              selected={deliveryDate}
+              onChange={(date) => setDeliveryDate(date)}
+              dateFormat="yyyy-MM-dd"
+              customInput={<TextField label="Expected Delivery" fullWidth InputLabelProps={{ shrink: true }} />}
+              disabled={isConfirming}
+              placeholderText="Select date"
+            />
+            <TextField
+              label="Admin Notes"
+              value={confirmNotes}
+              onChange={(e) => setConfirmNotes(e.target.value)}
+              fullWidth
+              multiline
+              rows={3}
+              disabled={isConfirming}
+            />
+            {confirmErr ? <Alert severity="error">{confirmErr}</Alert> : null}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)} disabled={isConfirming}>Cancel</Button>
+          <Button onClick={submitConfirm} variant="contained" disabled={isConfirming}>
+            {isConfirming ? <><CircularProgress size={16} style={{ marginRight: 8 }} /> Confirming...</> : 'Confirm & Ship'}
           </Button>
         </DialogActions>
       </Dialog>

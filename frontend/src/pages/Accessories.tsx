@@ -154,7 +154,7 @@ const Accessories = () => {
                       <div className="p-4">
                         <div className="font-semibold line-clamp-1">{p.title}</div>
                         <div className="text-sm text-gray-500 line-clamp-2">{p.description}</div>
-                        <div className="mt-2 font-bold">{`$${p.price.toFixed(2)}`}</div>
+                        <div className="mt-2 font-bold">{`₹${p.price.toFixed(2)}`}</div>
                       </div>
                     </Link>
                   </div>

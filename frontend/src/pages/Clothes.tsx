@@ -154,7 +154,7 @@ const Clothes = () => {
                     <Link to={`/product/${p._id}`} className="block">
                       <div className="aspect-square bg-gray-100 overflow-hidden">
                         <img
-                          src={p.image && p.image[0] ? p.image[0] : `https://source.unsplash.com/featured/600x600/${(p.subcategory || p.category || 'fashion').replace(/\s+/g, '+')}`}
+                          src={p.image && p.image[0] ? p.image[0] : `https://source.unsplash.com/featured/600x600/₹{(p.subcategory || p.category || 'fashion').replace(/\s+/g, '+')}`}
                           alt={p.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                         />
@@ -162,7 +162,7 @@ const Clothes = () => {
                       <div className="p-4">
                         <div className="font-semibold line-clamp-1">{p.title}</div>
                         <div className="text-sm text-gray-500 line-clamp-2">{p.description}</div>
-                        <div className="mt-2 font-bold">{`$${p.price.toFixed(2)}`}</div>
+                        <div className="mt-2 font-bold">{`₹${p.price.toFixed(2)}`}</div>
                       </div>
                     </Link>
                   </div>

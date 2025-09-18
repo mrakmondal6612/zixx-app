@@ -178,7 +178,8 @@ export const api = createApi({
       query: ({ id, trackingNumber, deliveryDate, adminNotes, carrier } = {}) => ({
         url: `admin/orders/${id}/confirm`,
         method: "PATCH",
-        body: { trackingNumber, deliveryDate, adminNotes, carrier },
+        // include both carrier and courierName to be compatible with backend
+        body: { trackingNumber, deliveryDate, adminNotes, carrier, courierName: carrier },
       }),
       invalidatesTags: ["Orders"],
     }),
