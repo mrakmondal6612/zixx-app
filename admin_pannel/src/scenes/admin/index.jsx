@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import Header from "@components/Header";
 import { useState, useEffect } from "react";
-import { useGetAdminUsersQuery, useUpdateAdminUserMutation, useDeleteAdminUserMutation } from "@state/api";
+import { useGetAdminUsersQuery, useUpdateAdminUserMutation, useDeleteAdminUserMutation, useGetCustomersQuery } from "@state/api";
 
 function UserCard({ user, onEdit, onDelete }) {
 
@@ -182,6 +182,9 @@ function UserCard({ user, onEdit, onDelete }) {
 function Admin() {
   const theme = useTheme();
   const { data, isLoading: loading, isError } = useGetAdminUsersQuery(undefined, { refetchOnMountOrArgChange: true });
+  // get customer count to display beside ADMIN header
+  const { data: customersData } = useGetCustomersQuery();
+  const totalCustomers = Array.isArray(customersData?.users) ? customersData.users.filter(u => String(u.role || '').toLowerCase() === 'admin').length : (Array.isArray(customersData) ? customersData.length : (customersData?.totalCustomers ?? 0));
   const [updateAdminUser] = useUpdateAdminUserMutation();
   const [deleteAdminUser] = useDeleteAdminUserMutation();
   const users = Array.isArray(data?.users) ? data.users : Array.isArray(data) ? data : [];
@@ -267,7 +270,7 @@ function Admin() {
 
   return (
     <Box m="1.5rem 2.5rem">
-      <Header title="ADMIN" subtitle="List of Admins" />
+  <Header title="ADMIN" subtitle="List of Admins" count={totalCustomers} />
 
       {isError && <p style={{ color: "red" }}>Failed to load admins</p>}
 

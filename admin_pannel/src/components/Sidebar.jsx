@@ -18,6 +18,12 @@ import {
   useTheme,
   Menu,
   MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Alert,
 } from "@mui/material";
 
 import {
@@ -85,6 +91,95 @@ const Sidebar = ({
   const settingsOpen = Boolean(settingsAnchor);
   const openSettings = (e) => setSettingsAnchor(e.currentTarget);
   const closeSettings = () => setSettingsAnchor(null);
+
+  // Empty DB modal state
+  const [emptyModalOpen, setEmptyModalOpen] = useState(false);
+  const [confirmPhrase, setConfirmPhrase] = useState("");
+  const [confirmTokenInput, setConfirmTokenInput] = useState("");
+  const [emptyInProgress, setEmptyInProgress] = useState(false);
+  const [emptyResult, setEmptyResult] = useState(null);
+  const [emptyError, setEmptyError] = useState(null);
+  // DB status and init dummy state
+  const [dbEmpty, setDbEmpty] = useState(null); // null=unknown, true/false known
+  const [initInProgress, setInitInProgress] = useState(false);
+  const [initResult, setInitResult] = useState(null);
+  const [initError, setInitError] = useState(null);
+
+  useEffect(() => {
+    const onOpen = () => setEmptyModalOpen(true);
+    window.addEventListener('openEmptyDatabaseModal', onOpen);
+    return () => window.removeEventListener('openEmptyDatabaseModal', onOpen);
+  }, []);
+
+  // Poll DB status once on mount to determine whether to show Dummy Dataset button
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE || ''}/admin/db-status`, { credentials: 'include' });
+        if (!res.ok) return setDbEmpty(null);
+        const j = await res.json();
+        setDbEmpty(Boolean(j.empty));
+      } catch (e) {
+        setDbEmpty(null);
+      }
+    };
+    check();
+  }, []);
+
+  const handleInitDummy = async () => {
+    setInitError(null);
+    setInitResult(null);
+    try {
+      setInitInProgress(true);
+      const res = await fetch(`${import.meta.env.VITE_API_BASE || ''}/admin/init-dummy`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const j = await res.json();
+      setInitInProgress(false);
+      if (!res.ok) {
+        setInitError(j?.msg || j?.error || 'Failed to initialize dummy data');
+        return;
+      }
+      setInitResult(j);
+      // refresh db status
+      setDbEmpty(false);
+    } catch (e) {
+      setInitInProgress(false);
+      setInitError(String(e));
+    }
+  };
+
+  const handleEmptyConfirm = async () => {
+    setEmptyError(null);
+    setEmptyResult(null);
+    if (confirmPhrase.trim() !== 'EMPTY DATABASE') {
+      setEmptyError('Please type EXACTLY "EMPTY DATABASE" to confirm');
+      return;
+    }
+    // confirm token is optional client-side; server will validate if required
+    try {
+      setEmptyInProgress(true);
+      const res = await fetch(`${import.meta.env.VITE_API_BASE || ''}/admin/empty-database`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmToken: confirmTokenInput.trim() }),
+      });
+      const json = await res.json();
+      setEmptyInProgress(false);
+      if (!res.ok) {
+        setEmptyError(json?.msg || json?.error || 'Failed to empty database');
+        return;
+      }
+      setEmptyResult(json);
+    } catch (e) {
+      setEmptyInProgress(false);
+      setEmptyError(String(e));
+    }
+  };
 
   // Resolve avatar/photo URL for user/admin with robust fallbacks
   const resolveAvatarSrc = () => {
@@ -314,71 +409,44 @@ const Sidebar = ({
                 >
                   <SettingsOutlined sx={{ fontSize: { xs: "20px", sm: "24px" } }} />
                 </IconButton>
-                <Button
-                  variant="contained"
-                  size="small"
-                  sx={{ 
-                    fontWeight: 700, 
-                    borderRadius: 2, 
-                    px: { xs: 1.5, sm: 2 },
-                    py: 0.5,
-                    fontSize: { xs: "0.75rem", sm: "0.875rem" },
-                    minWidth: { xs: "80px", sm: "auto" },
-                    background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-                    '&:hover': {
-                      background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
-                      transform: 'translateY(-1px)',
-                      boxShadow: theme.shadows[4]
-                    },
-                    transition: 'all 0.2s ease-in-out'
-                  }}
-                  onClick={async () => {
-                    try {
-                      const token = localStorage.getItem("token");
-                      const trigger = import.meta.env.VITE_ADMIN_SYNC_TRIGGER_URL;
-                      if (!trigger) {
-                        alert("Sync is not configured. Set VITE_ADMIN_SYNC_TRIGGER_URL in your env.");
-                        return;
-                      }
-                      
-                      // Show loading state
-                      const button = document.activeElement;
-                      const originalText = button.textContent;
-                      button.textContent = "Syncing...";
-                      button.disabled = true;
-                      
-                      const res = await fetch(trigger, {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                          Authorization: token ? `Bearer ${token}` : "",
-                        },
-                        credentials: "include",
-                      });
-                      const json = await res.json();
-                      
-                      button.textContent = originalText;
-                      button.disabled = false;
-                      
-                      if (!res.ok) throw new Error(json.message);
-                      const products = json?.result?.products?.synced;
-                      const users = json?.result?.users?.synced;
-                      if (typeof products === 'number' || typeof users === 'number') {
-                        alert(`✅ Sync Complete!\nProducts: ${products ?? 0}\nUsers: ${users ?? 0}`);
-                      } else {
-                        alert('✅ Sync triggered successfully');
-                      }
-                      setLastSync(json.at || new Date().toISOString());
-                    } catch (err) {
-                      const button = document.activeElement;
-                      button.textContent = "Sync";
-                      button.disabled = false;
-                      alert("❌ Sync failed: " + (err.message || err));
-                    }
-                  }}
-                >
-                  Sync Data
-                </Button>
+                {dbEmpty === true ? (
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      color="primary"
+                      sx={{ fontWeight: 700, borderRadius: 2 }}
+                      onClick={handleInitDummy}
+                      disabled={initInProgress}
+                    >
+                      {initInProgress ? 'Initializing...' : 'DUMMY DATASET'}
+                    </Button>
+                  </Box>
+                ) : (
+                  <Button
+                    variant="contained"
+                    size="small"
+                    color="error"
+                    sx={{ 
+                      fontWeight: 700, 
+                      borderRadius: 2, 
+                      px: { xs: 1.5, sm: 2 },
+                      py: 0.5,
+                      fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                      minWidth: { xs: "80px", sm: "auto" },
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                    onClick={() => {
+                      // open destructive confirm modal
+                      const ev = new CustomEvent('openEmptyDatabaseModal');
+                      window.dispatchEvent(ev);
+                    }}
+                  >
+                    EMPTY DATABASE
+                  </Button>
+                )}
+                {initError && <Alert severity="error" sx={{ mt: 1 }}>{initError}</Alert>}
+                {initResult && <Alert severity="success" sx={{ mt: 1 }}>Initialized dummy dataset successfully.</Alert>}
               </Box>
               {lastSync && (
                 <Typography
@@ -394,11 +462,60 @@ const Sidebar = ({
                 </Typography>
               )}
             </Box>
+
+            {/* Empty Database Confirmation Dialog */}
+            <Dialog open={emptyModalOpen} onClose={() => setEmptyModalOpen(false)} maxWidth="sm" fullWidth>
+              <DialogTitle color="error">Empty Database (Destructive)</DialogTitle>
+              <DialogContent>
+                <Typography sx={{ mb: 1 }} color="textSecondary">
+                  This action will drop all non-system collections from the connected database. This is irreversible.
+                </Typography>
+                <Alert severity="warning" sx={{ mb: 1 }}>
+                  Only enable this endpoint in a safe development environment. Configure a server-side confirm token and keep it secret — do not expose it to client-side code or commit env files to source control.
+                </Alert>
+                <TextField
+                  label="Type EXACT phrase to confirm"
+                  placeholder="EMPTY DATABASE"
+                  fullWidth
+                  value={confirmPhrase}
+                  onChange={(e) => setConfirmPhrase(e.target.value)}
+                  sx={{ mb: 1 }}
+                />
+                <TextField
+                  label="One-time confirm token (optional)"
+                  placeholder="If your server requires a one-time token, enter it here"
+                  fullWidth
+                  value={confirmTokenInput}
+                  onChange={(e) => setConfirmTokenInput(e.target.value)}
+                  sx={{ mb: 1 }}
+                />
+                {emptyError && <Alert severity="error" sx={{ mt: 1 }}>{emptyError}</Alert>}
+                {emptyResult && (
+                  <Alert severity="success" sx={{ mt: 1 }}>
+                    Success: Dropped {Array.isArray(emptyResult.dropped) ? emptyResult.dropped.length : 0} collections.
+                    <pre style={{ whiteSpace: 'pre-wrap', marginTop: 8 }}>{JSON.stringify(emptyResult, null, 2)}</pre>
+                  </Alert>
+                )}
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setEmptyModalOpen(false)} disabled={emptyInProgress}>Cancel</Button>
+                <Button color="error" variant="contained" onClick={handleEmptyConfirm} disabled={emptyInProgress}>
+                  {emptyInProgress ? 'Emptying...' : 'Confirm Empty'}
+                </Button>
+              </DialogActions>
+            </Dialog>
           </Box>
         </Drawer>
       )}
 
       {/* Settings Menu */}
+      {/* EMPTY DATABASE confirmation modal and logic */}
+      {/* Using a window event to avoid prop drilling; keeps modal here local to Sidebar */}
+      {(() => {
+        // local state via closures is awkward in JSX; use hooks near top instead
+        return null;
+      })()}
+
       <Menu
         anchorEl={settingsAnchor}
         open={settingsOpen}

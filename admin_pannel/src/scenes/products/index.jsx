@@ -311,12 +311,13 @@ const Product = ({ product, onDelete, onUpdate }) => {
               variant="h6"
               sx={{ mt: 1, fontWeight: "bold", color: theme.palette.mode === "dark" ? "#A692F6" : "#87068F" }}
             >
-                            <Typography
-              variant="h6"
-              sx={{ mt: 1, fontWeight: "bold", color: theme.palette.mode === "dark" ? "#A692F6" : "#87068F" }}
-            >
-              ₹{Number(product.price).toFixed(2)}
-            </Typography>
+              <Typography
+                variant="h6"
+                component="div"
+                sx={{ mt: 1, fontWeight: "bold", color: theme.palette.mode === "dark" ? "#A692F6" : "#87068F" }}
+              >
+                ₹{Number(product.price).toFixed(2)}
+              </Typography>
             </Typography>
             <Typography
               variant="body2"
@@ -722,7 +723,7 @@ const Products = () => {
   return (
     <Box m="1.5rem 2.5rem" >
       <Box display="flex" alignItems="center" justifyContent="space-between" >
-        <Header title="PRODUCTS" subtitle="See your list of products." />
+      <Header title="PRODUCTS" subtitle="See your list of products." count={products.length} />
         <Tooltip title="Add a new product" >
           <span>
             <Button

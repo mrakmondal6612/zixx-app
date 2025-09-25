@@ -7,6 +7,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import axios from 'axios';
 import getApiBase from '@utils/apiBase';
+import FooterServices from './FooterServices';
 
 const getAuthHeader = () => {
   try {
@@ -52,6 +53,8 @@ const FooterManagement = () => {
     quickLinks: [],
     accountLinks: [],
     exclusive: { title: 'Exclusive', subtitle: 'Subscribe', note: 'Get 10% off your first order' },
+    socialLinksExtra: [],
+    services: [],
     copyrightText: '',
   });
 
@@ -72,6 +75,13 @@ const FooterManagement = () => {
       });
       // Normalize response so missing arrays/objects don't break the UI
       const data = response.data || {};
+      // prepare default services if none present so admin can edit them
+      const defaultServices = [
+        { icon: '', title: 'FREE AND FAST DELIVERY', description: 'Free delivery for all orders over ₹140' },
+        { icon: '', title: '24/7 CUSTOMER SERVICE', description: 'Friendly 24/7 customer support' },
+        { icon: '', title: 'MONEY BACK GUARANTEE', description: 'We return money within 30 days' }
+      ];
+
       setFooterData({
         logo: data.logo || '',
         description: data.description || '',
@@ -81,12 +91,17 @@ const FooterManagement = () => {
         accountLinks: Array.isArray(data.accountLinks) ? data.accountLinks : [],
         exclusive: data.exclusive || { title: 'Exclusive', subtitle: 'Subscribe', note: 'Get 10% off your first order' },
         socialLinksExtra: Array.isArray(data.socialLinksExtra) ? data.socialLinksExtra : [],
+        services: Array.isArray(data.services) && data.services.length > 0 ? data.services : defaultServices,
         copyrightText: data.copyrightText || ''
       });
     } catch (error) {
       console.error('ERROR: Error fetching footer data', error?.response?.data || error.message || error);
       toast.error('Error fetching footer data');
     }
+  };
+
+  const setServices = (services) => {
+    setFooterData(prev => ({ ...prev, services }));
   };
 
   const handleChange = (e, section, field) => {
@@ -422,6 +437,11 @@ const FooterManagement = () => {
               onChange={(e) => setFooterData(prev => ({ ...prev, exclusive: { ...prev.exclusive, note: e.target.value } }))}
               margin="normal"
             />
+          </Grid>
+
+          {/* Footer Services Section */}
+          <Grid item xs={12}>
+            <FooterServices services={footerData.services || []} setServices={setServices} />
           </Grid>
 
           {/* Copyright Text */}

@@ -897,7 +897,7 @@ const Orders = () => {
 
   return (
     <Box m="1.5rem 2.5rem">
-      <Header title="ORDERS" subtitle="All product orders" />
+      <Header title="ORDERS" subtitle="All product orders" count={rows.length} />
       {isError ? (
         <Typography color="error" mt={2}>Failed to load orders.</Typography>
       ) : (

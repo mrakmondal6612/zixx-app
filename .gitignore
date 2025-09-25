@@ -9,3 +9,14 @@ env/
 env/.env
 env/.env.*
 init/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -185,6 +185,8 @@ function Customers() {
   const [deleteUser, { isLoading: isDeleting }] = useDeleteAdminUserMutation();
   const [toast, setToast] = useState({ open: false, severity: "success", message: "" });
   const users = Array.isArray(data?.users) ? data.users : Array.isArray(data) ? data : [];
+  // Show total users (customers + admins)
+  const customerCount = users.length;
 
   // For editing
   const [openEdit, setOpenEdit] = useState(false);
@@ -269,17 +271,16 @@ function Customers() {
   };
 
   return (
-    <Box m="1.5rem 2.5rem">
-      <Header title="CUSTOMERS" subtitle="List of Customers" />
-
+    <Box m="1.5rem 2.5rem"> 
+    <Header title="CUSTOMERS" subtitle="List of Customers" count={customerCount} /> 
       {isError && <p style={{ color: "red" }}>Failed to load users</p>}
 
       {isLoading ? (
         <p>Loading...</p>
       ) : (
         <Grid container spacing={3} sx={{ mt: 4 }}>
-          {users.map((user, idx) =>
-            user && user.role !== "admin" ? (
+          {users.map((user, idx) => (
+            user ? (
               <Grid
                 item
                 key={user._id || user.id || user.email || idx}
@@ -296,7 +297,7 @@ function Customers() {
                 />
               </Grid>
             ) : null
-          )}
+          ))}
         </Grid>
       )}
 
