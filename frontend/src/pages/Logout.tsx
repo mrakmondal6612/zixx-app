@@ -10,6 +10,31 @@ const Logout = () => {
   const [ask, setAsk] = React.useState(true);
   const [done, setDone] = React.useState(false);
 
+  // Check if the current authenticated user already submitted a testimonial
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch(apiUrl('/clients/testimonials/me'), { credentials: 'include' });
+        if (!mounted) return;
+        if (res.status === 401) {
+          // Not authenticated - keep asking (we may want anonymous feedback)
+          return;
+        }
+        const data = await res.json().catch(() => null);
+        // If API indicates user already has testimonial, skip showing modal
+        if (data && data.ok && data.hasTestimonial) {
+          setAsk(false);
+        }
+      } catch (e) {
+        // Ignore network errors - keep default behavior (show modal)
+      }
+    })();
+    return () => { mounted = false; };
+  // run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     // If user navigates directly and modal was skipped/submitted already, ensure logout proceeds
     if (!ask && !done) {

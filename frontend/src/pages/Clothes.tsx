@@ -133,7 +133,12 @@ const Clothes = () => {
         )}
 
         <div className="flex flex-col md:flex-row gap-8">
-          <CategoryFilters value={filters} onChange={(f) => { setFilters(f); setPage(1); }} />
+          <CategoryFilters
+            value={filters}
+            onChange={(f) => { setFilters(f); setPage(1); }}
+            availableSizes={Array.from(new Set(items.flatMap((p) => p.size || []).filter(Boolean).map((s) => String(s))))}
+            availableColors={Array.from(new Set(items.flatMap((p) => p.color || []).filter(Boolean).map((c) => String(c))))}
+          />
 
           <div className="flex-1">
             <div className="mb-8">

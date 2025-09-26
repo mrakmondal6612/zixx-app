@@ -55,9 +55,7 @@ const navItems = [
   { text: "Dashboard", icon: <HomeOutlined /> },
   { text: "Client Facing", icon: null },
   { text: "Products", icon: <ShoppingCartOutlined /> },
-  { text: "Banners", icon: <ReceiptLongOutlined /> },
   { text: "Testimonials", icon: <ReceiptLongOutlined /> },
-  { text: "Footer", icon: <ReceiptLongOutlined /> },
   { text: "Customers", icon: <Groups2Outlined /> },
   { text: "Orders", icon: <LocalShippingOutlined /> },
   { text: "Transactions", icon: <ReceiptLongOutlined /> },
@@ -69,6 +67,9 @@ const navItems = [
   { text: "Breakdown", icon: <PieChartOutlined /> },
   { text: "Management", icon: null },
   { text: "Admin", icon: <AdminPanelSettingsOutlined /> },
+  { text: "Auth", icon: <ReceiptLongOutlined /> },
+  { text: "Banners", icon: <ReceiptLongOutlined /> },
+  { text: "Footer", icon: <ReceiptLongOutlined /> },
   { text: "Performance", icon: <TrendingUpOutlined /> },
 ];
 
@@ -313,12 +314,17 @@ const Sidebar = ({
                         sx={{
                           backgroundColor:
                             active === lcText
-                              ? theme.palette.secondary[300]
+                              ? "#D92030"
                               : "transparent",
                           color:
                             active === lcText
-                              ? theme.palette.primary[600]
+                              ? "#ffffff"
                               : theme.palette.secondary[100],
+                          "&:hover": {
+                            backgroundColor: active === lcText
+                              ? "#D92030"
+                              : "rgba(217, 32, 48, 0.1)"
+                          }
                         }}
                       >
                         <ListItemIcon
@@ -326,7 +332,7 @@ const Sidebar = ({
                             ml: "2rem",
                             color:
                               active === lcText
-                                ? theme.palette.primary[600]
+                                ? "#ffffff"
                                 : theme.palette.secondary[200],
                           }}
                         >

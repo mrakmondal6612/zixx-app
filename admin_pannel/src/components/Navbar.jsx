@@ -66,6 +66,15 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
   const openSettings = (e) => setSettingsAnchor(e.currentTarget);
   const closeSettings = () => setSettingsAnchor(null);
 
+  // Toggle settings menu when clicking the settings button
+  const toggleSettings = (e) => {
+    if (settingsAnchor) {
+      setSettingsAnchor(null);
+    } else {
+      setSettingsAnchor(e && e.currentTarget ? e.currentTarget : null);
+    }
+  };
+
   // Search dialog
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -170,6 +179,7 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
               <Search sx={{ fontSize: { xs: "20px", sm: "24px" } }} />
             </IconButton>
           )}
+          {/* Theme toggle button commented out per request - original code kept here
           <IconButton
             onClick={(e) => {
               try {
@@ -241,9 +251,10 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
               <DarkModeOutlined sx={{ fontSize: { xs: "22px", sm: "24px" } }} />
             )}
           </IconButton>
+          */}
           <IconButton 
             aria-label="Settings" 
-            onClick={openSettings} 
+            onClick={toggleSettings} 
             sx={{ zIndex: (t) => t.zIndex.modal + 3 }}
             size="small"
           >
@@ -314,9 +325,11 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                     try {
                       const backendOrigin = getApiBase().replace(/\/?api\/?$/i, '').replace(/\/$/, '');
                       const isProd = !!(import.meta && import.meta.env && import.meta.env.PROD);
-                      let adminUrl = import.meta.env.VITE_ADMIN_PANEL_URL;
-                      // Fallback to safe defaults if env is missing or malformed
-                      if (!adminUrl || typeof adminUrl !== 'string' || !/^https?:\/\//i.test(adminUrl)) {
+                      // Prefer admin panel URL from environment; fallback to sensible defaults
+                      let adminUrl = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ADMIN_PANEL_URL
+                        ? String(import.meta.env.VITE_ADMIN_PANEL_URL).trim()
+                        : '';
+                      if (!adminUrl || !/^https?:\/\//i.test(adminUrl)) {
                         adminUrl = isProd ? 'https://admin.zixx.in' : `http://${window.location.hostname}:8000`;
                       }
                       try { const u = new URL(adminUrl); adminUrl = u.origin; } catch (err) { /* keep as-is if parsing fails */ }
@@ -344,8 +357,11 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
                   // Also notify main site origin instantly via hidden iframe to /logout-sync.html
                   // This makes zixx.in tabs receive storage/BroadcastChannel events on their origin
                   try {
-                    let frontendOrigin = import.meta.env.VITE_FRONTEND_URL;
-                    if (!frontendOrigin || typeof frontendOrigin !== 'string' || !/^https?:\/\//i.test(frontendOrigin)) {
+                    // Prefer frontend origin from environment; fallback to main site
+                    let frontendOrigin = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_FRONTEND_URL
+                      ? String(import.meta.env.VITE_FRONTEND_URL).trim()
+                      : '';
+                    if (!frontendOrigin || !/^https?:\/\//i.test(frontendOrigin)) {
                       frontendOrigin = 'https://zixx.in';
                     }
                     try { const u = new URL(frontendOrigin); frontendOrigin = u.origin; } catch (e) {}
@@ -470,6 +486,7 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
           }
         }}
       >
+        {/* Theme switch menu item commented out per request - original code kept here
         <MenuItem 
           onClick={() => { 
             try {
@@ -535,6 +552,7 @@ const Navbar = ({ user, isSidebarOpen, setIsSidebarOpen }) => {
             </Typography>
           </Box>
         </MenuItem>
+        */}
         
         <MenuItem 
           onClick={() => { setIsSidebarOpen((v) => !v); closeSettings(); }}

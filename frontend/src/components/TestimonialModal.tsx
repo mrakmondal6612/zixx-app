@@ -9,7 +9,7 @@ type Props = {
 };
 
 const TestimonialModal: React.FC<Props> = ({ open, onSubmit, onSkip, userName }) => {
-  const [rating, setRating] = useState<number>(5);
+  const [rating, setRating] = useState<number>(0);
   const [text, setText] = useState<string>("");
   const [name, setName] = useState<string>(userName || "");
   const [loading, setLoading] = useState(false);
@@ -80,7 +80,7 @@ const TestimonialModal: React.FC<Props> = ({ open, onSubmit, onSkip, userName })
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
               <span className="text-lg">👤</span>
               Your Name (optional)
             </label>
@@ -93,7 +93,7 @@ const TestimonialModal: React.FC<Props> = ({ open, onSubmit, onSkip, userName })
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
               <span className="text-lg">⭐</span>
               Rating
             </label>
@@ -103,21 +103,45 @@ const TestimonialModal: React.FC<Props> = ({ open, onSubmit, onSkip, userName })
                   key={star}
                   type="button"
                   onClick={() => setRating(star)}
-                  className={`text-2xl transition-all duration-200 hover:scale-110 ${
-                    star <= rating ? 'text-yellow-400' : 'text-gray-300'
+                  onKeyDown={(e: React.KeyboardEvent<HTMLButtonElement>) => {
+                    // keyboard accessibility: Enter/Space to select, arrows to move
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setRating(star);
+                      return;
+                    }
+                    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      setRating((prev) => Math.max(1, (prev > 0 ? prev : star) - 1));
+                      return;
+                    }
+                    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      setRating((prev) => Math.min(5, (prev > 0 ? prev : star) + 1));
+                      return;
+                    }
+                  }}
+                  aria-label={`${star} star${star > 1 ? 's' : ''}`}
+                  aria-pressed={rating === star}
+                  role="button"
+                  tabIndex={0}
+                  title={`${star} Star${star > 1 ? 's' : ''}`}
+                  className={`text-2xl transform transition-transform duration-200 hover:scale-125 active:scale-110 focus:scale-125 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-offset-1 rounded ${
+                    // when no rating selected (rating === 0) show muted/gray stars
+                    rating > 0 ? (star <= rating ? 'text-yellow-400' : 'text-gray-300') : 'text-gray-300/80'
                   }`}
                 >
                   ⭐
                 </button>
               ))}
-              <span className="ml-2 text-sm text-gray-600 font-medium">
-                {rating} Star{rating > 1 ? 's' : ''}
+              <span className={`ml-2 text-sm font-medium ${rating > 0 ? 'text-gray-600' : 'text-gray-400 italic'}`}>
+                {rating > 0 ? `${rating} Star${rating > 1 ? 's' : ''}` : 'No rating selected'}
               </span>
             </div>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
               <span className="text-lg">💬</span>
               Your Feedback
             </label>

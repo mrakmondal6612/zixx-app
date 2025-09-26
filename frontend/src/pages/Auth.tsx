@@ -34,6 +34,7 @@ const Auth = () => {
   const [phoneVerifyToken, setPhoneVerifyToken] = useState('');
   const [phoneCooldown, setPhoneCooldown] = useState(0);
   const { user, login, setRole, setUser } = useAuthContext();
+  const [authContent, setAuthContent] = React.useState<{ title?: string; description?: string; bannerImage?: string }>({});
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -88,6 +89,37 @@ const Auth = () => {
     setEmailOtpCode(''); setEmailRequestId(''); setEmailVerifyToken(''); setEmailCooldown(0);
     setPhoneOtpCode(''); setPhoneRequestId(''); setPhoneVerifyToken(''); setPhoneCooldown(0);
   };
+
+  // Fetch auth page content (login/signup) from backend
+  React.useEffect(() => {
+    const page = isLogin ? 'login' : 'signup';
+    let mounted = true;
+    (async () => {
+      try {
+        const url = apiUrl(`/auth-pages/${page}`);
+        console.log('Fetching auth content from:', url);
+        const res = await fetch(url, { credentials: 'include' });
+        console.log('Auth content response status:', res.status);
+        if (!res.ok) {
+          console.log('Auth content response not ok:', await res.text().catch(() => 'no body'));
+          return;
+        }
+        const json = await res.json().catch(() => ({}));
+        console.log('Auth content response:', json);
+        if (!mounted) return;
+        if (json && json.ok && json.data) {
+          setAuthContent({ 
+            title: json.data.title || '', 
+            description: json.data.description || '', 
+            bannerImage: json.data.bannerImage || ''
+          });
+        }
+      } catch (e) {
+        console.error('Error fetching auth content:', e);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [isLogin]);
 
   // Reset verification if user edits email/phone after verifying
   React.useEffect(() => { setEmailVerifyToken(''); setEmailOtpCode(''); setEmailRequestId(''); }, [email]);
@@ -362,9 +394,9 @@ const Auth = () => {
         <div className="w-full max-w-5xl bg-white rounded-2xl shadow-lg flex flex-col md:flex-row overflow-hidden">
           <div className="flex-1 flex flex-col justify-center px-8 py-10 md:py-16">
             <h1 className="text-3xl md:text-4xl font-bold mb-2 flex items-center gap-2">
-              {isLogin ? 'Welcome Back' : 'Welcome'} <span className="text-2xl">👋</span>
+              {(authContent.title && authContent.title.trim()) ? authContent.title : (isLogin ? 'Welcome Back' : 'Welcome')} <span className="text-2xl">👋</span>
             </h1>
-            <p className="mb-8 text-gray-700 text-lg">Join us now to be a part of Zixx's family.</p>
+            <p className="mb-8 text-gray-700 text-lg">{(authContent.description && authContent.description.trim()) ? authContent.description : "Join us now to be a part of Zixx's family."}</p>
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -494,8 +526,8 @@ const Auth = () => {
           </div>
           <div className="hidden md:flex flex-1 items-center justify-center bg-[#181818] h-[600px] rounded-2xl overflow-hidden shadow-xl m-4">
             <img
-              src="https://wintrackinc.com/cdn/shop/articles/pexels-olly-853151_2223d0ec-5853-4769-91e3-b38e2d748494.jpg?v=1738776038&width=2080"
-              alt="Flower Still Life"
+              src={(authContent.bannerImage && authContent.bannerImage.trim()) ? authContent.bannerImage : 'https://wintrackinc.com/cdn/shop/articles/pexels-olly-853151_2223d0ec-5853-4769-91e3-b38e2d748494.jpg?v=1738776038&width=2080'}
+              alt={authContent.title || 'Auth banner'}
               className="rounded-2xl object-cover w-full h-[99.5%] max-h-[800px] shadow-xl"
             />
           </div>
