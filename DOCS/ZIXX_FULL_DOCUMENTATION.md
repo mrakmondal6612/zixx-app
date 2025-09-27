@@ -384,10 +384,5 @@ npm run dev
 
 ---
 
-If you'd like, I can also:
-
-- add an `backend/.env.example` file with all environment variable names (no secrets),
-- create a Postman collection for the main user flows,
-- or add a short one-page quick-start checklist for a non-technical admin to publish the site.
 
 End of document.
