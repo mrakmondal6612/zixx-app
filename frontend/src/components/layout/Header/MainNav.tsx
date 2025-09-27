@@ -148,12 +148,13 @@ export const MainNav = () => {
                 <Menu size={24} />
               </button>
             </div>
+            
           </>
         ) : (
           <div className="flex items-center gap-2 sm:gap-4 lg:gap-6 xl:gap-8 justify-center flex-1 max-w-none">
             
             {/* Navigation Menu */}
-            <NavigationMenu className="hidden md:block">
+            {/* <NavigationMenu className="hidden md:block">
               <NavigationMenuList>
                 <NavigationMenuItem>
                   <NavigationMenuTrigger className="text-sm lg:text-base text-black">Shop</NavigationMenuTrigger>
@@ -224,7 +225,7 @@ export const MainNav = () => {
                 </NavigationMenuItem>
               </NavigationMenuList>
             </NavigationMenu>
-            
+             */}
             {/* Search Bar - Responsive */}
             <form onSubmit={handleSearch} className="bg-[rgba(240,240,240,1)] flex w-full max-w-[150px] sm:max-w-[220px] md:max-w-[280px] lg:max-w-[420px] xl:max-w-[520px] gap-2 sm:gap-3 overflow-hidden rounded-[62px] px-3 sm:px-4 py-2 sm:py-3">
               <img 
@@ -364,7 +365,7 @@ export const MainNav = () => {
                 </div>
               </div>
 
-              <nav className="p-2 flex-1 overflow-y-auto">
+              {/* <nav className="p-2 flex-1 overflow-y-auto">
                 <ul className="flex flex-col">
                   <li>
                     <button
@@ -465,7 +466,7 @@ export const MainNav = () => {
                     </Link>
                   </li>
                 </ul>
-              </nav>
+              </nav> */}
             </div>
           </aside>
         </>

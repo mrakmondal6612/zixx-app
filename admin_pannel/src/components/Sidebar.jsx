@@ -85,7 +85,7 @@ const Sidebar = ({
   const navigate = useNavigate();
   const theme = useTheme();
   const dispatch = useDispatch();
-  const [lastSync, setLastSync] = useState(null);
+  
   
   // Settings menu state
   const [settingsAnchor, setSettingsAnchor] = useState(null);
@@ -208,21 +208,7 @@ const Sidebar = ({
     return profileImage;
   };
 
-  useEffect(() => {
-    const url = import.meta.env.VITE_ADMIN_SYNC_STATUS_URL;
-    if (!url) return; // disabled by default
-    (async () => {
-      try {
-        const res = await fetch(url, { credentials: 'include' });
-        if (res.ok) {
-          const json = await res.json();
-          setLastSync(json.at || null);
-        }
-      } catch (e) {
-        // ignore network errors
-      }
-    })();
-  }, []);
+  
 
   useEffect(() => {
     setActive(pathname.substring(1));
@@ -415,7 +401,7 @@ const Sidebar = ({
                 >
                   <SettingsOutlined sx={{ fontSize: { xs: "20px", sm: "24px" } }} />
                 </IconButton>
-                {dbEmpty === true ? (
+                {/* {dbEmpty === true ? (
                   <Box display="flex" alignItems="center" gap={1}>
                     <Button
                       variant="contained"
@@ -452,21 +438,9 @@ const Sidebar = ({
                   </Button>
                 )}
                 {initError && <Alert severity="error" sx={{ mt: 1 }}>{initError}</Alert>}
-                {initResult && <Alert severity="success" sx={{ mt: 1 }}>Initialized dummy dataset successfully.</Alert>}
+                {initResult && <Alert severity="success" sx={{ mt: 1 }}>Initialized dummy dataset successfully.</Alert>} */}
               </Box>
-              {lastSync && (
-                <Typography
-                  sx={{
-                    mt: 1,
-                    fontSize: { xs: "0.7rem", sm: "0.75rem" },
-                    color: theme.palette.secondary[200],
-                    textAlign: "center",
-                    px: 1
-                  }}
-                >
-                  Last sync: {new Date(lastSync).toLocaleString()}
-                </Typography>
-              )}
+              
             </Box>
 
             {/* Empty Database Confirmation Dialog */}
@@ -538,7 +512,7 @@ const Sidebar = ({
           }
         }}
       >
-        <MenuItem 
+        {/* <MenuItem 
           onClick={() => { dispatch(setMode()); closeSettings(); }}
           sx={{ 
             py: 1.5,
@@ -560,7 +534,7 @@ const Sidebar = ({
               Change theme appearance
             </Typography>
           </Box>
-        </MenuItem>
+        </MenuItem> */}
         
         <MenuItem 
           onClick={() => { setIsSidebarOpen(false); closeSettings(); }}
