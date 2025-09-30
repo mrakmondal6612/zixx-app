@@ -6,61 +6,88 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2, ShoppingCart } from 'lucide-react';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
-import { toast } from 'sonner';
 import { useAuthContext } from '@/hooks/AuthProvider';
 import { apiUrl, getAuthHeaders } from '@/lib/api';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { toast } from 'sonner';
 import axios from 'axios';
 
-type WishlistItem = {
+interface WishlistItem {
   id: string;
   name: string;
-  price: number;
-  oldPrice?: number;
   image: string;
+  price: number; // Final calculated price
+  basePrice?: number;
+  oldPrice?: number;
   size?: string;
   color?: string;
   inStock: boolean;
-  discount?: number;
+  discount?: {
+    type: 'percentage' | 'fixed' | 'coupon';
+    value: number;
+  } | number; // Can be object or number (legacy)
+  tax?: {
+    type: 'free' | 'percentage';
+    value: number;
+  };
+  shippingCost?: {
+    type: 'free' | 'fixed';
+    value: number;
+  };
   rating?: string;
   category?: string;
   theme?: string;
-};
+}
+
+interface Product {
+  _id: string;
+  title: string;
+  price: number;
+  image: string | string[];
+  oldPrice?: number;
+  category?: string;
+}
 
 const Wishlist = () => {
-  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
-  const [topSellingProducts, setTopSellingProducts] = useState<any[]>([]);
-  const [newArrivals, setNewArrivals] = useState<any[]>([]);
+  const navigate = useNavigate();
   const { user } = useAuthContext();
   const { t } = useLanguage();
-  const navigate = useNavigate();
+  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
+  const [topSellingProducts, setTopSellingProducts] = useState<Product[]>([]);
+  const [newArrivals, setNewArrivals] = useState<Product[]>([]);
 
   useEffect(() => {
-    if (!user) return;
     async function fetchWishlist() {
+      if (!user) return;
+
       try {
         const res = await fetch(apiUrl('/clients/user/wishlist'), {
           credentials: 'include',
-          headers: { ...getAuthHeaders() },
+          headers: getAuthHeaders(),
         });
+
         if (res.status === 401) {
-          toast.error('Session expired, please log in');
+          toast.error('Please log in to view wishlist');
           navigate('/auth');
           return;
         }
-        const data = await res.json();
 
-        if (!Array.isArray(data.wishlist)) {
+        const data = await res.json();
+        if (!data?.data || !Array.isArray(data.data)) {
           console.error('Invalid wishlist data:', data);
           toast.error('Failed to load wishlist');
           return;
         }
 
-        const formatted = data.wishlist.map((i: any) => ({
+        // Map and deduplicate wishlist items by product ID
+        const mappedItems = data.data.map((i: any) => ({
           id: i._id,
           name: i.title,
-          price: i.price,
-          discount: i.discount || 0,
+          price: i.price, // Final calculated price
+          basePrice: i.basePrice || i.price,
+          discount: i.discount,
+          tax: i.tax,
+          shippingCost: i.shippingCost,
           rating: i.rating?.toString() || '0',
           category: i.category || '',
           theme: i.theme || '',
@@ -71,7 +98,12 @@ const Wishlist = () => {
           inStock: i.inStock !== false,
         }));
 
-        setWishlistItems(formatted);
+        // Remove duplicates by keeping only unique product IDs
+        const uniqueItems = mappedItems.filter((item, index, self) =>
+          index === self.findIndex((t) => t.id === item.id)
+        );
+
+        setWishlistItems(uniqueItems);
       } catch (err) {
         console.error('Error loading wishlist:', err);
         toast.error('Error loading wishlist');
@@ -149,10 +181,9 @@ const Wishlist = () => {
     const theme = item.theme || '';
     const category = item.category || '';
     const rating = item.rating || '0';
-    const discount = item.discount || 0;
-    const price = item.price;
+    const price = item.price; // Final calculated price
     const Qty = 1;
-    const afterQtyprice = (price - discount) * Qty;
+    const afterQtyprice = price * Qty; // Price is already final
     const total = afterQtyprice;
     const image = [item.image];
 
@@ -164,7 +195,10 @@ const Wishlist = () => {
       color,
       gender,
       price,
-      discount,
+      basePrice: item.basePrice || price,
+      tax: item.tax,
+      shippingCost: item.shippingCost,
+      discount: item.discount,
       rating,
       category,
       theme,
@@ -206,7 +240,7 @@ const Wishlist = () => {
         {wishlistItems.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {wishlistItems.map((item) => (
-              <Card key={item.id} onClick={() => navigate(`/product/${item.id}`)} className="overflow-hidden">
+              <Card key={`wishlist-${item.id}`} onClick={() => navigate(`/product/${item.id}`)} className="overflow-hidden">
                 <div className="aspect-square relative bg-gray-100 overflow-hidden">
                   <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
                   {!item.inStock && (
@@ -269,7 +303,7 @@ const Wishlist = () => {
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12">{t('product.topSelling')}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {topSellingProducts.map((product, index) => (
-              <div key={product._id || index} className="bg-white rounded-lg shadow-sm p-4 hover:shadow-lg transition-shadow">
+              <div key={`top-selling-${product._id || index}`} className="bg-white rounded-lg shadow-sm p-4 hover:shadow-lg transition-shadow">
                 <Link to={`/product/${product._id}`} className="block">
                   <div className="aspect-square bg-gray-100 mb-3 sm:mb-4 rounded-lg overflow-hidden">
                     <img
@@ -302,7 +336,7 @@ const Wishlist = () => {
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12">{t('product.newArrivals')}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {newArrivals.map((product, index) => (
-              <div key={product._id || index} className="bg-white rounded-lg shadow-sm p-4 hover:shadow-lg transition-shadow">
+              <div key={`new-arrival-${product._id || index}`} className="bg-white rounded-lg shadow-sm p-4 hover:shadow-lg transition-shadow">
                 <Link to={`/product/${product._id}`} className="block">
                   <div className="aspect-square bg-gray-100 mb-3 sm:mb-4 rounded-lg overflow-hidden">
                     <img

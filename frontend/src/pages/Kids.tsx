@@ -213,6 +213,7 @@ const Kids = () => {
         )}
 
         {/* All Kids Products */}
+        {/*  
         {!loading && !error && (
           <section className="mb-20">
             <div className="text-center space-y-3 mb-12">
@@ -239,12 +240,14 @@ const Kids = () => {
             </div>
           </section>
         )}
+      */}
 
         {/* Special Sections */}
-        <section className="mb-16">
+        
+        {/* <section className="mb-16"> */}
           {/* Best Sellers Banner always visible */}
-            </section>
-        <section className="mb-20">
+        {/* </section> */}
+        {/* <section className="mb-20">
           {bestSellers.length > 0 && (
             <>
               <div className="relative mb-12">
@@ -290,7 +293,8 @@ const Kids = () => {
               </div>
             </>
           )}
-        </section>        <section className="mb-20">
+        </section>         */}
+        {/* <section className="mb-20">
           {newArrivals.length > 0 && (
             <>
               <div className="relative mb-12">
@@ -337,7 +341,7 @@ const Kids = () => {
               </div>
             </>
           )}
-        </section>
+        </section> */}
       </main>
 
       <Footer />

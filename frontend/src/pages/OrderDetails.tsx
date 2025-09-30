@@ -192,17 +192,20 @@ const OrderDetails: React.FC = () => {
       brand: 'N/A',
       color,
       gender: 'Unisex',
-      price,
-      discount,
+      price, // Use price from order item (already final calculated price)
+      basePrice: (item as any).basePrice || price,
+      tax: (item as any).tax,
+      shippingCost: (item as any).shippingCost,
+      discount: (item as any).discount || { type: 'percentage', value: 0 },
       rating: '0',
       category: '',
       theme: '',
       size,
       image: [imageSrc],
       Qty,
-      afterQtyprice: (price - discount) * Qty,
+      afterQtyprice: price * Qty, // Price is already final
       variation: { size, color, quantity: Qty },
-      total: (price - discount) * Qty,
+      total: price * Qty,
     };
   };
 

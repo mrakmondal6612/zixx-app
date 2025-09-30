@@ -1,8 +1,51 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 
 const ShippingPolicy = () => {
+  const [contactInfo, setContactInfo] = useState({ address: '', phone: '', email: '' });
+
+  // Load contact info from admin panel footer settings
+  useEffect(() => {
+    const loadContactInfo = async () => {
+      try {
+        const candidates: string[] = [];
+        const envBackend = (import.meta as any).env?.VITE_BACKEND_URL;
+        if (envBackend) candidates.push(String(envBackend).replace(/\/$/, ''));
+        const envFallback = (import.meta as any).env?.VITE_BACKEND_FALLBACK || (import.meta as any).env?.VITE_DEPLOYED_BACKEND;
+        if (envFallback) candidates.push(String(envFallback).replace(/\/$/, ''));
+        candidates.push('/api');
+
+        let response: Response | null = null;
+        for (const base of candidates) {
+          const url = `${base.replace(/\/$/, '')}/admin/footer`;
+          try {
+            const r = await fetch(url, { cache: 'no-store', credentials: 'include', headers: { Accept: 'application/json' } });
+            if (r.ok) {
+              response = r;
+              break;
+            }
+          } catch (e) {
+            // Continue to next candidate
+          }
+        }
+        if (response) {
+          const json = await response.json().catch(() => null);
+          if (json && json.contactInfo) {
+            setContactInfo({
+              address: json.contactInfo.address || '',
+              phone: json.contactInfo.phone || '',
+              email: json.contactInfo.email || 'contact@zixxapp.com'
+            });
+          }
+        }
+      } catch (e) {
+        // Use default fallback
+        setContactInfo({ address: '', phone: '', email: 'contact@zixxapp.com' });
+      }
+    };
+    loadContactInfo();
+  }, []);
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Header />
@@ -41,27 +84,24 @@ const ShippingPolicy = () => {
             <h2 className="text-2xl font-semibold mb-4">Address & Delivery Attempts</h2>
             <p className="mb-6 text-gray-600">
               Please ensure your shipping address and contact information are accurate at checkout. Our courier partners 
-              will attempt delivery up to 2–3 times. If undelivered, the package may be returned to us. We can reship on request; 
-              additional shipping fees may apply in such cases.
             </p>
 
             <h2 className="text-2xl font-semibold mb-4">Undelivered or Lost Packages</h2>
             <p className="mb-6 text-gray-600">
-              In the rare event your package is lost or undelivered, contact us within 7 days of the last tracking update at 
-              <a href="mailto:contact@zixxapp.com" className="text-black underline"> contact@zixxapp.com</a> with your order ID. 
+              In the rare event your package is lost or undelivered, contact us within 7 days of the last tracking update at
+              <a href={`mailto:${contactInfo.email}`} className="text-black underline"> {contactInfo.email}</a> with your order ID.
               We will coordinate with the courier to resolve the issue at the earliest.
             </p>
 
             <h2 className="text-2xl font-semibold mb-4">International Shipping</h2>
             <p className="mb-6 text-gray-600">
-              At this time, we primarily ship within India. For any special international shipping requests, please write to 
-              <a href="mailto:contact@zixxapp.com" className="text-black underline"> contact@zixxapp.com</a> before placing an order.
+              At this time, we primarily ship within India. For any special international shipping requests, please write to
+              <a href={`mailto:${contactInfo.email}`} className="text-black underline"> {contactInfo.email}</a> before placing an order.
             </p>
 
             <h2 className="text-2xl font-semibold mb-4">Delivery Delays</h2>
             <p className="text-gray-600">
               External factors (weather, strikes, remote area constraints, or courier network issues) can cause delays. We appreciate 
-              your patience and will keep you informed if we anticipate any unusual delay.
             </p>
           </div>
         </div>

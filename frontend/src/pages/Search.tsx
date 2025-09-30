@@ -180,15 +180,18 @@ const Search = () => {
                                 brand: product.brand || '',
                                 color: (product.color && product.color[0]) || 'Default Color',
                                 gender: product.gender || 'Unisex',
-                                price: product.price,
-                                discount: product.discount || 0,
+                                price: product.price, // Final calculated price
+                                basePrice: (product as any).basePrice || product.price,
+                                tax: (product as any).tax,
+                                shippingCost: (product as any).shippingCost,
+                                discount: product.discount,
                                 rating: product.rating?.toString() || '0',
                                 category: product.category || '',
                                 theme: product.theme || '',
                                 size: (product.size && product.size[0]) || 'Free',
                                 image: product.image || [],
                                 Qty: 1,
-                                afterQtyprice: product.price,
+                                afterQtyprice: product.price, // Price is already final
                                 total: product.price,
                                 variation: {
                                   size: (product.size && product.size[0]) || 'Free',

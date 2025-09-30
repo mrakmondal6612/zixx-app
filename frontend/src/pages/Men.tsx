@@ -165,7 +165,7 @@ const Men = () => {
               )}
 
               
-              {/* All Men's Products */}
+              {/* All Men's Products
               {allData.length > 0 && (
                 <section className="mb-20">
                   <div className="flex flex-col items-center mb-12 text-center">
@@ -188,11 +188,11 @@ const Men = () => {
                     ))}
                   </div>
                 </section>
-              )}
+              )} */}
 
               {/* Shop by Category */}
-              {Object.entries(groupedProducts).map(([subcategory, products]) => (
-                <section key={subcategory} className="mb-16">
+              {/* {Object.entries(groupedProducts).map(([subcategory, products]) => ( */}
+                {/* <section key={subcategory} className="mb-16"> */}
                   {/* <DynamicBanner
                     page="men"
                     position="hero"
@@ -205,8 +205,8 @@ const Men = () => {
                     }}
                     style={{ variant: 'pro', overlay: 'dark', cta: 'brand', radius: '2xl', hover: 'zoom' }}
                   /> */}
-                  <h3 className="text-xl font-semibold mb-4">{subcategory}</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                  {/* <h3 className="text-xl font-semibold mb-4">{subcategory}</h3> */}
+                  {/* <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
                     {products.map((p) => (
                       <ProductCard
                         key={p._id}
@@ -218,12 +218,12 @@ const Men = () => {
                         badge={p.theme?.toLowerCase().includes('best') ? 'Best Seller' : p.theme?.toLowerCase().includes('new') ? 'New Arrival' : undefined}
                       />
                     ))}
-                  </div>
-                </section>
-              ))}
+                  </div> */}
+                {/* </section> */}
+              {/* ))} */}
 
               {/* Best Seller */}
-              {bestSellers.length > 0 && (
+              {/* {bestSellers.length > 0 && (
               <div>
                 <section className="mb-20">
                   <div className="relative mb-12">
@@ -265,10 +265,10 @@ const Men = () => {
                   </div>
                 </section>
               </div>
-              )}
+              )} */}
 
               {/* New Arrivals */}
-              {newArrivals.length > 0 && (
+              {/* {newArrivals.length > 0 && (
                 <section className="mb-20">
                   <div className="relative mb-12">
                     <DynamicBanner
@@ -308,7 +308,7 @@ const Men = () => {
                     ))}
                   </div>
                 </section>
-              )}
+              )} */}
             </>
           )}
         </main>

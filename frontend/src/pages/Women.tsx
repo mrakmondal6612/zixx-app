@@ -165,7 +165,7 @@ const Women = () => {
         </section>
 
         {/* All Women's Products */}
-        {allData.length > 0 && (
+        {/*{allData.length > 0 && (
           <section className="mb-20">
             <div className="flex flex-col items-center mb-12 text-center">
               <span className="text-sm font-medium text-pink-600 dark:text-pink-400 mb-2">EXPLORE</span>
@@ -187,10 +187,10 @@ const Women = () => {
               ))}
             </div>
           </section>
-        )}
+        )}*/}
 
         {/* Product Grid by Category */}
-        {loading && (
+{/*{loading && (
           <div className="flex justify-center items-center min-h-[200px]">
             <div className="animate-pulse flex gap-2">
               <div className="h-2 w-2 bg-pink-500 rounded-full animate-bounce"></div>
@@ -238,7 +238,7 @@ const Women = () => {
 
 
         {/* Best Sellers Section */}
-        {bestSellers.length > 0 && (
+{/*{bestSellers.length > 0 && (
           <section className="mb-20">
             <div className="relative mb-12">
               <DynamicBanner
@@ -281,7 +281,7 @@ const Women = () => {
         )}
 
         {/* New Arrivals Section */}
-        {newArrivals.length > 0 && (
+       {/* {newArrivals.length > 0 && (
           <section className="mb-20">
             <div className="relative mb-12">
               <DynamicBanner
@@ -322,7 +322,7 @@ const Women = () => {
             </div>
           </section>
         )}
-
+    */}
       </main>
 
       <Footer />

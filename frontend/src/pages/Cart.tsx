@@ -15,23 +15,39 @@ interface CartItem {
   id: string;
   productId: string;
   name: string;
-  price: number;
+  price: number; // Final calculated price
+  basePrice?: number;
   quantity: number;
   image: string;
   size: string;
   color: string;
   brand: string;
   category?: string;
-  discount?: number;
+  discount?: {
+    type: 'percentage' | 'fixed' | 'coupon';
+    value: number;
+  } | number; // Can be object or number (legacy)
+  tax?: {
+    type: 'free' | 'percentage';
+    value: number;
+  };
+  shippingCost?: {
+    type: 'free' | 'fixed';
+    value: number;
+  };
   inStock?: boolean;
 }
 
 interface Product {
   _id: string;
   title: string;
-  price: number;
+  price: number; // Final calculated price
+  basePrice?: number;
   image: string | string[];
-  discount?: number;
+  discount?: {
+    type: 'percentage' | 'fixed' | 'coupon';
+    value: number;
+  } | number;
   category?: string;
 }
 
@@ -118,14 +134,17 @@ const Cart = () => {
           id: item._id,
           productId: item.productId,
           name: item.title,
-          price: item.price,
+          price: item.price, // Final calculated price
+          basePrice: item.basePrice || item.price,
           quantity: item.Qty,
           image: Array.isArray(item.image) ? item.image[0] : item.image,
           size: item.size || 'Standard',
           color: item.color || 'Default',
           brand: item.brand || 'Generic',
           category: item.category,
-          discount: item.discount || 0,
+          discount: item.discount,
+          tax: item.tax,
+          shippingCost: item.shippingCost,
           inStock: item.inStock !== false
         })));
       }
@@ -545,10 +564,51 @@ const Cart = () => {
   };
 
 
+  // Calculate pricing breakdown from cart items
+  const baseSubtotal = cartItems.reduce((sum, item) => {
+    const basePrice = item.basePrice || item.price;
+    return sum + (basePrice * item.quantity);
+  }, 0);
+
+  const totalTax = cartItems.reduce((sum, item) => {
+    if (item.tax && item.tax.type === 'percentage' && item.tax.value > 0) {
+      const basePrice = item.basePrice || item.price;
+      return sum + ((basePrice * item.quantity * item.tax.value) / 100);
+    }
+    return sum;
+  }, 0);
+
+  const totalShipping = cartItems.reduce((sum, item) => {
+    if (item.shippingCost && item.shippingCost.type === 'fixed' && item.shippingCost.value > 0) {
+      return sum + (item.shippingCost.value * item.quantity);
+    }
+    return sum;
+  }, 0);
+
+  const totalDiscount = cartItems.reduce((sum, item) => {
+    const basePrice = item.basePrice || item.price;
+    const itemBaseTotal = basePrice * item.quantity;
+    
+    if (item.discount && typeof item.discount === 'object') {
+      if (item.discount.type === 'percentage' && item.discount.value > 0) {
+        const priceWithTax = itemBaseTotal + ((itemBaseTotal * (item.tax?.value || 0)) / 100);
+        return sum + ((priceWithTax * item.discount.value) / 100);
+      } else if (item.discount.type === 'fixed' && item.discount.value > 0) {
+        return sum + (item.discount.value * item.quantity);
+      }
+    } else if (typeof item.discount === 'number' && item.discount > 0) {
+      // Legacy discount format
+      const priceWithTax = itemBaseTotal + ((itemBaseTotal * (item.tax?.value || 0)) / 100);
+      return sum + ((priceWithTax * item.discount) / 100);
+    }
+    return sum;
+  }, 0);
+
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = 5.99;
-  const tax = subtotal * 0.09;
-  const total = subtotal + shipping + tax;
+  const shipping = totalShipping;
+  const tax = totalTax;
+  const discount = totalDiscount;
+  const total = subtotal;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#FAFAFA] dark:bg-[#121212]">
@@ -600,9 +660,19 @@ const Cart = () => {
                               <h3 className="font-bold text-sm sm:text-base line-clamp-2 text-gray-900 dark:text-gray-100">{item.name}</h3>
                               <div className="flex items-center gap-1 flex-shrink-0">
                                 <span className="font-bold text-base sm:text-lg text-purple-600">₹{item.price.toFixed(2)}</span>
-                                {item.discount > 0 && (
-                                  <span className="text-xs font-medium text-green-600">-{item.discount}%</span>
-                                )}
+                                {(() => {
+                                  const discount = item.discount;
+                                  if (discount && typeof discount === 'object' && discount.value > 0) {
+                                    if (discount.type === 'percentage') {
+                                      return <span className="text-xs font-medium text-green-600">-{discount.value}%</span>;
+                                    } else if (discount.type === 'fixed') {
+                                      return <span className="text-xs font-medium text-green-600">-₹{discount.value}</span>;
+                                    }
+                                  } else if (typeof discount === 'number' && discount > 0) {
+                                    return <span className="text-xs font-medium text-green-600">-{discount}%</span>;
+                                  }
+                                  return null;
+                                })()}
                               </div>
                             </div>
 
@@ -681,24 +751,61 @@ const Cart = () => {
               <div className="bg-gradient-to-br from-pink-100 via-purple-100 to-indigo-100 rounded-3xl shadow-xl p-4 lg:sticky lg:top-28 border-2 border-white/60">
                 <h2 className="font-black text-xl mb-3 text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 drop-shadow">{t('cart.orderSummary')}</h2>
                 
-                {/* Compact Summary */}
+                {/* Detailed Price Breakdown */}
                 <div className="space-y-2 mb-3">
                   <div className="flex justify-between text-sm font-medium">
-                    <span className="text-gray-600">{t('cart.subtotal')} ({cartItems.length} items)</span>
-                    <span className="font-bold">₹{subtotal.toFixed(2)}</span>
+                    <span className="text-gray-600">Base Subtotal ({cartItems.length} items)</span>
+                    <span className="font-bold">₹{baseSubtotal.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-sm font-medium">
-                    <span className="text-gray-600">{t('cart.shipping')}</span>
-                    <span className="font-bold">₹{shipping.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-medium">
-                    <span className="text-gray-600">{t('cart.tax')}</span>
-                    <span className="font-bold">₹{tax.toFixed(2)}</span>
-                  </div>
+                  
+                  {totalTax > 0 && (
+                    <div className="flex justify-between text-sm font-medium text-green-700">
+                      <span className="flex items-center gap-1">
+                        <span>+ Tax (GST)</span>
+                      </span>
+                      <span className="font-bold">₹{totalTax.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  {totalShipping > 0 && (
+                    <div className="flex justify-between text-sm font-medium text-blue-700">
+                      <span className="flex items-center gap-1">
+                        <span>+ {t('cart.shipping')}</span>
+                      </span>
+                      <span className="font-bold">₹{totalShipping.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  {totalDiscount > 0 && (
+                    <div className="flex justify-between text-sm font-medium text-red-600">
+                      <span className="flex items-center gap-1">
+                        <span>- Discount</span>
+                      </span>
+                      <span className="font-bold">-₹{totalDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  {totalShipping === 0 && (
+                    <div className="flex justify-between text-sm font-medium">
+                      <span className="text-gray-600">{t('cart.shipping')}</span>
+                      <span className="font-bold text-green-600">FREE</span>
+                    </div>
+                  )}
+                  
                   <div className="border-t-2 border-dashed border-pink-300 pt-2 flex justify-between font-black text-lg">
                     <span className="uppercase tracking-wide text-indigo-700">{t('cart.total')}</span>
                     <span className="text-pink-600 animate-pulse">₹{total.toFixed(2)}</span>
                   </div>
+                  
+                  {/* Savings Display */}
+                  {totalDiscount > 0 && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-2 mt-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-green-700 font-medium">🎉 You're saving</span>
+                        <span className="text-green-700 font-bold">₹{totalDiscount.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Compact Address Summary */}
@@ -848,11 +955,23 @@ const Cart = () => {
                   <h3 className="text-sm sm:text-base font-bold mb-2 line-clamp-2 bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent group-hover:from-pink-500 group-hover:to-purple-600 transition-all duration-300">{product.title}</h3>
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-black text-base sm:text-xl bg-gradient-to-br from-purple-600 to-pink-500 bg-clip-text text-transparent">₹{product.price}</div>
-                    {product.discount > 0 && (
-                      <div className="px-2 py-1 bg-pink-100 dark:bg-pink-900/30 rounded-lg">
-                        <span className="text-xs font-bold text-pink-600 dark:text-pink-400">-{product.discount}%</span>
-                      </div>
-                    )}
+                    {(() => {
+                      const discount = product.discount;
+                      if (discount && typeof discount === 'object' && discount.value > 0 && discount.type === 'percentage') {
+                        return (
+                          <div className="px-2 py-1 bg-pink-100 dark:bg-pink-900/30 rounded-lg">
+                            <span className="text-xs font-bold text-pink-600 dark:text-pink-400">-{discount.value}%</span>
+                          </div>
+                        );
+                      } else if (typeof discount === 'number' && discount > 0) {
+                        return (
+                          <div className="px-2 py-1 bg-pink-100 dark:bg-pink-900/30 rounded-lg">
+                            <span className="text-xs font-bold text-pink-600 dark:text-pink-400">-{discount}%</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </Link>
               </div>
@@ -887,11 +1006,23 @@ const Cart = () => {
                   <h3 className="text-sm sm:text-base font-bold mb-2 line-clamp-2 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent group-hover:from-purple-500 group-hover:to-pink-500 transition-all duration-300">{product.title}</h3>
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-black text-base sm:text-xl bg-gradient-to-br from-pink-500 to-purple-500 bg-clip-text text-transparent">₹{product.price}</div>
-                    {product.discount > 0 && (
-                      <div className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                        <span className="text-xs font-bold text-purple-600 dark:text-purple-400">-{product.discount}%</span>
-                      </div>
-                    )}
+                    {(() => {
+                      const discount = product.discount;
+                      if (discount && typeof discount === 'object' && discount.value > 0 && discount.type === 'percentage') {
+                        return (
+                          <div className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                            <span className="text-xs font-bold text-purple-600 dark:text-purple-400">-{discount.value}%</span>
+                          </div>
+                        );
+                      } else if (typeof discount === 'number' && discount > 0) {
+                        return (
+                          <div className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                            <span className="text-xs font-bold text-purple-600 dark:text-purple-400">-{discount}%</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </Link>
               </div>

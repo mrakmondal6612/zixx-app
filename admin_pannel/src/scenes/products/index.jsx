@@ -105,9 +105,26 @@ const Product = ({ product, onDelete, onUpdate }) => {
         .map((s) => s.trim())
         .filter(Boolean);
     }
-    // price/discount as numbers when possible
-    if (payload.price !== undefined) payload.price = Number(payload.price);
-    if (payload.discount !== undefined && payload.discount !== "") payload.discount = Number(payload.discount);
+    // Handle pricing fields
+    if (payload.basePrice !== undefined) payload.basePrice = Number(payload.basePrice);
+    if (payload.tax) {
+      payload.tax = {
+        type: payload.tax.type || 'free',
+        value: Number(payload.tax.value) || 0
+      };
+    }
+    if (payload.shippingCost) {
+      payload.shippingCost = {
+        type: payload.shippingCost.type || 'free',
+        value: Number(payload.shippingCost.value) || 0
+      };
+    }
+    if (payload.discount) {
+      payload.discount = {
+        type: payload.discount.type || 'percentage',
+        value: Number(payload.discount.value) || 0
+      };
+    }
     // stock -> supply mapping
     if (editedProduct.stock !== undefined || editedProduct.supply !== undefined) {
       const supplyVal = editedProduct.stock ?? editedProduct.supply ?? 1;
@@ -232,18 +249,56 @@ const Product = ({ product, onDelete, onUpdate }) => {
             <TextField
               fullWidth
               margin="dense"
-              name="price"
-              label="Price"
-              value={editedProduct.price}
+              name="basePrice"
+              label="Base Price (Rs.)"
+              type="number"
+              value={editedProduct.basePrice || editedProduct.price}
               onChange={handleInputChange}
             />
             <TextField
               fullWidth
               margin="dense"
+              name="tax"
+              label="Tax (type: free/percentage, value: number)"
+              value={editedProduct.tax ? `${editedProduct.tax.type}, ${editedProduct.tax.value}` : 'free, 0'}
+              helperText="Edit in format: type, value (e.g., percentage, 18)"
+              onChange={(e) => {
+                const [type, value] = e.target.value.split(',').map(s => s.trim());
+                setEditedProduct(prev => ({
+                  ...prev,
+                  tax: { type: type || 'free', value: Number(value) || 0 }
+                }));
+              }}
+            />
+            <TextField
+              fullWidth
+              margin="dense"
+              name="shippingCost"
+              label="Shipping (type: free/fixed, value: Rs.)"
+              value={editedProduct.shippingCost ? `${editedProduct.shippingCost.type}, ${editedProduct.shippingCost.value}` : 'free, 0'}
+              helperText="Edit in format: type, value (e.g., fixed, 50)"
+              onChange={(e) => {
+                const [type, value] = e.target.value.split(',').map(s => s.trim());
+                setEditedProduct(prev => ({
+                  ...prev,
+                  shippingCost: { type: type || 'free', value: Number(value) || 0 }
+                }));
+              }}
+            />
+            <TextField
+              fullWidth
+              margin="dense"
               name="discount"
-              label="Discount"
-              value={editedProduct.discount}
-              onChange={handleInputChange}
+              label="Discount (type: percentage/fixed/coupon, value)"
+              value={editedProduct.discount ? (typeof editedProduct.discount === 'object' ? `${editedProduct.discount.type}, ${editedProduct.discount.value}` : `percentage, ${editedProduct.discount}`) : 'percentage, 0'}
+              helperText="Edit in format: type, value (e.g., percentage, 10)"
+              onChange={(e) => {
+                const [type, value] = e.target.value.split(',').map(s => s.trim());
+                setEditedProduct(prev => ({
+                  ...prev,
+                  discount: { type: type || 'percentage', value: Number(value) || 0 }
+                }));
+              }}
             />
             <TextField
               fullWidth
@@ -316,7 +371,7 @@ const Product = ({ product, onDelete, onUpdate }) => {
                 component="div"
                 sx={{ mt: 1, fontWeight: "bold", color: theme.palette.mode === "dark" ? "#A692F6" : "#87068F" }}
               >
-                ₹{Number(product.price).toFixed(2)}
+                ₹{Math.ceil(Number(product.price))}
               </Typography>
             </Typography>
             <Typography
@@ -399,13 +454,37 @@ const Product = ({ product, onDelete, onUpdate }) => {
           </Typography>
           <Typography>Size: {Array.isArray(product.size) ? product.size.join(", ") : (product.size ?? "")}</Typography>
           <Typography>Subcategory: {product.subcategory}</Typography>
-          <Typography>Discount: {product.discount}%</Typography>
           <Typography>Theme: {product.theme}</Typography>
           <Typography>Supply Left: {product.supply}</Typography>
-          {product.features && (Array.isArray(product.features) ? product.features.length > 0 : String(product.features).trim()) && (
+          <Divider sx={{ my: 1.5 }} />
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Pricing Breakdown:</Typography>
+          <Typography>Base Price: ₹{Number(product.basePrice || product.price).toFixed(2)}</Typography>
+          {product.tax && (
             <Typography>
-              Features: {Array.isArray(product.features) ? product.features.join(" • ") : String(product.features)}
+              Tax: {product.tax.type === 'percentage' ? `${product.tax.value}%` : 'Free'}
             </Typography>
+          )}
+          {product.shippingCost && (
+            <Typography>
+              Shipping: {product.shippingCost.type === 'fixed' ? `₹${product.shippingCost.value}` : 'Free'}
+            </Typography>
+          )}
+          {product.discount && (
+            <Typography>
+              Discount: {product.discount.type === 'percentage' ? `${product.discount.value}%` : 
+                        product.discount.type === 'fixed' ? `₹${product.discount.value}` : 
+                        product.discount.type === 'coupon' ? 'Coupon (at checkout)' : 
+                        `${product.discount}%`}
+            </Typography>
+          )}
+          <Typography sx={{ fontWeight: 600, mt: 1 }}>Final Price: ₹{Math.ceil(Number(product.price))}</Typography>
+          {product.features && (Array.isArray(product.features) ? product.features.length > 0 : String(product.features).trim()) && (
+            <>
+              <Divider sx={{ my: 1.5 }} />
+              <Typography>
+                Features: {Array.isArray(product.features) ? product.features.join(" • ") : String(product.features)}
+              </Typography>
+            </>
           )}
         </CardContent>
       </Collapse>
@@ -427,6 +506,13 @@ const Products = () => {
   const [newProduct, setNewProduct] = useState({
     title: "",
     description: "",
+    basePrice: "",
+    taxType: "free",
+    taxValue: "",
+    shippingType: "free",
+    shippingValue: "",
+    discountType: "percentage",
+    discountValue: "",
     price: "",
     category: "",
     subcategory: "",
@@ -434,7 +520,6 @@ const Products = () => {
     images: "",
     size: "",
     colors: "",
-    discount: "",
     stock: "1",
     brand: "",
     theme: "",
@@ -458,6 +543,36 @@ const Products = () => {
     "Kurta",
   ];
 
+  // Calculate final price whenever pricing fields change
+  const calculatePrice = (base, taxT, taxV, shipT, shipV, discT, discV) => {
+    let finalPrice = Number(base) || 0;
+    
+    // Add tax
+    if (taxT === 'percentage' && taxV > 0) {
+      finalPrice += (finalPrice * Number(taxV)) / 100;
+    }
+    
+    // Add shipping
+    if (shipT === 'fixed' && shipV > 0) {
+      finalPrice += Number(shipV);
+    }
+    
+    // Subtract discount
+    if (discV > 0) {
+      if (discT === 'percentage') {
+        finalPrice -= (finalPrice * Number(discV)) / 100;
+      } else if (discT === 'fixed') {
+        finalPrice -= Number(discV);
+      }
+    }
+    
+    // Round up to nearest integer (upper bound) if there are decimal points
+    // Example: 199.52 -> 200, 199.11 -> 200, 199.82 -> 200
+    finalPrice = Math.ceil(Math.max(0, finalPrice));
+    
+    return finalPrice;
+  };
+
   const handleNewChange = (e) => {
     const { name, value } = e.target;
     if (name === 'images') {
@@ -467,7 +582,23 @@ const Products = () => {
       const newUrlEntries = urls.map((u)=> prevUrlMap.get(u) || { url: u, from: 'url', caption: '', alt: '' });
       setImagesList([...newUrlEntries, ...prevUploaded]);
     }
-    setNewProduct((p) => ({ ...p, [name]: value }));
+    
+    const updatedProduct = { ...newProduct, [name]: value };
+    
+    // Recalculate price if pricing fields changed
+    if (['basePrice', 'taxType', 'taxValue', 'shippingType', 'shippingValue', 'discountType', 'discountValue'].includes(name)) {
+      updatedProduct.price = calculatePrice(
+        updatedProduct.basePrice,
+        updatedProduct.taxType,
+        updatedProduct.taxValue,
+        updatedProduct.shippingType,
+        updatedProduct.shippingValue,
+        updatedProduct.discountType,
+        updatedProduct.discountValue
+      );
+    }
+    
+    setNewProduct(updatedProduct);
   };
 
   const handleAddSubmit = async () => {
@@ -482,7 +613,19 @@ const Products = () => {
       const body = {
         title: newProduct.title.trim(),
         description: newProduct.description.trim(),
-        price: Number(newProduct.price),
+        basePrice: Number(newProduct.basePrice),
+        tax: {
+          type: newProduct.taxType,
+          value: newProduct.taxValue === "" ? 0 : Number(newProduct.taxValue)
+        },
+        shippingCost: {
+          type: newProduct.shippingType,
+          value: newProduct.shippingValue === "" ? 0 : Number(newProduct.shippingValue)
+        },
+        discount: {
+          type: newProduct.discountType,
+          value: newProduct.discountValue === "" ? 0 : Number(newProduct.discountValue)
+        },
         category: newProduct.category.trim(),
         subcategory: newProduct.subcategory.trim(),
         gender: newProduct.gender.trim(),
@@ -490,7 +633,6 @@ const Products = () => {
         size: sizeArr,
         colors: colorArr, // required by controller validation
         color: colorArr,  // persisted by schema (field name is `color`)
-        discount: newProduct.discount === "" ? 0 : Number(newProduct.discount),
         supply: newProduct.stock === "" ? 1 : Number(newProduct.stock),
         brand: newProduct.brand.trim() || undefined,
         theme: newProduct.theme.trim() || undefined,
@@ -500,8 +642,10 @@ const Products = () => {
       setToast({ open: true, severity: "success", message: "Product added." });
       setAddOpen(false);
       setNewProduct({
-        title: "", description: "", price: "", category: "", subcategory: "", gender: "",
-        images: "", size: "", colors: "", discount: "", stock: "1", brand: "", theme: "", features: "",
+        title: "", description: "", basePrice: "", taxType: "free", taxValue: "",
+        shippingType: "free", shippingValue: "", discountType: "percentage", discountValue: "",
+        price: "", category: "", subcategory: "", gender: "",
+        images: "", size: "", colors: "", stock: "1", brand: "", theme: "", features: "",
       });
       setImagesList([]);
       refetch();
@@ -940,7 +1084,18 @@ const Products = () => {
               <TextField fullWidth required label="Title" name="title" value={newProduct.title} onChange={handleNewChange} helperText="Product title (required)" />
             </Grid>
             <Grid item xs={12}>
-              <TextField fullWidth required multiline rows={3} label="Description" name="description" value={newProduct.description} onChange={handleNewChange} helperText="Short description (required)" />
+              <TextField 
+                fullWidth 
+                required 
+                multiline 
+                rows={6} 
+                label="Description" 
+                name="description" 
+                value={newProduct.description} 
+                onChange={handleNewChange} 
+                helperText="Supports formatting: Use **bold**, *italic*, and line breaks. Example: **Features:**\n• Premium quality\n• Durable material" 
+                placeholder="Enter product description with formatting...&#10;&#10;Use **text** for bold&#10;Use *text* for italic&#10;Use • for bullet points&#10;Press Enter for new lines"
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
               <Autocomplete
@@ -967,11 +1122,110 @@ const Products = () => {
                 )}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField fullWidth required label="Price" name="price" type="number" value={newProduct.price} onChange={handleNewChange} />
+            <Grid item xs={12}>
+              <Divider sx={{ my: 1.5 }} />
+              <Typography variant="subtitle1" sx={{ mb: 1.5, fontWeight: 600 }}>Pricing Details</Typography>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField fullWidth label="Discount (%)" name="discount" type="number" value={newProduct.discount} onChange={handleNewChange} />
+              <TextField 
+                fullWidth 
+                required 
+                label="Base Price (Rs.)" 
+                name="basePrice" 
+                type="number" 
+                value={newProduct.basePrice} 
+                onChange={handleNewChange}
+                helperText="Original product price"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField 
+                fullWidth 
+                label="Final Price (Rs.)" 
+                value={newProduct.price}
+                disabled
+                helperText="Auto-calculated & rounded up to nearest whole number"
+                InputProps={{
+                  style: { fontWeight: 'bold', color: '#1976d2' }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth>
+                <InputLabel>Tax Type</InputLabel>
+                <Select
+                  name="taxType"
+                  value={newProduct.taxType}
+                  label="Tax Type"
+                  onChange={handleNewChange}
+                >
+                  <MenuItem value="free">Free (No Tax)</MenuItem>
+                  <MenuItem value="percentage">Percentage</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={2}>
+              <TextField 
+                fullWidth 
+                label="Tax %" 
+                name="taxValue" 
+                type="number" 
+                value={newProduct.taxValue} 
+                onChange={handleNewChange}
+                disabled={newProduct.taxType === 'free'}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth>
+                <InputLabel>Shipping</InputLabel>
+                <Select
+                  name="shippingType"
+                  value={newProduct.shippingType}
+                  label="Shipping"
+                  onChange={handleNewChange}
+                >
+                  <MenuItem value="free">Free Shipping</MenuItem>
+                  <MenuItem value="fixed">Fixed Amount</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={2}>
+              <TextField 
+                fullWidth 
+                label="Amount (Rs.)" 
+                name="shippingValue" 
+                type="number" 
+                value={newProduct.shippingValue} 
+                onChange={handleNewChange}
+                disabled={newProduct.shippingType === 'free'}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth>
+                <InputLabel>Discount Type</InputLabel>
+                <Select
+                  name="discountType"
+                  value={newProduct.discountType}
+                  label="Discount Type"
+                  onChange={handleNewChange}
+                >
+                  <MenuItem value="percentage">Percentage (%)</MenuItem>
+                  <MenuItem value="fixed">Fixed (Rs.)</MenuItem>
+                  <MenuItem value="coupon">Coupon (at checkout)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={2}>
+              <TextField 
+                fullWidth 
+                label={newProduct.discountType === 'percentage' ? 'Discount %' : 'Discount (Rs.)'}
+                name="discountValue" 
+                type="number" 
+                value={newProduct.discountValue} 
+                onChange={handleNewChange}
+                disabled={newProduct.discountType === 'coupon'}
+                helperText={newProduct.discountType === 'coupon' ? 'Applied at checkout' : ''}
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField fullWidth label="Stock (quantity)" name="stock" type="number" value={newProduct.stock} onChange={handleNewChange} helperText="Default 1. 0 means Out of Stock." />
@@ -1050,13 +1304,14 @@ const Products = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Features (comma or new line separated)"
+                label="Features"
                 name="features"
                 value={newProduct.features}
                 onChange={handleNewChange}
-                helperText="Example: 100% cotton, Regular fit, Machine washable"
+                helperText="Supports formatting: Use **bold**, *italic*, and line breaks. Each line will be a bullet point. Example: **Premium Quality**\n*Soft and comfortable*\nMachine washable"
+                placeholder="Enter product features with formatting...&#10;&#10;Use **text** for bold&#10;Use *text* for italic&#10;Each new line becomes a bullet point&#10;&#10;Example:&#10;**100% Cotton**&#10;*Breathable* fabric&#10;Machine washable"
                 multiline
-                rows={3}
+                rows={5}
               />
             </Grid>
           </Grid>
@@ -1073,7 +1328,7 @@ const Products = () => {
               !newProduct.category.trim() ||
               !newProduct.subcategory.trim() ||
               !newProduct.gender.trim() ||
-              !newProduct.price || Number(newProduct.price) <= 0 ||
+              !newProduct.basePrice || Number(newProduct.basePrice) <= 0 ||
               (imagesList.length === 0) ||
               (newProduct.size.split(',').map(s=>s.trim()).filter(Boolean).length === 0) ||
               (newProduct.colors.split(',').map(s=>s.trim()).filter(Boolean).length === 0) ||

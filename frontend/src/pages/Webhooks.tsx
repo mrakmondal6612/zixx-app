@@ -1,9 +1,52 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
 import { CodeBlock } from '@/components/ui/code-block';
 
 const Webhooks = () => {
+  const [contactInfo, setContactInfo] = useState({ address: '', phone: '', email: '' });
+
+  // Load contact info from admin panel footer settings
+  useEffect(() => {
+    const loadContactInfo = async () => {
+      try {
+        const candidates: string[] = [];
+        const envBackend = (import.meta as any).env?.VITE_BACKEND_URL;
+        if (envBackend) candidates.push(String(envBackend).replace(/\/$/, ''));
+        const envFallback = (import.meta as any).env?.VITE_BACKEND_FALLBACK || (import.meta as any).env?.VITE_DEPLOYED_BACKEND;
+        if (envFallback) candidates.push(String(envFallback).replace(/\/$/, ''));
+        candidates.push('/api');
+
+        let response: Response | null = null;
+        for (const base of candidates) {
+          const url = `${base.replace(/\/$/, '')}/admin/footer`;
+          try {
+            const r = await fetch(url, { cache: 'no-store', credentials: 'include', headers: { Accept: 'application/json' } });
+            if (r.ok) {
+              response = r;
+              break;
+            }
+          } catch (e) {
+            // Continue to next candidate
+          }
+        }
+        if (response) {
+          const json = await response.json().catch(() => null);
+          if (json && json.contactInfo) {
+            setContactInfo({
+              address: json.contactInfo.address || '',
+              phone: json.contactInfo.phone || '',
+              email: json.contactInfo.email || 'dev@zixxapp.com'
+            });
+          }
+        }
+      } catch (e) {
+        // Use default fallback
+        setContactInfo({ address: '', phone: '', email: 'dev@zixxapp.com' });
+      }
+    };
+    loadContactInfo();
+  }, []);
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Header />
@@ -113,7 +156,7 @@ const Webhooks = () => {
             <h2 className="text-2xl font-semibold mb-4">Need Help?</h2>
             <p className="text-gray-600">
               For any questions about webhooks, please contact our support team at
-              <a href="mailto:dev@zixxapp.com" className="text-black underline"> dev@zixxapp.com</a>.
+              <a href={`mailto:${contactInfo.email}`} className="text-black underline"> {contactInfo.email}</a>.
             </p>
           </div>
         </div>

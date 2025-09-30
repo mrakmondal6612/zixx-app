@@ -1,8 +1,52 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer/Footer';
+import { apiUrl, getAuthHeaders } from '@/lib/api';
 
 const ReturnsRefunds = () => {
+  const [contactInfo, setContactInfo] = useState({ address: '', phone: '', email: '' });
+
+  // Load contact info from admin panel footer settings
+  useEffect(() => {
+    const loadContactInfo = async () => {
+      try {
+        const candidates: string[] = [];
+        const envBackend = (import.meta as any).env?.VITE_BACKEND_URL;
+        if (envBackend) candidates.push(String(envBackend).replace(/\/$/, ''));
+        const envFallback = (import.meta as any).env?.VITE_BACKEND_FALLBACK || (import.meta as any).env?.VITE_DEPLOYED_BACKEND;
+        if (envFallback) candidates.push(String(envFallback).replace(/\/$/, ''));
+        candidates.push('/api');
+
+        let response: Response | null = null;
+        for (const base of candidates) {
+          const url = `${base.replace(/\/$/, '')}/admin/footer`;
+          try {
+            const r = await fetch(url, { cache: 'no-store', credentials: 'include', headers: { Accept: 'application/json' } });
+            if (r.ok) {
+              response = r;
+              break;
+            }
+          } catch (e) {
+            // Continue to next candidate
+          }
+        }
+        if (response) {
+          const json = await response.json().catch(() => null);
+          if (json && json.contactInfo) {
+            setContactInfo({
+              address: json.contactInfo.address || '',
+              phone: json.contactInfo.phone || '',
+              email: json.contactInfo.email || 'contact@zixxapp.com'
+            });
+          }
+        }
+      } catch (e) {
+        // Use default fallback
+        setContactInfo({ address: '', phone: '', email: 'wecare@zixx.in' });
+      }
+    };
+    loadContactInfo();
+  }, []);
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Header />
@@ -57,14 +101,13 @@ const ReturnsRefunds = () => {
 
             <h2 className="text-2xl font-semibold mb-4">Cancellations</h2>
             <p className="mb-6 text-gray-600">
-              Orders can be cancelled before they are shipped. If already shipped, please refuse delivery or initiate a return after delivery.
             </p>
 
             <h2 className="text-2xl font-semibold mb-4">Need Help?</h2>
             <p className="text-gray-600">
               For any queries, write to us at
-              <a href="mailto:contact@zixxapp.com" className="text-black underline"> contact@zixxapp.com</a>
-              with your order ID, and we’ll be happy to assist.
+              <a href={`mailto:${contactInfo.email}`} className="text-black underline"> {contactInfo.email} {" "}</a>
+              with your order ID, and we'll be happy to assist.
             </p>
           </div>
         </div>

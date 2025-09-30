@@ -6,19 +6,31 @@ export interface ProductCardProps {
   id: string;
   title: string;
   image?: string;
-  price: number;
-  discount?: number; // percentage
+  price: number; // Final calculated price
+  basePrice?: number; // Original price
+  discount?: {
+    type: 'percentage' | 'fixed' | 'coupon';
+    value: number;
+  } | number; // Can be object (new) or number (legacy)
   oldPrice?: number; // optional explicit old price
   reviews?: number; // optional review count
   badge?: string; // e.g., 'Best Seller', 'New Arrival'
   className?: string;
 }
 
-const formatOldPrice = (price: number, discount?: number, oldPrice?: number) => {
+const formatOldPrice = (price: number, basePrice?: number, discount?: any, oldPrice?: number) => {
   if (oldPrice && oldPrice > price) return oldPrice.toFixed(2);
-  if (discount && discount > 0 && discount < 100) {
-    const base = price / (1 - discount / 100);
-    return base.toFixed(2);
+  if (basePrice && basePrice > price) return basePrice.toFixed(2);
+  
+  // Handle discount object or number
+  if (discount) {
+    if (typeof discount === 'object' && discount.type === 'percentage' && discount.value > 0 && discount.value < 100) {
+      const base = price / (1 - discount.value / 100);
+      return base.toFixed(2);
+    } else if (typeof discount === 'number' && discount > 0 && discount < 100) {
+      const base = price / (1 - discount / 100);
+      return base.toFixed(2);
+    }
   }
   return '';
 };
@@ -28,13 +40,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   title,
   image,
   price,
-  discount = 0,
+  basePrice,
+  discount,
   oldPrice,
   reviews,
   badge,
   className = ''
 }) => {
-  const computedOld = formatOldPrice(price, discount, oldPrice);
+  const computedOld = formatOldPrice(price, basePrice, discount, oldPrice);
   return (
     <Link to={`/product/${id}`} className={`group ${className}`}>
       <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300">

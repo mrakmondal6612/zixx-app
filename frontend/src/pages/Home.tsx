@@ -217,7 +217,7 @@ const Home = () => {
         )}
 
         {/* Featured Collection Banner */}
-        <section className="mb-20">
+       {/* <section className="mb-20">
           <div className="flex flex-col items-center mb-12 text-center">
             <span className="text-sm font-medium text-pink-600 dark:text-pink-400 mb-2">TRENDING NOW</span>
             <h2 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 bg-clip-text text-transparent animate-text-shine">Featured Collection</h2>
@@ -237,6 +237,7 @@ const Home = () => {
             style={{ variant: 'pro', overlay: 'dark', cta: 'neutral', radius: '2xl', hover: 'zoom' }}
           />
         </section>
+        )*/}
 
         {/* Best Sellers Section */}
         {bestSellers.length > 0 && (
@@ -264,7 +265,7 @@ const Home = () => {
         )}
 
         {/* Men's Collection Promo */}
-        <section className="mb-20">
+       {/* <section className="mb-20">
           <div className="relative">
             <DynamicBanner
               page="home"
@@ -283,6 +284,7 @@ const Home = () => {
             </div>
           </div>
         </section>
+        )*/}
 
         {/* All Collection */}
         {products.length > 0 && (

@@ -29,8 +29,20 @@ interface ProductType {
   title: string;
   description?: string;
   brand?: string;
-  price: number;
-  discount: number;
+  basePrice?: number; // Original product price
+  price: number; // Final calculated price
+  tax?: {
+    type: 'free' | 'percentage';
+    value: number;
+  };
+  shippingCost?: {
+    type: 'free' | 'fixed';
+    value: number;
+  };
+  discount?: {
+    type: 'percentage' | 'fixed' | 'coupon';
+    value: number;
+  } | number; // Can be object (new schema) or number (legacy)
   oldPrice?: number;
   image?: string[];
   size?: string[];
@@ -54,6 +66,24 @@ interface ProductType {
   supply?: number;
 }
 
+// Helper function to render formatted text
+const formatDescription = (text: string) => {
+  if (!text) return null;
+  
+  return text.split('\n').map((line, index) => {
+    // Replace **text** with bold
+    let formattedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Replace *text* with italic
+    formattedLine = formattedLine.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    // Replace • or - at start with bullet point
+    formattedLine = formattedLine.replace(/^[•\-]\s*/, '• ');
+    
+    return (
+      <span key={index} dangerouslySetInnerHTML={{ __html: formattedLine }} className="block" />
+    );
+  });
+};
+
 const Product = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -68,6 +98,8 @@ const Product = () => {
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  const [showFullFeatures, setShowFullFeatures] = useState(false);
   // Image zoom state
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomOrigin, setZoomOrigin] = useState<{ x: string; y: string }>({ x: '50%', y: '50%' });
@@ -159,6 +191,29 @@ const Product = () => {
     fetchProduct();
   }, [id, location.search]);
 
+  // Check if product is in wishlist
+  useEffect(() => {
+    if (!product || !user) return;
+    
+    const checkWishlistStatus = async () => {
+      try {
+        const res = await axios.get(
+          apiUrl('/clients/user/wishlist'),
+          { withCredentials: true, headers: { ...getAuthHeaders() } }
+        );
+        
+        if (res.data?.data && Array.isArray(res.data.data)) {
+          const isInWishlist = res.data.data.some((item: any) => item._id === product._id);
+          setIsWishlisted(isInWishlist);
+        }
+      } catch (err) {
+        console.error('Error checking wishlist status:', err);
+      }
+    };
+    
+    checkWishlistStatus();
+  }, [product?._id, user]);
+
   // Fetch related products based on current product
   useEffect(() => {
     if (!product) return;
@@ -238,16 +293,19 @@ const Product = () => {
         brand: product.brand || "N/A",
         color: selectedColor || 'Default Color',
         gender: product.gender || 'Unisex',
-        price: product.price,
-        discount: product.discount || 0,
+        price: product.price, // Final calculated price
+        basePrice: product.basePrice || product.price,
+        tax: product.tax,
+        shippingCost: product.shippingCost,
+        discount: product.discount,
         rating: product.rating?.toString() || '0',
         category: product.category || "N/A",
         theme: product.theme || "N/A",
         size: selectedSize || 'Free',
         image: product.image || [],
         Qty: quantity,
-        afterQtyprice: (product.price - (product.discount || 0)) * quantity,
-        total: (product.price - (product.discount || 0)) * quantity,
+        afterQtyprice: product.price * quantity, // Price is already final
+        total: product.price * quantity,
         variation: { size: selectedSize, color: selectedColor, quantity },
       },
       {
@@ -268,24 +326,34 @@ const Product = () => {
   const handleAddToWishlist = async () => {
     if (!ensureLoggedIn() || !product) return;
     try {
-      const res = await axios.post(
-        apiUrl('/clients/user/wishlist/add'),
-        { productId: product._id },
-        { withCredentials: true, headers: { ...getAuthHeaders() } }
-      );
-
-      if (res.data?.ok || res.data?.success) {
-        toast.success(`Added ${product.title} to wishlist!`);
-        setIsWishlisted(true);
-
-        const check = await axios.get(
-          apiUrl('/clients/user/wishlist'),
+      if (isWishlisted) {
+        // Remove from wishlist
+        const res = await axios.post(
+          apiUrl('/clients/user/wishlist/remove'),
+          { productId: product._id },
           { withCredentials: true, headers: { ...getAuthHeaders() } }
         );
-      } else toast.error(res.data?.message || 'Failed to add to wishlist');
+
+        if (res.data?.ok || res.data?.success) {
+          toast.success(`Removed ${product.title} from wishlist!`);
+          setIsWishlisted(false);
+        } else toast.error(res.data?.message || 'Failed to remove from wishlist');
+      } else {
+        // Add to wishlist
+        const res = await axios.post(
+          apiUrl('/clients/user/wishlist/add'),
+          { productId: product._id },
+          { withCredentials: true, headers: { ...getAuthHeaders() } }
+        );
+
+        if (res.data?.ok || res.data?.success) {
+          toast.success(`Added ${product.title} to wishlist!`);
+          setIsWishlisted(true);
+        } else toast.error(res.data?.message || 'Failed to add to wishlist');
+      }
     } catch (err: any) {
       if (err?.response?.status === 401) navigate('/auth');
-      else toast.error(err?.response?.data?.message || 'Add to wishlist failed');
+      else toast.error(err?.response?.data?.message || 'Wishlist operation failed');
     }
   };
 
@@ -375,17 +443,65 @@ const Product = () => {
                 {product.reviewCount} reviews
               </span>
             </div>
+            {/* Product Description */}
+            {product.description && (
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-2xl p-4 md:p-5 backdrop-blur-xl border border-white/20">
+                <h3 className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500 mb-3">Description</h3>
+                <div className={`text-sm text-gray-700 dark:text-gray-300 space-y-1 whitespace-pre-wrap overflow-hidden transition-all duration-300 ${showFullDescription ? 'max-h-[1000px]' : 'max-h-32'}`}>
+                  {formatDescription(product.description)}
+                </div>
+                {product.description.split('\n').length > 3 && (
+                  <button
+                    onClick={() => setShowFullDescription(!showFullDescription)}
+                    className="mt-3 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1 transition-colors"
+                  >
+                    {showFullDescription ? (
+                      <>
+                        Show less
+                        <ChevronLeft className="w-4 h-4" />
+                      </>
+                    ) : (
+                      <>
+                        Read more
+                        <ChevronRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/10 dark:to-pink-900/10 rounded-2xl p-4 md:p-5 backdrop-blur-xl border border-white/20">
               <h3 className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 mb-3">Product Features</h3>
               {product.features && Array.isArray(product.features) && product.features.length > 0 ? (
-                <ul className="text-sm space-y-2">
-                  {product.features.map((feature, index) => (
-                    <li key={index} className="flex items-center gap-2">
-                      <span className={`w-1.5 h-1.5 rounded-full ${index % 2 === 0 ? 'bg-purple-400' : 'bg-pink-400'}`}></span>
-                      <span className="text-gray-700 dark:text-gray-300">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <ul className={`text-sm space-y-2 overflow-hidden transition-all duration-300 ${showFullFeatures ? 'max-h-none' : 'max-h-40'}`}>
+                    {product.features.map((feature, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <span className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${index % 2 === 0 ? 'bg-purple-400' : 'bg-pink-400'}`}></span>
+                        <span className="text-gray-700 dark:text-gray-300">{formatDescription(feature)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {product.features.length > 5 && (
+                    <button
+                      onClick={() => setShowFullFeatures(!showFullFeatures)}
+                      className="mt-3 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 flex items-center gap-1 transition-colors"
+                    >
+                      {showFullFeatures ? (
+                        <>
+                          Show less
+                          <ChevronLeft className="w-4 h-4 rotate-90" />
+                        </>
+                      ) : (
+                        <>
+                          Read more
+                          <ChevronRight className="w-4 h-4 rotate-90" />
+                        </>
+                      )}
+                    </button>
+                  )}
+                </>
               ) : (
                 <ul className="text-sm space-y-2">
                   {product.category === 'Shirt' || product.category === 'T-Shirt' ? (
@@ -489,14 +605,41 @@ const Product = () => {
             </div>
             <div className="flex items-center gap-3 flex-wrap bg-white/50 dark:bg-black/20 rounded-2xl p-4 backdrop-blur-sm border border-white/20">
               <span className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">₹{product.price}</span>
-              {product.discount > 0 && (
-                <>
-                  <span className="text-lg md:text-xl text-muted-foreground line-through">₹{(product.price/(1 - product.discount/100)).toFixed(2)}</span>
-                  <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 rounded-full font-bold text-sm animate-pulse">
-                    {Math.round(product.discount)}% OFF
-                  </Badge>
-                </>
-              )}
+              {(() => {
+                // Calculate discount display
+                const basePrice = product.basePrice || product.price;
+                const discount = product.discount;
+                let showDiscount = false;
+                let discountPercent = 0;
+                let oldPrice = basePrice;
+                
+                if (discount && typeof discount === 'object' && discount.value > 0) {
+                  if (discount.type === 'percentage') {
+                    discountPercent = discount.value;
+                    showDiscount = true;
+                  } else if (discount.type === 'fixed' && basePrice > product.price) {
+                    discountPercent = ((basePrice - product.price) / basePrice) * 100;
+                    showDiscount = true;
+                  }
+                } else if (typeof discount === 'number' && discount > 0) {
+                  // Legacy discount format
+                  discountPercent = discount;
+                  showDiscount = true;
+                } else if (basePrice > product.price) {
+                  // Calculate from price difference
+                  discountPercent = ((basePrice - product.price) / basePrice) * 100;
+                  showDiscount = discountPercent > 0;
+                }
+                
+                return showDiscount ? (
+                  <>
+                    <span className="text-lg md:text-xl text-muted-foreground line-through">₹{basePrice.toFixed(2)}</span>
+                    <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 rounded-full font-bold text-sm animate-pulse">
+                      {Math.round(discountPercent)}% OFF
+                    </Badge>
+                  </>
+                ) : null;
+              })()}
               {outOfStock ? (
                 <Badge className="bg-red-500 text-white px-3 py-1 rounded-full font-bold text-sm">Out of Stock</Badge>
               ) : (
@@ -654,14 +797,14 @@ const Product = () => {
               </div>
             </div>
 
-            {/* Description */}
+            {/* Description
             <Card className="p-3 md:p-4">
               <h3 className="font-semibold mb-2">Description</h3>
               <details open className="text-sm text-muted-foreground leading-relaxed">
                 <summary className="cursor-pointer text-foreground mb-2">Read more</summary>
                 <p>{product.description || 'No description available for this product.'}</p>
               </details>
-            </Card>
+            </Card> */}
           </div>
         </div>
 
