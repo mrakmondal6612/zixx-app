@@ -438,6 +438,38 @@ const Orders = () => {
 
   // HTML Generators
   const generateShippingLabelHTML = (order) => {
+    // Get footer data for company information
+    const getFooterData = () => {
+      try {
+        // Try to get footer data from localStorage (if cached) or fetch it
+        const cached = localStorage.getItem('admin_footer_data');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return {
+            companyName: parsed.companyName || 'ZIXX',
+            address: parsed.contactInfo?.address || '429/1, R.B AVENUE, Bhadreswar\nHooghly - 712124\nWest Bengal, India',
+            phone: parsed.contactInfo?.phone || '+91 89622 31295',
+            email: parsed.contactInfo?.email || 'contact@zixxapp.com'
+          };
+        }
+        return {
+          companyName: 'ZIXX',
+          address: '429/1, R.B AVENUE, Bhadreswar\nHooghly - 712124\nWest Bengal, India',
+          phone: '+91 89622 31295',
+          email: 'contact@zixxapp.com'
+        };
+      } catch (e) {
+        return {
+          companyName: 'ZIXX',
+          address: '429/1, R.B AVENUE, Bhadreswar\nHooghly - 712124\nWest Bengal, India',
+          phone: '+91 89622 31295',
+          email: 'contact@zixxapp.com'
+        };
+      }
+    };
+
+    const footerData = getFooterData();
+
     return `
       <div class="shipping-label" style="
         font-family: 'Inter', sans-serif;
@@ -449,7 +481,7 @@ const Orders = () => {
         background: #fff;
         color: #111;
       ">
-        
+
         <!-- Header -->
         <div style="
           background: linear-gradient(135deg, #6EE7B7 0%, #3B82F6 100%);
@@ -460,18 +492,18 @@ const Orders = () => {
           <h2 style="margin: 0; font-size: 22px; font-weight: 700;">🚚 Shipping Label</h2>
           <div style="font-size: 14px; opacity: 0.9;">Order #${order._id}</div>
         </div>
-        
+
         <!-- Addresses -->
         <div style="display: flex; justify-content: space-between; padding: 16px; gap: 12px;">
           <div style="flex: 1; background: #F9FAFB; border-radius: 12px; padding: 12px;">
             <h3 style="margin: 0 0 8px; font-size: 14px; color: #374151;">📦 From</h3>
             <p style="margin: 0; font-size: 13px; line-height: 1.4; color: #111827;">
-              Your Company Name<br/>
-              Warehouse Address<br/>
-              📞 Your Phone
+              <strong>${footerData.companyName}</strong><br/>
+              ${footerData.address.replace(/\n/g, '<br/>')}
+              <br/>📞 ${footerData.phone}
             </p>
           </div>
-          
+
           <div style="flex: 1; background: #F9FAFB; border-radius: 12px; padding: 12px;">
             <h3 style="margin: 0 0 8px; font-size: 14px; color: #374151;">📍 To</h3>
             <p style="margin: 0; font-size: 13px; line-height: 1.4; color: #111827;">
@@ -479,14 +511,14 @@ const Orders = () => {
             </p>
           </div>
         </div>
-  
+
         <!-- Shipping Info -->
         <div style="padding: 16px; border-top: 1px dashed #E5E7EB; border-bottom: 1px dashed #E5E7EB; background: #F3F4F6;">
           <div style="font-size: 14px; margin-bottom: 6px;">🚀 Carrier: <strong>${order.carrier || 'N/A'}</strong></div>
           <div style="font-size: 14px; margin-bottom: 6px;">🔗 Tracking: <strong>${order.trackingNumber || 'N/A'}</strong></div>
           ${order.courierPhone ? `<div style="font-size: 14px;">☎️ Courier Phone: <strong>${order.courierPhone}</strong></div>` : ''}
         </div>
-  
+
         <!-- Barcode / QR -->
         <div style="text-align: center; padding: 20px;">
           <div style="
@@ -641,6 +673,38 @@ const Orders = () => {
 
   
   const generateInvoiceHTML = (order) => {
+    // Get footer data for company information
+    const getFooterData = () => {
+      try {
+        // Try to get footer data from localStorage (if cached) or fetch it
+        const cached = localStorage.getItem('admin_footer_data');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return {
+            companyName: parsed.companyName || 'ZIXX',
+            address: parsed.contactInfo?.address || '429/1, R.B AVENUE, Bhadreswar\nHooghly - 712124\nWest Bengal, India',
+            phone: parsed.contactInfo?.phone || '+91 89622 31295',
+            email: parsed.contactInfo?.email || 'contact@zixxapp.com'
+          };
+        }
+        return {
+          companyName: 'ZIXX',
+          address: '429/1, R.B AVENUE, Bhadreswar\nHooghly - 712124\nWest Bengal, India',
+          phone: '+91 89622 31295',
+          email: 'contact@zixxapp.com'
+        };
+      } catch (e) {
+        return {
+          companyName: 'ZIXX',
+          address: '429/1, R.B AVENUE, Bhadreswar\nHooghly - 712124\nWest Bengal, India',
+          phone: '+91 89622 31295',
+          email: 'contact@zixxapp.com'
+        };
+      }
+    };
+
+    const footerData = getFooterData();
+
     return `
       <div class="invoice" style="
         font-family: 'Inter', sans-serif;
@@ -652,13 +716,13 @@ const Orders = () => {
         padding: 24px;
         color: #111;
       ">
-  
+
         <!-- Header -->
         <div style="text-align: center; padding-bottom: 16px; border-bottom: 2px solid #E5E7EB;">
           <h1 style="
-            font-size: 28px; 
-            font-weight: 800; 
-            margin: 0; 
+            font-size: 28px;
+            font-weight: 800;
+            margin: 0;
             background: linear-gradient(135deg, #3B82F6, #9333EA);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -669,7 +733,7 @@ const Orders = () => {
             Thank you for shopping with us 💜
           </p>
         </div>
-  
+
         <!-- Order Info -->
         <div style="margin-top: 16px; display: flex; justify-content: space-between; flex-wrap: wrap;">
           <div style="font-size: 14px; line-height: 1.6;">
@@ -679,17 +743,18 @@ const Orders = () => {
           </div>
           <div style="text-align: right; font-size: 14px; color: #374151;">
             <p><strong>From:</strong></p>
-            <p>Your Company Name</p>
-            <p>📍 Warehouse Address</p>
-            <p>📞 Support: +91-XXXXXXXXXX</p>
+            <p><strong>${footerData.companyName}</strong></p>
+            <p>${footerData.address.replace(/\n/g, '<br/>')}</p>
+            <p>📞 Support: ${footerData.phone}</p>
+            <p>✉️ Email: ${footerData.email}</p>
           </div>
         </div>
-  
+
         <!-- Table -->
         <table style="
-          width: 100%; 
-          border-collapse: collapse; 
-          margin-top: 20px; 
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
           font-size: 14px;
         ">
           <thead>
@@ -717,13 +782,13 @@ const Orders = () => {
             </tr>
           </tfoot>
         </table>
-  
+
         <!-- Footer -->
         <div style="margin-top: 24px; text-align: center; font-size: 12px; color: #6B7280;">
           <p>🚀 This is a computer-generated invoice, no signature required.</p>
-          <p>✨ Need help? Contact us at support@example.com</p>
+          <p>✨ Need help? Contact us at ${footerData.email}</p>
         </div>
-  
+
       </div>
     `;
   };

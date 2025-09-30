@@ -56,6 +56,7 @@ const FooterManagement = () => {
     socialLinksExtra: [],
     services: [],
     copyrightText: '',
+    companyName: 'ZIXX',
   });
 
   const [newQuickLink, setNewQuickLink] = useState({ title: '', url: '' });
@@ -92,8 +93,19 @@ const FooterManagement = () => {
         exclusive: data.exclusive || { title: 'Exclusive', subtitle: 'Subscribe', note: 'Get 10% off your first order' },
         socialLinksExtra: Array.isArray(data.socialLinksExtra) ? data.socialLinksExtra : [],
         services: Array.isArray(data.services) && data.services.length > 0 ? data.services : defaultServices,
-        copyrightText: data.copyrightText || ''
+        copyrightText: data.copyrightText || '',
+        companyName: data.companyName || 'ZIXX'
       });
+
+      // Cache footer data for other components (like order shipping labels)
+      try {
+        localStorage.setItem('admin_footer_data', JSON.stringify({
+          companyName: data.companyName || 'ZIXX',
+          contactInfo: data.contactInfo || { address: '', phone: '', email: '' }
+        }));
+      } catch (e) {
+        console.warn('Failed to cache footer data in localStorage', e);
+      }
     } catch (error) {
       console.error('ERROR: Error fetching footer data', error?.response?.data || error.message || error);
       toast.error('Error fetching footer data');
@@ -206,6 +218,13 @@ const FooterManagement = () => {
           {/* Basic Information */}
           <Grid item xs={12}>
             <Typography variant="h5" mb={2}>Basic Information</Typography>
+            <TextField
+              fullWidth
+              label="Company Name"
+              value={footerData.companyName}
+              onChange={(e) => handleChange(e, null, 'companyName')}
+              margin="normal"
+            />
             <TextField
               fullWidth
               label="Logo URL"
