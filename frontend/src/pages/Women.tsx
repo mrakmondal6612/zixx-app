@@ -98,7 +98,7 @@ const Women = () => {
             page="women"
             position="featured"
             fallback={{
-              imageUrl: "https://res.cloudinary.com/dxtle1heo/image/upload/v1756038296/profile_pics/gatpp49d6jwhb9q2l6yv.png",
+              imageUrl: "",
               heading: "Featured Collection",
               description: "Explore our curated selection of the season's must-haves.",
               linkText: "Shop Collection",
