@@ -119,7 +119,7 @@ const Kids = () => {
             page="kids"
             position="featured"
             fallback={{
-              imageUrl: 'https://cdn.builder.io/api/v1/image/assets/70ad6d2d96f744648798836a6706b9db/4aced3c27c234d70267aacc0142add1478e2c868?placeholderIfAbsent=true',
+              imageUrl: '',
               heading: 'Playful Picks',
               description: 'Fun and vibrant styles for your little ones.',
               linkText: 'Shop Now',
